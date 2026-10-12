@@ -10,6 +10,7 @@ import datetime as dt
 import json
 import logging
 import math
+import os
 import queue as _queue
 import re
 import shutil
@@ -403,7 +404,8 @@ def to_obsidian(m: dict) -> str:
     att.mkdir(parents=True, exist_ok=True)
     audio_name = f"{date} {m['id']}.mp3"
     src = _dir(m["id"]) / "audio.mp3"
-    if src.exists() and not (att / audio_name).exists():
+    embed = os.getenv("OBSIDIAN_EMBED_AUDIO", "1") != "0"  # VPS + vault git: không đẩy file âm thanh nặng lên git
+    if embed and src.exists() and not (att / audio_name).exists():
         shutil.copy2(src, att / audio_name)
     tline = lambda x: f" `{_fmt(x.get('t', 0))}`" if x.get("t") is not None else ""  # noqa: E731
     pl = lambda s: "[[" + s + "]]" if s in people else s  # noqa: E731
@@ -414,7 +416,8 @@ def to_obsidian(m: dict) -> str:
           "participants: [" + ", ".join(f'"[[{p}]]"' for p in people) + "]", f"source: {m.get('source', '')}",
           f"superhuy_id: {m['id']}", "tags: [" + ", ".join(tags) + "]", "---", ""]
     body = [f"# {title}", "", f"Thuộc: [[{org_link}]]" + (f" › [[{proj_link}]]" if proj_link else "") + (f" › {dept}" if dept else ""),
-            f"Người tham gia: {', '.join('[[' + p + ']]' for p in people) or '(chưa rõ tên)'}", "", f"![[{audio_name}]]", "",
+            f"Người tham gia: {', '.join('[[' + p + ']]' for p in people) or '(chưa rõ tên)'}", "",
+            f"![[{audio_name}]]" if embed else "🎧 Nghe lại âm thanh: mở superHuy › Họp (mỗi ý có mốc giờ để bấm nghe)", "",
             "## Tóm tắt", r.get("summary", ""), ""]
     if r.get("decisions"):
         body += ["## Quyết định"] + [f"- {d['text']}" + (f" ({pl(d['owner'])})" if d.get("owner") else "") + tline(d) for d in r["decisions"]] + [""]

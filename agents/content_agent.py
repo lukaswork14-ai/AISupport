@@ -2,10 +2,10 @@
 import json
 import re
 
-from config import BASE_DIR, DATA_DIR, LLM_MODEL
+from config import DATA_DIR, LLM_MODEL, home_file
 from llm import LLM_EXTRA, make_client
 
-STYLE_FILE = BASE_DIR / "style_guide.md"
+STYLE_FILE = home_file("style_guide.md")
 DEFAULT_STYLE = """- Xưng "mình", gọi người đọc là "bạn" hoặc "anh em seller".
 - Câu ngắn, thẳng, không sáo rỗng. Mở bài bằng 1 câu gây tò mò hoặc con số/sự kiện.
 - Giọng người trong cuộc đang làm thật (POD, Amazon, Etsy, TikTok Shop), nói điều tin này nghĩa là gì với việc bán hàng.

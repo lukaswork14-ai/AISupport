@@ -1,0 +1,33 @@
+# Giám sát từ bên ngoài: 30 phút/lần gọi /health của Mini App; nếu VPS sập thì nhắn Telegram cho anh Huy.
+# Cần: biến APP_URL; secrets TELEGRAM_TOKEN, OWNER_CHAT_ID.
+name: Giám sát superHuy
+
+on:
+  schedule:
+    - cron: "7,37 * * * *"
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-24.04
+    if: vars.APP_URL != ''
+    steps:
+      - name: Gọi /health
+        id: h
+        run: |
+          for i in 1 2 3; do
+            if curl -fsS -m 15 "${{ vars.APP_URL }}/health" >/dev/null; then echo "ok=1" >> "$GITHUB_OUTPUT"; exit 0; fi
+            sleep 20
+          done
+          echo "ok=0" >> "$GITHUB_OUTPUT"
+      - name: Báo Telegram khi sập
+        if: steps.h.outputs.ok != '1'
+        env:
+          TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          CHAT: ${{ secrets.OWNER_CHAT_ID }}
+        run: |
+          [ -n "$TOKEN" ] || exit 1
+          curl -fsS "https://api.telegram.org/bot$TOKEN/sendMessage" \
+            --data-urlencode "chat_id=$CHAT" \
+            --data-urlencode "text=🚨 superHuy trên VPS không phản hồi (${{ vars.APP_URL }}). Kiểm tra: ssh vào VPS, chạy 'sudo systemctl status superhuy' và 'journalctl -u superhuy -n 50'."
+          exit 1

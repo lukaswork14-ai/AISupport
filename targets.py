@@ -5,9 +5,9 @@
 import json
 
 from agents import publisher
-from config import BASE_DIR
+from config import home_file
 
-FILE = BASE_DIR / "targets.json"
+FILE = home_file("targets.json")
 ICON = {"profile": "👤", "group": "👥", "page": "📄", "other": "🔗"}
 
 

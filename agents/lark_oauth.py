@@ -26,6 +26,9 @@ def _accounts() -> str:
 
 
 def base_url() -> str:
+    fixed = os.getenv("WEBAPP_URL", "").strip().rstrip("/")
+    if fixed:  # chạy trên VPS có tên miền riêng
+        return fixed
     try:
         return json.loads((DATA_DIR / "tunnel.json").read_text())["url"].rstrip("/")
     except Exception:

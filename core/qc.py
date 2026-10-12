@@ -102,6 +102,9 @@ def _http_ok(url: str, timeout: int = 15) -> tuple[bool, str]:
 
 
 def tunnel_url() -> str:
+    fixed = os.getenv("WEBAPP_URL", "").strip().rstrip("/")
+    if fixed:
+        return fixed
     try:
         return json.loads((DATA_DIR / "tunnel.json").read_text())["url"].rstrip("/")
     except Exception:
@@ -114,8 +117,9 @@ def quick_checks(port: int):
     url = tunnel_url()
     if url:
         ok, d = _http_ok(url + "/health", 20)
-        report("tunnel", "Link Mini App (đường hầm)", ok, f"Link {url} không mở được ({d}).",
-               "Bot đang tự mở link mới; khi xong sẽ gửi nút “Mở app” mới.")
+        report("tunnel", "Link Mini App", ok, f"Link {url} không mở được ({d}).",
+               "Trên VPS: kiểm tra Caddy (sudo systemctl status caddy) và tên miền trỏ đúng IP." if os.getenv("WEBAPP_URL")
+               else "Bot đang tự mở link mới; khi xong sẽ gửi nút “Mở app” mới.")
     else:
         report("tunnel", "Link Mini App (đường hầm)", False, "Chưa có link Mini App.", "Kiểm tra cloudflared (Cai-dat-miniapp.command).")
     free = shutil.disk_usage(str(DATA_DIR)).free / 1e9
@@ -129,7 +133,7 @@ def connection_checks():
     ok, _ = _http_ok("https://api.telegram.org", 15)
     if not ok:
         ok, _ = _http_ok("https://www.google.com/generate_204", 15)
-    report("net", "Mạng internet của máy Mac", ok, "Máy Mac đang mất mạng.", "Kiểm tra Wi-Fi của máy Mac.")
+    report("net", "Mạng internet của máy chủ", ok, "Máy chủ bot đang mất mạng.", "Kiểm tra mạng của VPS / máy Mac.")
     if not ok:
         return  # mất mạng: không báo lỗi lan tràn từng dịch vụ
     if mailbox.gmail_ready():

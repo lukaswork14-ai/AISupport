@@ -7,11 +7,11 @@ import re
 
 import requests
 
-from config import BASE_DIR
+from config import HOME_DIR, home_file
 
 GRAPH = "https://graph.facebook.com/v21.0"
-ENV = BASE_DIR / ".env"
-TARGETS = BASE_DIR / "targets.json"
+ENV = HOME_DIR / ".env"
+TARGETS = home_file("targets.json")
 
 
 def _get(path, **params):

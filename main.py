@@ -218,6 +218,16 @@ async def job_content_scan(app: Application):
         await send(app, f"📰 {r['added']} tin mới đang chờ anh duyệt ở trang Nội dung (quẹt phải để tạo reels). Tổng chờ duyệt: {r['pending']}.")
 
 
+async def job_vault_sync(app: Application):
+    from core import qc, vault_sync
+    try:
+        await asyncio.to_thread(vault_sync.sync)
+        qc.report("vault", "Đồng bộ Obsidian (git)", True, "", "")
+    except Exception as e:
+        log.warning("Đồng bộ vault lỗi: %s", e)
+        qc.report("vault", "Đồng bộ Obsidian (git)", False, str(e)[:200], "Kiểm tra VAULT_GIT_REMOTE và deploy key của repo vault.")
+
+
 _SCHED: list = []
 JOB_NAMES = {"job_morning_plan": "Lịch trình buổi sáng", "job_evening_reminder": "Nhắc lịch buổi tối", "job_finance_monthly": "Báo cáo tài chính tháng", "job_lark_digest": "Tổng hợp tin nhắn Lark",
              "job_email_digest": "Phân tích email buổi tối", "job_news": "Bản tin sáng", "job_content_scan": "Săn tin cho trang Nội dung"}
@@ -269,6 +279,10 @@ async def post_init(app: Application):
                       misfire_grace_time=6 * 3600, coalesce=True)
     scheduler.add_job(news_bot.job_news, CronTrigger(hour=NEWS_HOUR, minute=0), args=[app],
                       misfire_grace_time=3600, coalesce=True)
+    from core import vault_sync
+    if vault_sync.enabled():
+        scheduler.add_job(job_vault_sync, "interval", minutes=10, args=[app], coalesce=True, max_instances=1,
+                          misfire_grace_time=600, next_run_time=dt.datetime.now() + dt.timedelta(minutes=1))
     for h in CONTENT_SCAN_HOURS:
         scheduler.add_job(job_content_scan, CronTrigger(hour=h, minute=10), args=[app], misfire_grace_time=3600, coalesce=True)
     scheduler.add_job(job_restart_watch, "interval", seconds=15, args=[app], coalesce=True, max_instances=1)
@@ -393,6 +407,14 @@ async def on_audio(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 
 def main():
     require_config()
+    if (DATA_DIR / "DISABLED").exists():
+        # Bot đã chuyển sang máy chủ khác (VPS): máy này đứng yên, không nhận tin Telegram để tránh tranh nhau.
+        # Bật lại: xoá file data/DISABLED rồi khởi động lại.
+        import time
+        log.warning("Bot đang TẮT trên máy này (có file data/DISABLED). Đứng chờ, không kết nối Telegram.")
+        while (DATA_DIR / "DISABLED").exists():
+            time.sleep(60)
+        log.info("Đã xoá data/DISABLED, khởi động bot.")
     asyncio.set_event_loop(asyncio.new_event_loop())  # Python 3.14 không tự tạo event loop
     app = Application.builder().token(TELEGRAM_TOKEN).post_init(post_init).build()
     bot_guard.install(app, replay=answer_text)  # PHẢI gắn trước các handler khác

@@ -1,9 +1,9 @@
 """Ghi/sửa một khóa trong .env và cập nhật ngay cho tiến trình đang chạy (không cần khởi động lại)."""
 import os
 
-from config import BASE_DIR
+from config import HOME_DIR
 
-ENV = BASE_DIR / ".env"
+ENV = HOME_DIR / ".env"
 
 
 def set_env(key: str, value: str):

@@ -4,7 +4,9 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent
-load_dotenv(BASE_DIR / ".env")
+# Trên VPS: code nằm ở /opt/superhuy/current (đổi mỗi lần triển khai), còn .env + data ở SUPERHUY_HOME (giữ nguyên).
+HOME_DIR = Path(os.getenv("SUPERHUY_HOME", str(BASE_DIR))).expanduser()
+load_dotenv(HOME_DIR / ".env")
 
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN", "")
 OWNER_CHAT_ID = int(os.getenv("OWNER_CHAT_ID", "0") or 0)
@@ -26,11 +28,21 @@ EMAIL_DIGEST_EVERY_HOURS = int(os.getenv("EMAIL_DIGEST_EVERY_HOURS", "1"))  # (c
 LARK_DIGEST_HOURS = os.getenv("LARK_DIGEST_HOURS", "9,11,14,16,18,21")
 EMAIL_DIGEST_HOURS = os.getenv("EMAIL_DIGEST_HOURS", "21")
 
-DATA_DIR = BASE_DIR / "data"
-DATA_DIR.mkdir(exist_ok=True)
-GOOGLE_CREDENTIALS_FILE = BASE_DIR / "credentials.json"   # tải từ Google Cloud
+DATA_DIR = HOME_DIR / "data"
+DATA_DIR.mkdir(parents=True, exist_ok=True)
+GOOGLE_CREDENTIALS_FILE = HOME_DIR / "credentials.json"   # tải từ Google Cloud
 GOOGLE_TOKEN_FILE = DATA_DIR / "google_token.json"        # tự sinh sau khi cấp quyền
 STATE_FILE = DATA_DIR / "state.json"
+
+
+def home_file(name: str) -> Path:
+    """File cấu hình người dùng sửa được (targets.json, style_guide.md): nằm ở SUPERHUY_HOME để không mất khi triển khai bản mới.
+    Lần đầu chưa có thì chép bản mặc định từ thư mục code."""
+    p = HOME_DIR / name
+    if not p.exists() and (BASE_DIR / name).exists() and HOME_DIR != BASE_DIR:
+        import shutil
+        shutil.copy2(BASE_DIR / name, p)
+    return p
 
 
 def require_config():

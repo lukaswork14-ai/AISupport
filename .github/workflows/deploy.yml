@@ -1,0 +1,105 @@
+# CI/CD superHuy: mỗi lần đẩy lên main -> kiểm tra -> chép code lên VPS -> khởi động lại -> tự quay về bản cũ nếu lỗi.
+# Cần secrets: VPS_HOST, VPS_USER, VPS_SSH_KEY (tạo bởi deploy/setup_vps.sh). Tuỳ chọn: VPS_PORT.
+name: Kiểm tra & triển khai
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  test:
+    name: Kiểm tra (Python ${{ matrix.python }})
+    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        python: ["3.10", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+      - name: Cài thư viện
+        run: pip install -r requirements.txt
+      - name: Biên dịch toàn bộ mã
+        run: python -m compileall -q .
+      - name: Import các module chính
+        env:
+          SUPERHUY_HOME: ${{ runner.temp }}/home
+          TELEGRAM_TOKEN: "1:test"
+          OWNER_CHAT_ID: "1"
+          LLM_API_KEY: test
+          OBSIDIAN_VAULT: ${{ runner.temp }}/vault
+        run: |
+          mkdir -p "$SUPERHUY_HOME"
+          python - <<'PY'
+          import importlib
+          for m in ("config", "hub", "brain", "main", "agents.meeting", "agents.content_hub", "agents.planner",
+                    "agents.growth", "agents.fb_reel", "core.qc", "core.vault_sync", "webapp.server"):
+              importlib.import_module(m)
+          import hub
+          from core import registry
+          assert len(registry.llm_tools()) > 20, "thiếu công cụ cho trợ lý"
+          print("OK:", len(registry.llm_tools()), "công cụ")
+          PY
+      - name: Kiểm tra JavaScript của Mini App
+        run: |
+          python - <<'PY'
+          import re, pathlib
+          s = pathlib.Path("webapp/static/index.html").read_text(encoding="utf-8")
+          pathlib.Path("/tmp/app.js").write_text("\n".join(re.findall(r"<script>(.*?)</script>", s, re.S)), encoding="utf-8")
+          PY
+          node --check /tmp/app.js
+      - name: Kiểm tra script triển khai
+        run: bash -n deploy/setup_vps.sh && bash -n deploy/release.sh && bash -n deploy/import_data.sh
+
+  deploy:
+    name: Triển khai lên VPS
+    needs: test
+    runs-on: ubuntu-24.04
+    environment: production
+    steps:
+      - name: Kiểm tra cấu hình
+        id: cfg
+        env:
+          HOST: ${{ secrets.VPS_HOST }}
+        run: |
+          if [ -z "$HOST" ]; then echo "Chưa có secret VPS_HOST: bỏ qua triển khai."; echo "skip=1" >> "$GITHUB_OUTPUT"; fi
+      - uses: actions/checkout@v4
+        if: steps.cfg.outputs.skip != '1'
+      - name: Khoá SSH
+        if: steps.cfg.outputs.skip != '1'
+        env:
+          KEY: ${{ secrets.VPS_SSH_KEY }}
+          HOST: ${{ secrets.VPS_HOST }}
+          PORT: ${{ secrets.VPS_PORT || '22' }}
+        run: |
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "$KEY" > ~/.ssh/deploy && chmod 600 ~/.ssh/deploy
+          ssh-keyscan -p "$PORT" -H "$HOST" >> ~/.ssh/known_hosts 2>/dev/null
+      - name: Chép code lên VPS
+        if: steps.cfg.outputs.skip != '1'
+        env:
+          HOST: ${{ secrets.VPS_HOST }}
+          USER: ${{ secrets.VPS_USER || 'superhuy' }}
+          PORT: ${{ secrets.VPS_PORT || '22' }}
+        run: |
+          rsync -az --delete --exclude .git --exclude .github \
+            -e "ssh -i ~/.ssh/deploy -p $PORT" ./ "$USER@$HOST:/opt/superhuy/releases/$GITHUB_SHA/"
+      - name: Cài đặt, khởi động lại, kiểm tra sức khoẻ
+        if: steps.cfg.outputs.skip != '1'
+        env:
+          HOST: ${{ secrets.VPS_HOST }}
+          USER: ${{ secrets.VPS_USER || 'superhuy' }}
+          PORT: ${{ secrets.VPS_PORT || '22' }}
+        run: ssh -i ~/.ssh/deploy -p "$PORT" "$USER@$HOST" "bash /opt/superhuy/releases/$GITHUB_SHA/deploy/release.sh $GITHUB_SHA"
+      - name: Kiểm tra từ Internet
+        if: steps.cfg.outputs.skip != '1' && vars.APP_URL != ''
+        run: |
+          for i in 1 2 3 4 5 6; do curl -fsS -m 10 "${{ vars.APP_URL }}/health" && exit 0; sleep 10; done
+          echo "App chưa trả lời qua tên miền (kiểm tra DNS/Caddy)"; exit 1
