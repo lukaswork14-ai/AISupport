@@ -19,8 +19,12 @@ apt-get install -y python3 python3-venv python3-pip git rsync curl ffmpeg fonts-
   debian-keyring debian-archive-keyring apt-transport-https gnupg tzdata
 timedatectl set-timezone Asia/Ho_Chi_Minh || true
 
-echo "==> 2/7 Caddy (HTTPS tự động)"
-if ! command -v caddy >/dev/null; then
+# VPS đã có nginx (đang phục vụ site khác) -> dùng nginx + certbot, không cài Caddy để khỏi tranh cổng 80/443
+USE_NGINX=0; systemctl is-active --quiet nginx && USE_NGINX=1
+echo "==> 2/7 Web server (HTTPS tự động)"
+if [ $USE_NGINX = 1 ]; then
+  command -v certbot >/dev/null || apt-get install -y certbot python3-certbot-nginx
+elif ! command -v caddy >/dev/null; then
   curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
   curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' > /etc/apt/sources.list.d/caddy-stable.list
   apt-get update -y && apt-get install -y caddy
@@ -63,6 +67,31 @@ $APPUSER ALL=(root) NOPASSWD: /bin/systemctl restart superhuy, /bin/systemctl st
 SUDO
 chmod 440 /etc/sudoers.d/superhuy
 
+if [ $USE_NGINX = 1 ]; then
+echo "==> 5/7 nginx cho $DOMAIN"
+cat > /etc/nginx/sites-available/$DOMAIN <<NGINX
+server {
+    listen 80;
+    listen [::]:80;
+    server_name $DOMAIN;
+    client_max_body_size 20m;
+    location / {
+        proxy_pass http://127.0.0.1:8787;
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_read_timeout 300s;
+    }
+}
+NGINX
+ln -sfn /etc/nginx/sites-available/$DOMAIN /etc/nginx/sites-enabled/$DOMAIN
+nginx -t && systemctl reload nginx
+certbot --nginx -d "$DOMAIN" --non-interactive --agree-tos --register-unsafely-without-email --redirect   || echo "!! Chưa lấy được chứng chỉ HTTPS (kiểm tra DNS $DOMAIN), chạy lại: certbot --nginx -d $DOMAIN"
+else
 echo "==> 5/7 Caddy cho $DOMAIN"
 cat > /etc/caddy/Caddyfile <<CADDY
 $DOMAIN {
@@ -75,6 +104,7 @@ $DOMAIN {
 CADDY
 systemctl enable caddy >/dev/null
 systemctl reload caddy || systemctl restart caddy
+fi
 if command -v ufw >/dev/null && ufw status | grep -q "Status: active"; then ufw allow 22/tcp; ufw allow 80/tcp; ufw allow 443/tcp; fi
 
 echo "==> 6/7 Khoá SSH"
