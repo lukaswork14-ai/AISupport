@@ -80,7 +80,14 @@ jobs:
           PORT: ${{ secrets.VPS_PORT || '22' }}
         run: |
           mkdir -p ~/.ssh && chmod 700 ~/.ssh
-          printf '%s\n' "$KEY" > ~/.ssh/deploy && chmod 600 ~/.ssh/deploy
+          # làm sạch khoá dán từ Windows: bỏ \r, khoảng trắng đầu/cuối dòng; dán mất xuống dòng thì dựng lại
+          K=$(printf '%s\n' "$KEY" | tr -d '\r' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | sed '/^$/d')
+          if [ "$(printf '%s\n' "$K" | wc -l)" -le 2 ]; then
+            BODY=$(printf '%s' "$K" | sed 's/-----[A-Z ]*-----//g' | tr -d ' \n')
+            K=$(printf -- '-----BEGIN OPENSSH PRIVATE KEY-----\n%s\n-----END OPENSSH PRIVATE KEY-----' "$(printf '%s' "$BODY" | fold -w 70)")
+          fi
+          printf '%s\n' "$K" > ~/.ssh/deploy && chmod 600 ~/.ssh/deploy
+          ssh-keygen -y -f ~/.ssh/deploy > /dev/null || { echo "::error::VPS_SSH_KEY không phải khoá hợp lệ: dán lại TOÀN BỘ khoá riêng (cả dòng BEGIN/END)"; exit 1; }
           ssh-keyscan -p "$PORT" -H "$HOST" >> ~/.ssh/known_hosts 2>/dev/null
       - name: Chép code lên VPS
         if: steps.cfg.outputs.skip != '1'
