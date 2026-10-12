@@ -39,7 +39,8 @@ class Tunnel:
         fixed = os.getenv("WEBAPP_URL", "").strip()
         if fixed:
             self.url = fixed.rstrip("/")
-            self.on_url(self.url)
+            # chạy ở thread riêng: on_url chờ coroutine trên event loop, gọi thẳng từ post_init sẽ treo loop (TimeoutError)
+            threading.Thread(target=self.on_url, args=(self.url,), daemon=True, name="tunnel").start()
             return
         threading.Thread(target=self._loop, daemon=True, name="tunnel").start()
 
