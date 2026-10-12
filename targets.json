@@ -1,0 +1,8 @@
+[
+  {"id": "profile", "name": "FB cá nhân", "type": "profile",
+   "url": "https://www.facebook.com/trinhduchuy/", "default_for": ["post"]},
+  {"id": "efe_group", "name": "Group EFE Community", "type": "group",
+   "url": "https://www.facebook.com/groups/efecommunity", "default_for": ["post", "bantin", "video"]},
+  {"id": "efe_page", "name": "Page EFE Network", "type": "page",
+   "url": "https://www.facebook.com/efenetwork", "fb_page": "EFE Network", "default_for": ["bantin", "video"]}
+]

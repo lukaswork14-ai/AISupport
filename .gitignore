@@ -1,0 +1,13 @@
+# Bí mật & dữ liệu cá nhân: KHÔNG đưa lên git
+.env
+credentials.json
+token*.json
+client_secret*.json
+data/
+*.bak
+# Môi trường & tạm
+.venv/
+__pycache__/
+*.pyc
+.DS_Store
+bin/
