@@ -25,7 +25,9 @@ VAULT_DIR="${OBSIDIAN_VAULT:-$HOME/SecondBrain}"
 [ -d "$VAULT_DIR" ] && rsync -a --exclude '.obsidian/workspace*' --exclude '.trash' "$VAULT_DIR/" "$STAGE/vault/"
 tar -czf "$PKG" -C "$STAGE" .
 rm -rf "$STAGE"
-SSHO=(-o ControlMaster=auto -o ControlPath=/tmp/superhuy-ssh-%r@%h:%p -o ControlPersist=600 -o StrictHostKeyChecking=accept-new)
+# Có khoá data/vps_admin_key (khoá công khai đã thêm vào VPS) thì đăng nhập bằng khoá, không cần mật khẩu.
+KEYO=(); [ -f data/vps_admin_key ] && KEYO=(-i data/vps_admin_key)
+SSHO=("${KEYO[@]}" -o ControlMaster=auto -o ControlPath=/tmp/superhuy-ssh-%r@%h:%p -o ControlPersist=600 -o StrictHostKeyChecking=accept-new)
 echo "Đã đóng gói $(du -h "$PKG" | cut -f1). Kết nối VPS: gõ MẬT KHẨU VPS khi được hỏi (chỉ 1 lần, chữ không hiện khi gõ)…"
 ssh "${SSHO[@]}" -p "$P" "$U@$IP" true
 scp "${SSHO[@]}" -P "$P" deploy/setup_vps.sh deploy/import_data.sh "$PKG" "$U@$IP:/tmp/"
