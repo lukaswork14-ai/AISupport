@@ -19,8 +19,8 @@ jobs:
       matrix:
         python: ["3.10", "3.12"]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python }}
           cache: pip
@@ -70,7 +70,7 @@ jobs:
           HOST: ${{ secrets.VPS_HOST }}
         run: |
           if [ -z "$HOST" ]; then echo "Chưa có secret VPS_HOST: bỏ qua triển khai."; echo "skip=1" >> "$GITHUB_OUTPUT"; fi
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         if: steps.cfg.outputs.skip != '1'
       - name: Khoá SSH
         if: steps.cfg.outputs.skip != '1'
