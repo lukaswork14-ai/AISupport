@@ -1,0 +1,44 @@
+# Chẩn đoán VPS theo yêu cầu (bấm Run workflow). Chỉ ghi thông tin KHÔNG bí mật vào nhánh "diag" (repo công khai).
+name: Chẩn đoán VPS
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: [deploy/diag_vps.sh]
+
+permissions:
+  contents: write
+
+jobs:
+  diag:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - name: Khoá SSH
+        env:
+          KEY: ${{ secrets.VPS_SSH_KEY }}
+          HOST: ${{ secrets.VPS_HOST }}
+          PORT: ${{ secrets.VPS_PORT || '22' }}
+        run: |
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          K=$(printf '%s\n' "$KEY" | tr -d '\r' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | sed '/^$/d')
+          if [ "$(printf '%s\n' "$K" | wc -l)" -le 2 ]; then
+            BODY=$(printf '%s' "$K" | sed 's/-----[A-Z ]*-----//g' | tr -d ' \n')
+            K=$(printf -- '-----BEGIN OPENSSH PRIVATE KEY-----\n%s\n-----END OPENSSH PRIVATE KEY-----' "$(printf '%s' "$BODY" | fold -w 70)")
+          fi
+          printf '%s\n' "$K" > ~/.ssh/deploy && chmod 600 ~/.ssh/deploy
+          ssh-keyscan -p "$PORT" -H "$HOST" >> ~/.ssh/known_hosts 2>/dev/null
+      - name: Chạy chẩn đoán
+        env:
+          HOST: ${{ secrets.VPS_HOST }}
+          USER: ${{ secrets.VPS_USER || 'superhuy' }}
+          PORT: ${{ secrets.VPS_PORT || '22' }}
+        run: ssh -i ~/.ssh/deploy -p "$PORT" "$USER@$HOST" 'bash -s' < deploy/diag_vps.sh > /tmp/status.txt 2>&1 || true
+      - name: Ghi vào nhánh diag
+        run: |
+          git config user.name "superHuy CI"; git config user.email "ci@superhuy.local"
+          git fetch origin diag 2>/dev/null && git checkout -B diag origin/diag || git checkout --orphan diag
+          git rm -rq --cached . 2>/dev/null || true
+          cp /tmp/status.txt status.txt
+          git add status.txt && git commit -qm "chẩn đoán $(date -Is)" && git push -q origin diag
