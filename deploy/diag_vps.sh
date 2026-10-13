@@ -26,3 +26,5 @@ if grep -q '^VAULT_GIT_REMOTE=.\+' $S/.env; then
   echo "vault_last_commit: $(git -C "$V" log -1 --format='%cI by %an' 2>/dev/null)"
   echo "vault_ahead_behind: $(git -C "$V" rev-list --left-right --count HEAD...origin/main 2>/dev/null)"
 fi
+echo "vault_mac_commits: $(git -C "$V" log --format=%an 2>/dev/null | grep -c 'Obsidian Mac')"
+echo "vault_test_note: $([ -f "$V/00 Inbox/Kiem tra ket noi superHuy.md" ] && echo yes || echo no)"

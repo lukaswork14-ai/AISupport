@@ -13,6 +13,8 @@ SSHCMD="ssh -i \"$KEY\" -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-ne
 
 # kho Obsidian đang dùng: lấy kho mở gần nhất trong cấu hình Obsidian, mặc định ~/SecondBrain
 VAULT="${OBSIDIAN_VAULT:-}"
+# ưu tiên kho superHuy vẫn dùng (~/SecondBrain) nếu có
+[ -z "$VAULT" ] && [ -d "$HOME/SecondBrain" ] && VAULT="$HOME/SecondBrain"
 if [ -z "$VAULT" ] && [ -f "$HOME/Library/Application Support/obsidian/obsidian.json" ]; then
   VAULT=$(/usr/bin/python3 - <<'PY' 2>/dev/null || true
 import json, os
