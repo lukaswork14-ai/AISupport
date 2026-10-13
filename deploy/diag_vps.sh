@@ -19,3 +19,10 @@ if [ ! -f $S/vault_deploy_key ]; then ssh-keygen -q -t ed25519 -N "" -C "superhu
 echo "vault_pubkey: $(cat $S/vault_deploy_key.pub 2>/dev/null)"
 echo "sync_log: $(grep -h 'vault' $S/data/agent.log 2>/dev/null | tail -3 | cut -c1-160 | tr '\n' '|')"
 echo "qc_vault: $(python3 -c "import json;d=json.load(open('$S/data/qc.json'));print(d.get('vault'))" 2>/dev/null)"
+# Ép đồng bộ Obsidian một lần (chỉ in tóm tắt/lỗi đã cắt ngắn, không có bí mật)
+if grep -q '^VAULT_GIT_REMOTE=.\+' $S/.env; then
+  echo "force_sync: $(cd /opt/superhuy/current && SUPERHUY_HOME=$S timeout 150 /opt/superhuy/venv/bin/python -c 'from core import vault_sync as v; print(v.sync())' 2>&1 | tail -2 | cut -c1-240 | tr '\n' '|')"
+  echo "vault_git_commits_after: $(git -C "$V" rev-list --count HEAD 2>/dev/null)"
+  echo "vault_last_commit: $(git -C "$V" log -1 --format='%cI by %an' 2>/dev/null)"
+  echo "vault_ahead_behind: $(git -C "$V" rev-list --left-right --count HEAD...origin/main 2>/dev/null)"
+fi
