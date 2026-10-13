@@ -68,3 +68,15 @@ Dữ liệu và khoá **không bao giờ** nằm trong repo. Chúng ở `/opt/su
 - **Chia sẻ biên bản họp:** trang công khai `https://<tên miền>/s/<mã>` là bản chụp lúc tạo.
   - Có hạn dùng và thu hồi được. Dữ liệu lưu ở `shared/data/meetings/shares.json`.
   - Nginx/Caddy chỉ cần chuyển mọi đường dẫn về cổng 8787, như hiện tại.
+
+## Nguồn tri thức: Gemini Notebook
+
+- Google chưa có API chính thức cho tài khoản cá nhân. superHuy dùng thư viện mã nguồn mở `notebooklm-py` với phiên đăng nhập Google của anh.
+- **Kết nối:**
+  1. Vào app › Second Brain › Gemini Notebook › **Kết nối** để lấy mã 8 ký tự.
+  2. Trên Mac, bấm đúp `deploy/Ket-noi-Gemini-Notebook.command`, đăng nhập Google trong Chrome, rồi dán mã.
+  3. Phiên được lưu ở `shared/notebooklm/storage_state.json` (quyền 600). Nếu phiên hết hạn, superHuy báo; anh chạy lại script.
+- **Dữ liệu nạp về:**
+  - Mỗi 6 giờ superHuy nạp tóm tắt, ghi chú và toàn văn các nguồn vào `shared/data/knowledge/gemini/`. superHuy tra cứu ở đây khi trả lời.
+  - Mỗi notebook có thêm một ghi chú mục lục trong Obsidian: `03 Resources/Gemini Notebook/`.
+- **Thêm nguồn mới:** khai báo trong `agents/knowledge_sources.py` và ghi `.md` vào `data/knowledge/<nguồn>/`.

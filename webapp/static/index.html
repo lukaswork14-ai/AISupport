@@ -538,6 +538,7 @@ html[data-scheme="dark"] .apps i{ background:color-mix(in srgb,var(--c) 22%,tran
 .dot{ width:10px; height:10px; border-radius:50%; background:var(--muted); flex:none } .dot.ok{ background:#199e70; box-shadow:0 0 0 4px color-mix(in srgb,#199e70 18%,transparent) }
 .savebtn{ align-self:flex-start; display:inline-flex; gap:6px; align-items:center; font-size:12.5px; font-weight:600; color:var(--jade); padding:4px 2px; margin:-4px 0 6px }
 .savebtn[disabled]{ color:var(--muted) }
+.gemcode{ font:700 26px/1 ui-monospace,SFMono-Regular,Menlo,monospace; letter-spacing:.12em; padding:12px 14px; border-radius:12px; background:var(--fill) }
 </style>
 </head>
 <body>
@@ -1438,10 +1439,11 @@ function brPaint(){
   const row = (n, sub, act) => `<button onclick="${act}"><span class="thumb">${ico('brain',18)}</span><div class="grow" style="min-width:0"><div style="font-weight:600" class="clamp2">${esc(n)}</div><div class="meta">${esc(sub)}</div></div></button>`;
   sheet(`<h2>Second Brain</h2><p class="lead">Kho Obsidian là bộ não thứ hai của anh. Trước khi trả lời, đề xuất hay biên tập họp, superHuy tra các ghi chú liên quan và nêu tên ghi chú đã dùng.</p>
     ${d.err?`<div class="card pad">${esc(d.err)}</div>`:`
-    <div class="hstat brstat"><div><b>${st.notes||0}</b><span>ghi chú</span></div><div><b>${st.own||0}</b><span>anh tự viết</span></div><div><b>${st.changed_7d||0}</b><span>đổi trong 7 ngày</span></div><div><b>${(d.memory||0)+(d.memory_extra||0)}</b><span>điều superHuy nhớ</span></div></div>
+    <div class="hstat brstat"><div><b>${st.notes||0}</b><span>ghi chú</span></div><div><b>${st.own||0}</b><span>anh tự viết</span></div><div><b>${st.external||0}</b><span>tài liệu nguồn ngoài</span></div><div><b>${(d.memory||0)+(d.memory_extra||0)}</b><span>điều superHuy nhớ</span></div></div>
     <div class="card pad" style="margin:12px 0"><div class="row" style="align-items:center;gap:10px"><span class="dot ${sy.enabled?'ok':''}"></span><div class="grow"><div style="font-weight:600">${sy.enabled?'Đồng bộ hai chiều với Obsidian trên Mac':'Chưa bật đồng bộ'}</div>
       <div class="meta">${sy.last_commit?'Lần đồng bộ gần nhất '+esc(sy.last_commit)+' · ':''}tự động mỗi 10 phút</div></div><button class="btn sm" id="brSync" onclick="brSync()">${ico('refresh',15)} Đồng bộ</button></div></div>`}
-    <form class="askbar" onsubmit="event.preventDefault();brSearch($('#brQ').value)"><span class="ic">${ico('brain',18)}</span><input id="brQ" value="${esc(S.br.q||'')}" placeholder="Tìm trong Obsidian…" autocomplete="off"><button class="btn pri sm">Tìm</button></form>
+    ${(d.sources||[]).length?`<p class="lbl" style="margin-top:4px">Nguồn tri thức</p><div class="card list" id="brSrc">${d.sources.map(brSrcRow).join('')}</div><div id="brSrcOut"></div>`:''}
+    <form class="askbar" style="margin-top:14px" onsubmit="event.preventDefault();brSearch($('#brQ').value)"><span class="ic">${ico('brain',18)}</span><input id="brQ" value="${esc(S.br.q||'')}" placeholder="Tìm trong Obsidian…" autocomplete="off"><button class="btn pri sm">Tìm</button></form>
     <div id="brHits">${brHitsHtml()}</div>
     ${(d.mac||[]).length?`<p class="lbl" style="margin-top:18px">Anh vừa viết trên Obsidian</p><div class="card list">${d.mac.map(n=>row(n.title, (n.folder||'Gốc')+' · '+n.when, `brOpen('${esc(n.path).replace(/'/g,'&#39;')}')`)).join('')}</div>`:''}
     ${(d.recent||[]).length?`<p class="lbl" style="margin-top:18px">Ghi chú mới nhất</p><div class="card list">${d.recent.slice(0,8).map(n=>row(n.title, n.folder, `brOpen('${esc(n.folder+'/'+n.title+'.md').replace(/'/g,'&#39;')}')`)).join('')}</div>`:''}
@@ -1473,6 +1475,40 @@ async function brOpen(path){
       <div class="notebody" style="margin-top:12px;font-size:15px;line-height:1.6">${mdLite(n.body)}</div>`); }
   catch(e){ toast(e.message); }
 }
+
+const SRC_IC = {obsidian:['brain','#8B5CF6'], gemini:['spark','#1A73E8']};
+function brSrcRow(x){
+  const [ic,c] = SRC_IC[x.id]||['link','#7A7387'];
+  const act = x.id==='gemini' ? (x.connected
+      ? `<button class="btn sm" onclick="brSrcSync('gemini')" ${x.syncing?'disabled':''}>${ico('refresh',15)} ${x.syncing?'Đang nạp':'Nạp lại'}</button>`
+      : `<button class="btn pri sm" onclick="brGemConnect()">Kết nối</button>`) : '';
+  return `<div style="align-items:center"><span class="thumb" style="color:${c}">${ico(ic,20)}</span><div class="grow" style="min-width:0">
+    <div style="font-weight:600">${esc(x.name)} ${x.connected?'<span class="dot ok" style="display:inline-block;width:8px;height:8px;margin-left:4px"></span>':''}</div>
+    <div class="meta">${esc(x.detail||'')}${x.last_sync?' · '+esc(x.last_sync):''}</div>
+    ${x.last_error?`<div class="meta" style="color:var(--danger)">${esc(x.last_error)}</div>`:''}
+    ${x.id==='gemini'&&x.connected?`<div class="row" style="gap:8px;margin-top:6px"><button class="addlink" onclick="brGemList()">Xem notebook</button><button class="addlink" onclick="brGemConnect()">Đăng nhập lại</button><button class="addlink" style="color:var(--danger)" onclick="brGemOff()">Ngắt</button></div>`:''}</div>${act}</div>`;
+}
+async function brGemConnect(){
+  const out = $('#brSrcOut');
+  try{ const r = await run('brain','gemini_ma',{},'',true);
+    out.innerHTML = `<div class="card pad" style="margin-top:10px"><div style="font-weight:600;margin-bottom:6px">Kết nối Gemini Notebook</div>
+      <ol class="meta" style="margin:0 0 10px;padding-left:18px;line-height:1.7"><li>Trên Mac, bấm đúp <b>Ket-noi-Gemini-Notebook.command</b> (thư mục agent-army › deploy).</li>
+      <li>Chrome mở ra: anh đăng nhập đúng Gmail chứa các notebook.</li><li>Khi Terminal hỏi, dán mã dưới đây. Mã dùng 1 lần, hết hạn sau ${r.expires_min} phút.</li></ol>
+      <div class="row" style="align-items:center;gap:10px"><div class="gemcode">${esc(r.code)}</div><button class="btn sm" onclick="copyText('${esc(r.code)}')">${ico('copy',15)} Chép mã</button></div>
+      <p class="meta" style="margin:10px 0 0">superHuy chỉ đọc notebook để tham chiếu; phiên đăng nhập chỉ lưu trên máy chủ của anh. Google chưa có API chính thức nên superHuy dùng thư viện mã nguồn mở notebooklm-py.</p></div>`;
+  }catch(e){ toast(e.message); }
+}
+async function brSrcSync(id){ try{ await run('brain','dongbo_nguon',{source:id},'Nạp lại '+(id==='gemini'?'Gemini Notebook':id)); toast('Đã nạp xong'); S.br.d = await run('brain','tongquan',{},'',true); brPaint(); }catch(e){ toast(e.message); } }
+async function brGemList(){
+  try{ const r = await run('brain','notebook_ds',{},'',true), out = $('#brSrcOut');
+    out.innerHTML = `<div class="card list" style="margin-top:10px">${(r.items||[]).map(n=>`<button onclick="S.dockOpen=true;dock();$('#dIn').value='Hỏi notebook ${esc(n.title).replace(/'/g,'&#39;')}: ';$('#dIn').focus()"><span class="thumb">${esc(n.emoji)||ico('spark',18)}</span><div class="grow"><div style="font-weight:600">${esc(n.title)}</div><div class="meta">${n.sources} nguồn · ${n.notes} ghi chú · bấm để hỏi notebook này</div></div></button>`).join('')||'<div class="empty">Chưa nạp notebook nào.</div>'}</div>`;
+  }catch(e){ toast(e.message); }
+}
+function brGemOff(){
+  $('#brSrcOut').innerHTML = `<div class="card pad" style="margin-top:10px"><p style="margin:0 0 10px">Ngắt Gemini Notebook? superHuy xoá phiên đăng nhập trên máy chủ.</p>
+    <div class="row"><button class="btn grow" onclick="brGemOffGo(true)">Ngắt, giữ dữ liệu đã nạp</button><button class="btn grow" style="color:var(--danger)" onclick="brGemOffGo(false)">Ngắt và xoá dữ liệu</button></div></div>`;
+}
+async function brGemOffGo(keep){ try{ const r = await run('brain','gemini_ngat',{keep_data:keep},'',true); toast(r.text); S.br.d = await run('brain','tongquan',{},'',true); brPaint(); }catch(e){ toast(e.message); } }
 async function chatSave(i){
   const m = S.data.chat||[], a = m[i]; if(!a) return;
   const q = [...m.slice(0,i)].reverse().find(x=>x.role==='user')?.content||'';

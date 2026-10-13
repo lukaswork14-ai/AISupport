@@ -265,6 +265,8 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         u = urlparse(self.path)
+        if u.path == "/connect/gemini":  # script trên Mac gửi phiên đăng nhập Gemini Notebook kèm mã dùng 1 lần
+            return self._connect_gemini(u)
         if u.path == "/api/upload":
             try:
                 return self._upload(u)
@@ -364,6 +366,25 @@ class Handler(BaseHTTPRequestHandler):
                 notify.send(text=f"⚠️ Không thêm được bot vào group Lark: {e}")
         threading.Thread(target=work, daemon=True).start()
         return self._html("✅ Đã nhận quyền. Bot đang tự thêm vào các group Lark của bạn, kết quả sẽ gửi vào Telegram trong ít phút. Bạn có thể đóng trang này.")
+
+    _cg_fails: list = []
+
+    def _connect_gemini(self, u):
+        from agents import gemini_notebook
+        now = time.time()
+        Handler._cg_fails = [t for t in Handler._cg_fails if t > now - 600]
+        if len(Handler._cg_fails) >= 20:
+            return self._json(429, {"error": "Thử sai quá nhiều lần, đợi 10 phút rồi chạy lại."})
+        n = int(self.headers.get("Content-Length") or 0)
+        if n <= 0 or n > 2_000_000:
+            return self._json(400, {"error": "Thiếu dữ liệu phiên đăng nhập"})
+        body = self.rfile.read(n)
+        try:
+            msg = gemini_notebook.accept(dict(parse_qsl(u.query)).get("code", ""), body)
+        except Exception as e:
+            Handler._cg_fails.append(now)
+            return self._json(400, {"error": str(e)[:300]})
+        return self._json(200, {"ok": True, "message": msg})
 
     def _share(self, path: str):
         from agents import meeting, meeting_share

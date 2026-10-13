@@ -7,7 +7,7 @@ import os
 import re
 
 import targets as targets_mod
-from agents import (calendar_agent, content_agent, content_hub, meeting, meeting_share, email_agent, fb_connect, gcal_bridge, imagecard, lark_agent, mailbox, news_agent, publisher,
+from agents import (calendar_agent, content_agent, content_hub, gemini_notebook, knowledge_sources, meeting, meeting_share, email_agent, fb_connect, gcal_bridge, imagecard, lark_agent, mailbox, news_agent, publisher,
                     reel_video, second_brain)
 from config import CARD_HANDLE, DATA_DIR
 from core import digests, notify, store
@@ -716,7 +716,7 @@ def brain_tongquan() -> dict:
     st = vault_sync.status()
     st.pop("public_key", None)
     st.pop("remote", None)
-    out = {"stats": kb.stats(), "sync": st, "mac": vault_sync.recent_by("Obsidian Mac", 12), "recent": brain_gan_day(12)["items"],
+    out = {"stats": kb.stats(), "sync": st, "sources": knowledge_sources.all_status(), "mac": vault_sync.recent_by("Obsidian Mac", 12), "recent": brain_gan_day(12)["items"],
            "memory": len(memory.facts()), "memory_extra": len(memory.vault_additions()), "memory_note": memory.VAULT_NOTE}
     return out
 
@@ -729,6 +729,12 @@ def brain_dongbo() -> dict:
     r = vault_sync.sync()
     st = vault_sync.status()
     return {**st, "text": f"Đồng bộ Obsidian: {r}. Kho có {st['notes']} ghi chú, lần ghi gần nhất {st.get('last_commit', '?')}."}
+
+
+def brain_nguon() -> dict:
+    items = knowledge_sources.all_status()
+    return {"items": items, "text": "\n".join(f"• {x['name']}: {'đã kết nối' if x.get('connected') else 'chưa kết nối'} · {x.get('detail', '')}"
+                                             + (f" · đồng bộ {x['last_sync']}" if x.get("last_sync") else "") for x in items)}
 
 
 register(Agent("brain", "Second Brain", "🧠", "Kho tri thức Obsidian: superHuy tra cứu khi trả lời, lưu kiến thức tích luỹ", order=60, actions=[
@@ -752,6 +758,19 @@ register(Agent("brain", "Second Brain", "🧠", "Kho tri thức Obsidian: superH
            desc="Đọc toàn văn 1 ghi chú Obsidian theo path (lấy từ brain__tim).", params=[Param("path", "Đường dẫn", required=True)]),
     Action("dongbo", "Đồng bộ Obsidian ngay", brain_dongbo, icon="🔄", llm=True,
            desc="Đồng bộ ngay kho ghi chú giữa superHuy và Obsidian trên Mac (qua repo git), và báo tình trạng."),
+    Action("nguon", "Các nguồn tri thức", brain_nguon, hidden=True, llm=True,
+           desc="Tình trạng các nguồn tri thức đã kết nối (Obsidian, Gemini Notebook...)."),
+    Action("dongbo_nguon", "Đồng bộ 1 nguồn tri thức", knowledge_sources.sync, hidden=True, long=True, llm=True,
+           desc="Nạp lại dữ liệu từ 1 nguồn: obsidian | gemini.", params=[Param("source", "Nguồn", required=True)]),
+    Action("gemini_ma", "Mã kết nối Gemini Notebook", gemini_notebook.new_code, hidden=True),
+    Action("gemini_ngat", "Ngắt Gemini Notebook", gemini_notebook.disconnect, hidden=True,
+           params=[Param("keep_data", "Giữ dữ liệu đã nạp", "bool", default=True)]),
+    Action("notebook_ds", "Các notebook Gemini", gemini_notebook.list_text, hidden=True, llm=True,
+           desc="Danh sách notebook trong Gemini Notebook (NotebookLM) của anh đã nạp vào superHuy."),
+    Action("hoi_notebook", "Hỏi 1 notebook Gemini", gemini_notebook.ask, hidden=True, llm=True,
+           desc="Hỏi trực tiếp 1 notebook trong Gemini Notebook (NotebookLM) của anh: Gemini trả lời dựa trên các nguồn của notebook đó, "
+                "có trích nguồn. Dùng khi anh nhắc tên notebook hoặc cần câu trả lời sâu từ tài liệu trong notebook. notebook = tên (gần đúng) hoặc id.",
+           params=[Param("question", "Câu hỏi", "textarea", required=True), Param("notebook", "Tên notebook", required=True)]),
 ]))
 
 

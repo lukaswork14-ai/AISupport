@@ -219,6 +219,15 @@ async def job_content_scan(app: Application):
         await send(app, f"📰 {r['added']} tin mới đang chờ anh duyệt ở trang Nội dung (quẹt phải để tạo reels). Tổng chờ duyệt: {r['pending']}.")
 
 
+async def job_knowledge_sync():
+    """Nạp lại các nguồn tri thức ngoài Obsidian (Gemini Notebook...) 6 giờ/lần."""
+    from agents import knowledge_sources
+    try:
+        await asyncio.to_thread(knowledge_sources.sync_all_connected)
+    except Exception as e:
+        log.warning("Đồng bộ nguồn tri thức lỗi: %s", e)
+
+
 async def job_vault_sync(app: Application):
     from core import qc, vault_sync
     try:
@@ -284,6 +293,8 @@ async def post_init(app: Application):
     if vault_sync.enabled():
         scheduler.add_job(job_vault_sync, "interval", minutes=10, args=[app], coalesce=True, max_instances=1,
                           misfire_grace_time=600, next_run_time=dt.datetime.now() + dt.timedelta(minutes=1))
+    scheduler.add_job(job_knowledge_sync, "interval", hours=6, coalesce=True, max_instances=1, misfire_grace_time=3600,
+                      next_run_time=dt.datetime.now() + dt.timedelta(minutes=3))
     for h in CONTENT_SCAN_HOURS:
         scheduler.add_job(job_content_scan, CronTrigger(hour=h, minute=10), args=[app], misfire_grace_time=3600, coalesce=True)
     scheduler.add_job(job_restart_watch, "interval", seconds=15, args=[app], coalesce=True, max_instances=1)

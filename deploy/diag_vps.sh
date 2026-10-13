@@ -31,3 +31,4 @@ echo "vault_test_note: $([ -f "$V/00 Inbox/Kiem tra ket noi superHuy.md" ] && ec
 echo "share_route_unknown: $(curl -s -o /dev/null -w '%{http_code}' -m 5 http://127.0.0.1:8787/s/khongtontai123)"
 echo "kb_stats: $(cd /opt/superhuy/current && SUPERHUY_HOME=$S timeout 60 /opt/superhuy/venv/bin/python -c 'from core import kb; print(kb.stats())' 2>&1 | tail -1 | cut -c1-200)"
 echo "memory_note: $([ -f "$V/02 Areas/superHuy/superHuy hieu ve anh.md" ] && echo yes || echo no)"
+echo "gemini: $(cd /opt/superhuy/current && SUPERHUY_HOME=$S timeout 60 /opt/superhuy/venv/bin/python -c 'from agents import gemini_notebook as g; s=g.status(); print({k: s[k] for k in ("library","connected","syncing","last_sync","last_error","notebooks","sources","notes")})' 2>&1 | tail -1 | cut -c1-300)"
