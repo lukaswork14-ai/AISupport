@@ -35,7 +35,7 @@ def seed():
     (kg / "Báo cáo POD [x1].md").write_text('---\ntitle: "Báo cáo POD"\nkb_source: "Gemini Notebook"\nkb_label: "Chiến lược Sellnity › Báo cáo POD"\n---\n'
                                             "# Báo cáo\nThị trường print on demand 2026 tăng 18%, biên lợi nhuận trung bình 32%.\n", encoding="utf-8")
     from agents import meeting
-    m = {"id": "demo01", "status": "done", "started": "2026-10-12T09:05:00", "duration": 2460, "source": "Ghi âm",
+    m = {"id": "demo01", "title": "Tiến độ AI Agent Factory", "status": "done", "started": "2026-10-12T09:05:00", "duration": 2460, "source": "Ghi âm",
          "labels": {"org": "sellnity", "project": "AI Agent Factory", "type": "Họp nội bộ"},
          "speakers": {"S1": {"name": "Anh Huy"}, "S2": {"name": "Lan"}},
          "segments": [{"s": 0, "spk": "S1", "text": "Chào cả nhà, họp nhanh về AI Agent Factory."}, {"s": 35, "spk": "S2", "text": "Tuần này team AI hoá xong 3 quy trình."}],

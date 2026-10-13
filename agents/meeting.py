@@ -789,7 +789,7 @@ def view_list() -> dict:
     for m in all_meetings()[:80]:
         r, lab = m.get("recap") or {}, m.get("labels") or {}
         rows.append({k: m.get(k) for k in ("id", "title", "status", "step", "progress", "err", "source", "started", "duration")}
-                    | {"org": lab.get("org", ""), "project": lab.get("project", ""), "department": lab.get("department", ""),
+                    | {"title": m.get("title") or r.get("title", ""), "org": lab.get("org", ""), "project": lab.get("project", ""), "department": lab.get("department", ""),
                        "type": lab.get("type", ""), "summary": r.get("summary", ""), "n_next": len(r.get("next_steps") or []),
                        "n_dec": len(r.get("decisions") or [])})
     return {"items": rows, "orgs": ORGS, "taxonomy": taxonomy()}
@@ -800,6 +800,7 @@ def view(mid: str) -> dict:
     if not m:
         raise ValueError("Không tìm thấy cuộc họp")
     m = dict(m)
+    m["title"] = m.get("title") or (m.get("recap") or {}).get("title", "")
     m["audio"] = str(_dir(mid) / "audio.mp3")
     m["obsidian_rel"] = str(m.get("obsidian", "")).replace(str(OBSIDIAN_VAULT), "").lstrip("/")
     return m
