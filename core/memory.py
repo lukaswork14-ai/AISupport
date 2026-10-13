@@ -38,6 +38,63 @@ def _save(items: list[dict]):
         os.chmod(FILE, 0o600)
     except Exception:
         pass
+    try:
+        export_to_vault(items[-MAX_FACTS:])
+    except Exception:
+        log.debug("Không ghi được trí nhớ sang Obsidian", exc_info=True)
+
+
+# ------------------------------------------------------------------ hai chiều với Obsidian
+VAULT_NOTE = "02 Areas/superHuy/superHuy hieu ve anh.md"
+EXTRA_HEAD = "## Anh bổ sung"
+
+
+def _note_path():
+    from config import OBSIDIAN_VAULT
+    return OBSIDIAN_VAULT / VAULT_NOTE
+
+
+def vault_additions() -> list[str]:
+    """Những dòng anh tự viết trong Obsidian dưới mục "Anh bổ sung" của ghi chú trí nhớ -> superHuy coi như điều đã biết."""
+    try:
+        text = _note_path().read_text(encoding="utf-8")
+    except Exception:
+        return []
+    if EXTRA_HEAD not in text:
+        return []
+    sec = text.split(EXTRA_HEAD, 1)[1]
+    sec = re.split(r"\n## ", sec, 1)[0]
+    out = []
+    for ln in sec.splitlines():
+        ln = re.sub(r"^\s*(?:[-*+]|\d+[.)])\s+(?:\[.\]\s*)?", "", ln).strip()
+        if len(ln) > 3 and not ln.startswith(("<!--", ">")) and not SECRET.search(ln):
+            out.append(ln[:300])
+    return out[:80]
+
+
+def export_to_vault(items: list[dict] | None = None):
+    """Ghi bản đọc được của trí nhớ sang Obsidian (giữ nguyên mục "Anh bổ sung" anh tự viết)."""
+    p = _note_path()
+    items = _load() if items is None else items
+    keep = ""
+    if p.exists():
+        old = p.read_text(encoding="utf-8")
+        if EXTRA_HEAD in old:
+            keep = old.split(EXTRA_HEAD, 1)[1]
+            keep = re.split(r"\n## ", keep, 1)[0].strip("\n")
+    by: dict[str, list[dict]] = {}
+    for it in items:
+        by.setdefault(it.get("kind", "profile"), []).append(it)
+    lines = ["---", "type: superhuy-memory", "generated_by: superhuy", f"updated: {_now()}", "tags: [superhuy, second-brain]", "---", "",
+             "# superHuy hiểu về anh", "",
+             "> [!info] superHuy tự cập nhật phần dưới từ các cuộc trò chuyện. Muốn superHuy biết thêm hoặc sửa điều chưa đúng, "
+             "viết vào mục **Anh bổ sung** ở cuối (mỗi ý 1 dòng gạch đầu dòng). superHuy đọc lại mục đó mỗi lần trả lời.", ""]
+    for k, label in KINDS.items():
+        if by.get(k):
+            lines += [f"## {label}"] + [f"- {it['text']}" for it in by[k]] + [""]
+    lines += [EXTRA_HEAD, keep or "<!-- Ví dụ: - Ưu tiên quý này: đưa Sellnity đạt 1 triệu USD doanh thu -->", ""]
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text("\n".join(lines), encoding="utf-8")
 
 
 def _norm(s: str) -> str:
@@ -93,7 +150,7 @@ def forget_matching(query: str) -> int:
 def context(max_chars: int = 3500) -> str:
     """Khối văn bản ngắn gọn đưa vào prompt."""
     items = _load()
-    if not items:
+    if not items and not vault_additions():
         return ""
     by: dict[str, list[str]] = {}
     for it in items[::-1]:
@@ -106,6 +163,9 @@ def context(max_chars: int = 3500) -> str:
             if n > max_chars:
                 break
             out.append(line)
+    extra = vault_additions()
+    if extra:
+        out.append("- Anh tự ghi trong Obsidian: " + "; ".join(extra)[:1500])
     return "\n".join(out)
 
 

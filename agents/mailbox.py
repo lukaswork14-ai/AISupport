@@ -281,7 +281,7 @@ def compose(brief: str, tone: str = "chuyên nghiệp", lang: str = "Việt") ->
     raise RuntimeError("AI chưa viết được, bạn thử diễn đạt ý chính rõ hơn.")
 
 
-def send(platform: str, to: str, subject: str, body: str, reply_uid: str = "", cc: str = "") -> str:
+def send(platform: str, to: str, subject: str, body: str, reply_uid: str = "", cc: str = "", html: str = "") -> str:
     to_list = [a for _, a in getaddresses([to]) if "@" in a]
     if not to_list:
         raise ValueError("Địa chỉ người nhận không hợp lệ")
@@ -306,6 +306,8 @@ def send(platform: str, to: str, subject: str, body: str, reply_uid: str = "", c
             msg["In-Reply-To"] = x["message_id"]
             msg["References"] = (x.get("references", "") + " " + x["message_id"]).strip()
     msg.set_content(body)
+    if html:
+        msg.add_alternative(html, subtype="html")
     with smtplib.SMTP_SSL(host, 465, context=ssl.create_default_context(), timeout=60) as s:
         s.login(user, pwd)
         s.send_message(msg)

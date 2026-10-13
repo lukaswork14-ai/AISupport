@@ -108,3 +108,25 @@ def search(query: str, limit: int = 8) -> list[dict]:
                          "snippet": re.sub(r"\s+", " ", text[max(0, i - 120): i + 280]).strip()})
     hits.sort(key=lambda h: -h["score"])
     return hits[:limit]
+
+
+def recent_by(author: str, limit: int = 12, days: int = 30) -> list[dict]:
+    """Ghi chú do một bên (vd "Obsidian Mac" = anh tự viết/sửa trên Mac) đổi gần đây, mới nhất trước."""
+    if not (OBSIDIAN_VAULT / ".git").exists():
+        return []
+    r = _git("-c", "core.quotepath=false", "log", f"--author={author}", f"--since={days}.days", "--name-only", "--format=@@%cd", "--date=format:%H:%M %d/%m",
+             check=False)
+    out, seen, when = [], set(), ""
+    for ln in r.stdout.splitlines():
+        if ln.startswith("@@"):
+            when = ln[2:]
+            continue
+        ln = ln.strip().strip('"')
+        if not ln.endswith(".md") or ln in seen or ln.startswith(".obsidian"):
+            continue
+        seen.add(ln)
+        if (OBSIDIAN_VAULT / ln).exists():
+            out.append({"path": ln, "title": ln.rsplit("/", 1)[-1][:-3], "folder": ln.rsplit("/", 1)[0] if "/" in ln else "", "when": when})
+        if len(out) >= limit:
+            break
+    return out

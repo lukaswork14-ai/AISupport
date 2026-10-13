@@ -28,3 +28,6 @@ if grep -q '^VAULT_GIT_REMOTE=.\+' $S/.env; then
 fi
 echo "vault_mac_commits: $(git -C "$V" log --format=%an 2>/dev/null | grep -c 'Obsidian Mac')"
 echo "vault_test_note: $([ -f "$V/00 Inbox/Kiem tra ket noi superHuy.md" ] && echo yes || echo no)"
+echo "share_route_unknown: $(curl -s -o /dev/null -w '%{http_code}' -m 5 http://127.0.0.1:8787/s/khongtontai123)"
+echo "kb_stats: $(cd /opt/superhuy/current && SUPERHUY_HOME=$S timeout 60 /opt/superhuy/venv/bin/python -c 'from core import kb; print(kb.stats())' 2>&1 | tail -1 | cut -c1-200)"
+echo "memory_note: $([ -f "$V/02 Areas/superHuy/superHuy hieu ve anh.md" ] && echo yes || echo no)"

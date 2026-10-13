@@ -5,6 +5,7 @@ import json
 import logging
 import os
 import re
+import threading
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
@@ -330,6 +331,14 @@ async def post_init(app: Application):
         meeting.resume_pending()
     except Exception:
         log.exception("Không khôi phục được hàng chờ Meeting Studio")
+
+    # Second Brain: ghi chú "superHuy hiểu về anh" trong Obsidian (hai chiều) + dựng sẵn chỉ mục tri thức
+    try:
+        from core import kb, memory
+        memory.export_to_vault()
+        threading.Thread(target=kb.refresh, kwargs={"force": True}, daemon=True).start()
+    except Exception:
+        log.exception("Không khởi tạo được Second Brain")
 
     # tên hiển thị của bot: superHuy (chỉ đổi khi khác, Telegram giới hạn số lần đổi)
     try:

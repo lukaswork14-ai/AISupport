@@ -212,6 +212,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(200, {"ok": True})
         if u.path == "/lark/callback":  # Lark chuyển về sau khi chủ nhân bấm Cho phép
             return self._lark_callback(q)
+        if u.path.startswith("/s/"):  # trang chia sẻ biên bản họp (công khai qua liên kết bí mật)
+            return self._share(u.path)
         tok = self._tok(q)
         if not check_session(tok):
             return self._json(401, {"error": "Phiên hết hạn, hãy mở lại app từ Telegram."})
@@ -362,6 +364,33 @@ class Handler(BaseHTTPRequestHandler):
                 notify.send(text=f"⚠️ Không thêm được bot vào group Lark: {e}")
         threading.Thread(target=work, daemon=True).start()
         return self._html("✅ Đã nhận quyền. Bot đang tự thêm vào các group Lark của bạn, kết quả sẽ gửi vào Telegram trong ít phút. Bạn có thể đóng trang này.")
+
+    def _share(self, path: str):
+        from agents import meeting, meeting_share
+        m = re.fullmatch(r"/s/([A-Za-z0-9_-]{8,40})(/audio)?", path)
+        rec = meeting_share.get(m.group(1)) if m else None
+        if not rec:
+            return self._page(meeting_share.dead_page(), 404)
+        if m.group(2):
+            if "audio" not in rec["parts"]:
+                return self._json(404, {"error": "not found"})
+            return self._file(meeting._dir(rec["mid"]) / "audio.mp3", cache=False)
+        meeting_share.hit(rec["token"])
+        return self._page(meeting_share.render(rec))
+
+    def _page(self, body: str, code: int = 200):
+        b = body.encode()
+        self.send_response(code)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header("Content-Length", str(len(b)))
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("X-Robots-Tag", "noindex, nofollow")
+        self.send_header("Referrer-Policy", "no-referrer")
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("Content-Security-Policy", "default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline' https://fonts.googleapis.com; "
+                         "font-src https://fonts.gstatic.com; img-src 'self' data:; media-src 'self'; frame-ancestors 'none'")
+        self.end_headers()
+        self.wfile.write(b)
 
     def _html(self, msg: str):
         body = (f"<!doctype html><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'>"

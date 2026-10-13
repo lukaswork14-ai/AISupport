@@ -530,6 +530,14 @@ html[data-scheme="dark"] .apps i{ background:color-mix(in srgb,var(--c) 22%,tran
 .dsug{ display:flex; flex-direction:column; gap:6px; margin-top:8px } .dsug button{ text-align:left; padding:10px 12px; border-radius:14px; background:var(--surface); box-shadow:0 0 0 1px var(--line); font-size:13.5px }
 .dform .send{ background:var(--aura); color:#fff }
 
+.shgrid{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:6px }
+.shgrid button{ display:flex; flex-direction:column; align-items:center; gap:6px; padding:12px 6px; border-radius:14px; background:var(--surface); box-shadow:0 0 0 1px var(--line); font-size:13px; font-weight:500; text-align:center }
+.shgrid i{ width:40px; height:40px; border-radius:12px; display:grid; place-items:center; color:var(--c); background:color-mix(in srgb,var(--c) 13%,transparent) }
+.shlink{ margin-top:12px } .shlink .url{ font-weight:600; word-break:break-all; font-size:14px }
+.brstat{ grid-template-columns:repeat(4,1fr) } .brstat>div{ display:flex; flex-direction:column; gap:2px; background:var(--surface); border-radius:14px; padding:10px 12px; box-shadow:0 0 0 1px var(--line) } .brstat b{ font-size:20px } .brstat span{ font-size:12px; color:var(--muted) }
+.dot{ width:10px; height:10px; border-radius:50%; background:var(--muted); flex:none } .dot.ok{ background:#199e70; box-shadow:0 0 0 4px color-mix(in srgb,#199e70 18%,transparent) }
+.savebtn{ align-self:flex-start; display:inline-flex; gap:6px; align-items:center; font-size:12.5px; font-weight:600; color:var(--jade); padding:4px 2px; margin:-4px 0 6px }
+.savebtn[disabled]{ color:var(--muted) }
 </style>
 </head>
 <body>
@@ -726,7 +734,7 @@ const APPS = [
   ['film','Nội dung','#C13F96',"go('news')", ()=>S.data.cq?.new?.length],
   ['sprout','Phát triển','#199e70',"go('growth')", ()=>{ const g=S.gr?.data; return g ? g.today_due-g.today_done : 0; }],
   ['wallet','Tài chính','#d95926',"go('money')"],
-  ['brain','Second Brain','#8B5CF6',"openAgent('brain')"],
+  ['brain','Second Brain','#8B5CF6',"openBrain()"],
   ['send','Đăng bài','#c98500',"openAgent('dang')"],
   ['chat','Trò chuyện','#A2338C',"go('chat')"],
   ['gear','Cài đặt','#7A7387',"go('more')"],
@@ -1205,7 +1213,7 @@ function vMeetDetail(){
   const lab = m.labels||{}, r = m.recap||{}, busy = ['queued','working'].includes(m.status), v = S.mt.view;
   const head = `<button class="back" onclick="meetBack()">${ico('chev',18)} Họp</button>
     <div class="row" style="gap:6px;align-items:center;margin:6px 0 2px;flex-wrap:wrap">${orgBadge(lab.org, lab.project)}${lab.department?`<span class="meta" style="margin:0">› ${esc(lab.department)}</span>`:''}${lab.type?`<span class="meta" style="margin:0">· ${esc(lab.type)}</span>`:''}
-      ${m.status==='done'?`<button class="addlink" onclick="meetLabels()">${ico('pen',14)} Phân loại</button>`:''}</div>
+      ${m.status==='done'?`<button class="addlink" onclick="meetLabels()">${ico('pen',14)} Phân loại</button><button class="addlink" onclick="meetShare()">${ico('upload',14)} Chia sẻ</button>`:''}</div>
     <h1 style="font-size:24px;margin:4px 0 4px">${esc(m.title || 'Cuộc họp')}</h1>
     <div class="meta">${(m.started||'').slice(11,16)} ${(m.started||'').slice(8,10)}/${(m.started||'').slice(5,7)} · ${fmtDur(m.duration)} · ${esc(m.source||'')}</div>
     <div class="player"><audio id="mau" src="${m.audio}" preload="metadata" controls></audio>
@@ -1220,6 +1228,7 @@ function vMeetDetail(){
     <form class="askbar" onsubmit="event.preventDefault();meetAsk($('#mdq').value,'${m.id}')"><span class="ic">${ico('spark',18)}</span><input id="mdq" placeholder="Ví dụ: ai phụ trách việc X, đã chốt ngân sách bao nhiêu?" autocomplete="off"><button class="btn pri sm">Hỏi</button></form><div id="mdans"></div>
     <div class="card list" style="margin-top:16px">
       ${m.obsidian_rel?`<div><span class="thumb">${ico('brain',20)}</span><div class="grow"><div style="font-weight:600">Đã lưu vào Obsidian</div><div class="meta">${esc(m.obsidian_rel)}</div></div></div>`:''}
+      <button onclick="meetShare()"><span class="thumb">${ico('upload',20)}</span><div class="grow"><div style="font-weight:600">Chia sẻ biên bản</div><div class="meta">Trang web có sơ đồ, gửi qua Telegram, Zalo, email, nhóm Lark</div></div></button>
       <button onclick="meetRedo('recap')"><span class="thumb">${ico('refresh',20)}</span><div class="grow"><div style="font-weight:600">Biên tập lại biên bản</div><div class="meta">Giữ lời thoại, AI viết lại tóm tắt, quyết định, sơ đồ</div></div></button>
       <button onclick="meetRedo('all')"><span class="thumb">${ico('mic',20)}</span><div class="grow"><div style="font-weight:600">Chép lời lại từ đầu</div><div class="meta">Dùng khi lời thoại sai nhiều (sau khi thêm từ điển)</div></div></button>
       <button onclick="meetDelete()"><span class="thumb" style="color:var(--danger)">${ico('del',20)}</span><div class="grow"><div style="font-weight:600;color:var(--danger)">Xoá cuộc họp</div><div class="meta">Chuyển vào thùng rác trên máy</div></div></button>
@@ -1329,6 +1338,148 @@ function meetDelete(){
 }
 async function meetDeleteGo(){ try{ await run('hop','xoa',{mid:S.mt.m.id},'',true); closeSheet(); meetBack(); toast('Đã xoá'); }catch(e){ toast(e.message); } }
 
+/* ---------- chia sẻ biên bản họp: trang web, chat, email, Lark */
+const SHARE_PARTS = [['summary','Tóm tắt'],['decisions','Quyết định'],['next_steps','Ai làm gì'],['mindmap','Sơ đồ'],['sections','Diễn biến'],['open_questions','Còn bỏ ngỏ'],['suggestions','Đề xuất của superHuy'],['transcript','Lời thoại'],['audio','Âm thanh']];
+async function meetShare(){
+  const m = S.mt.m; if(!m) return;
+  S.sh = {mid:m.id, parts:['summary','decisions','next_steps','mindmap','sections','open_questions'], days:14, note:'', last:null, links:[], groups:null};
+  shPaint(); shLoadLinks();
+}
+function shPaint(){
+  const h = S.sh, y = $('#sheet').classList.contains('on') ? $('#sheet').scrollTop : 0;
+  sheet(`<h2>Chia sẻ biên bản</h2><p class="lead">Chọn phần muốn gửi. superHuy tạo một trang web riêng (có dòng thời gian và sơ đồ) kèm tin nhắn soạn sẵn.</p>
+    <p class="lbl">Gồm những phần</p><div class="chips" style="padding-top:0;flex-wrap:wrap;margin-bottom:14px">${SHARE_PARTS.map(([k,l])=>`<button class="chip ${h.parts.includes(k)?'on':''}" aria-pressed="${h.parts.includes(k)}" onclick="shToggle('${k}')">${l}</button>`).join('')}</div>
+    ${h.parts.some(p=>['transcript','audio','suggestions'].includes(p))?`<p class="meta" style="margin:-6px 0 12px;color:var(--amber)">Lưu ý: lời thoại, âm thanh và đề xuất nội bộ sẽ hiện với người nhận.</p>`:''}
+    <p class="lbl">Liên kết hiệu lực</p><div class="chips" style="padding-top:0;margin-bottom:14px">${[[3,'3 ngày'],[14,'14 ngày'],[30,'30 ngày']].map(([d,l])=>`<button class="chip ${h.days===d?'on':''}" onclick="S.sh.days=${d};shPaint()">${l}</button>`).join('')}</div>
+    <label class="field"><span>Lời nhắn kèm (không bắt buộc)</span><textarea id="shNote" rows="2" placeholder="Ví dụ: Gửi team biên bản họp sáng nay, mọi người xem phần Ai làm gì nhé." oninput="S.sh.note=this.value">${esc(h.note)}</textarea></label>
+    <p class="lbl">Gửi qua</p>
+    <div class="shgrid">
+      <button onclick="shGo('web')"><i style="--c:#7B5CF0">${ico('link',20)}</i>Trang web</button>
+      <button onclick="shGo('tg')"><i style="--c:#2AABEE">${ico('send',20)}</i>Telegram</button>
+      <button onclick="shGo('native')"><i style="--c:#0068FF">${ico('upload',20)}</i>Zalo, Messenger…</button>
+      <button onclick="shGo('copy')"><i style="--c:#199e70">${ico('copy',20)}</i>Sao chép tin nhắn</button>
+      <button onclick="shEmail()"><i style="--c:#d95926">${ico('mail',20)}</i>Email</button>
+      <button onclick="shLark()"><i style="--c:#1F7AE0">${ico('lark',20)}</i>Nhóm Lark</button>
+    </div>
+    <div id="shOut">${h.last?shLastHtml():''}</div>
+    <div id="shLinks">${shLinksHtml()}</div>`);
+  $('#sheet').scrollTop = y;
+}
+function shToggle(k){ const p = S.sh.parts; S.sh.parts = p.includes(k) ? p.filter(x=>x!==k) : [...p, k]; S.sh.last = null; shPaint(); }
+async function shMake(){
+  const h = S.sh; if(!h.parts.length) throw new Error('Chọn ít nhất 1 phần');
+  if(h.last && h.last.key === h.parts.join()+h.days+h.note) return h.last;
+  const r = await run('hop','chia_se',{mid:h.mid, parts:h.parts.join(','), days:h.days, note:h.note},'',true);
+  h.last = {...r, key:h.parts.join()+h.days+h.note}; shLoadLinks(); return h.last;
+}
+function shLastHtml(){ const l = S.sh.last; return `<div class="card pad shlink"><div class="meta" style="margin:0 0 6px">Liên kết hết hạn ${esc(l.expires)}</div><div class="url">${esc(l.url)}</div>
+  <div class="row" style="margin-top:10px"><button class="btn sm" onclick="copyText(S.sh.last.url)">${ico('copy',16)} Chép link</button><button class="btn sm" onclick="openLink(S.sh.last.url)">${ico('arrow',16)} Xem trang</button></div></div>`; }
+async function shGo(how){
+  try{
+    const l = await shMake(), out = $('#shOut'); if(out) out.innerHTML = shLastHtml();
+    if(how==='tg'){ const u = `https://t.me/share/url?url=${encodeURIComponent(l.url)}&text=${encodeURIComponent(l.message.replace(/\n🔗[^\n]*$/,''))}`; tg?.openTelegramLink ? tg.openTelegramLink(u) : openLink(u); run('hop','da_gui',{token:l.token, how:'Telegram'},'',true).catch(()=>{}); }
+    else if(how==='native'){ if(navigator.share){ try{ await navigator.share({title:'Biên bản họp', text:l.message}); run('hop','da_gui',{token:l.token, how:'chia sẻ'},'',true).catch(()=>{}); }catch(e){} } else { copyText(l.message); toast('Đã chép tin nhắn, mở Zalo/Messenger và dán vào'); } }
+    else if(how==='copy'){ copyText(l.message); }
+    else toast('Đã tạo trang chia sẻ');
+  }catch(e){ toast(e.message); }
+}
+function shEmail(){
+  const out = $('#shOut');
+  out.innerHTML = `<div class="card pad" style="margin-top:12px"><label class="field"><span>Gửi tới (nhiều email cách nhau dấu phẩy)</span><input type="email" id="shTo" multiple placeholder="lan@sellnity.com, minh@sellnity.com" autocomplete="email"></label>
+    <label class="field"><span>CC</span><input type="email" id="shCc" multiple placeholder="không bắt buộc"></label>
+    <div class="chips" style="padding-top:0;margin-bottom:12px"><button class="chip on" id="shGm" onclick="this.classList.add('on');$('#shLk').classList.remove('on')">Gmail</button><button class="chip" id="shLk" onclick="this.classList.add('on');$('#shGm').classList.remove('on')">Lark Mail</button></div>
+    <button class="btn pri full" id="shSend" onclick="shEmailGo()">${ico('send',18)} Gửi email</button></div>`;
+  setTimeout(()=>$('#shTo')?.focus(), 100);
+}
+async function shEmailGo(){
+  const to = $('#shTo').value.trim(), h = S.sh; if(!to.includes('@')) return toast('Nhập email người nhận');
+  const b = $('#shSend'); b.disabled = true; b.textContent = 'Đang gửi…';
+  try{ const r = await run('hop','chia_se_email',{mid:h.mid, to, cc:$('#shCc').value.trim(), parts:h.parts.join(','), days:h.days, note:h.note, platform:$('#shLk').classList.contains('on')?'lark':'gmail'},'',true);
+    toast(r.text.split('.')[0]); notifyH('success'); $('#shOut').innerHTML = `<div class="card pad" style="margin-top:12px">✓ ${esc(r.text)}</div>`; shLoadLinks(); }
+  catch(e){ toast(e.message); b.disabled = false; b.textContent = 'Gửi email'; }
+}
+async function shLark(){
+  const out = $('#shOut'); out.innerHTML = `<div class="card pad" style="margin-top:12px"><div class="skel" style="width:60%"></div><div class="skel"></div></div>`;
+  try{ if(!S.sh.groups) S.sh.groups = (await run('hop','lark_nhom',{},'',true)).items||[];
+    const g = S.sh.groups;
+    out.innerHTML = g.length ? `<div class="card list" style="margin-top:12px">${g.map(c=>`<button onclick="shLarkGo('${esc(c.id)}','${esc(c.name).replace(/'/g,'&#39;')}')"><span class="thumb">${ico('lark',20)}</span><div class="grow"><div style="font-weight:600">${esc(c.name)}</div><div class="meta">Bấm để gửi biên bản vào nhóm này</div></div></button>`).join('')}</div>`
+      : `<div class="card pad" style="margin-top:12px">Bot superHuy chưa ở nhóm Lark nào. Thêm bot vào nhóm trên Lark rồi thử lại.</div>`;
+  }catch(e){ out.innerHTML = `<div class="card pad" style="margin-top:12px">${esc(e.message)}</div>`; }
+}
+function shLarkGo(id, name){
+  $('#shOut').innerHTML = `<div class="card pad" style="margin-top:12px"><p style="margin:0 0 10px">Gửi biên bản vào nhóm <b>${esc(name)}</b>?</p><div class="row"><button class="btn grow" onclick="shLark()">Chọn nhóm khác</button><button class="btn pri grow" id="shLg" onclick="shLarkSend('${esc(id)}')">${ico('send',16)} Gửi</button></div></div>`;
+}
+async function shLarkSend(id){
+  const h = S.sh, b = $('#shLg'); b.disabled = true;
+  try{ const r = await run('hop','chia_se_lark',{mid:h.mid, chat_id:id, parts:h.parts.join(','), days:h.days, note:h.note},'',true); toast(r.text); notifyH('success'); $('#shOut').innerHTML = `<div class="card pad" style="margin-top:12px">✓ ${esc(r.text)}</div>`; shLoadLinks(); }
+  catch(e){ toast(e.message); b.disabled = false; }
+}
+async function shLoadLinks(){ try{ S.sh.links = (await run('hop','chia_se_ds',{mid:S.sh.mid},'',true)).items||[]; const el = $('#shLinks'); if(el) el.innerHTML = shLinksHtml(); }catch(e){} }
+function shLinksHtml(){
+  const L = (S.sh?.links||[]); if(!L.length) return '';
+  const name = p => (SHARE_PARTS.find(x=>x[0]===p)||[p,p])[1];
+  return `<p class="lbl" style="margin-top:20px">Đã chia sẻ</p><div class="card list">${L.map(l=>`<div style="align-items:flex-start"><span class="thumb">${ico('link',18)}</span><div class="grow" style="min-width:0">
+    <div style="font-weight:600">${l.active?'Đang mở':'Đã '+(l.revoked?'thu hồi':'hết hạn')} · ${l.views} lượt xem</div>
+    <div class="meta">Tạo ${esc(l.created)}, hết hạn ${esc(l.expires)} · ${l.parts.map(name).join(', ')}</div>
+    ${(l.sent||[]).length?`<div class="meta">Đã gửi: ${esc(l.sent.slice(-3).join('; '))}</div>`:''}
+    ${l.active?`<div class="row" style="margin-top:8px;gap:8px"><button class="btn sm" onclick="copyText('${esc(l.url)}')">${ico('copy',15)} Chép</button><button class="btn sm" style="color:var(--danger)" onclick="shRevoke('${esc(l.token)}')">Thu hồi</button></div>`:''}</div></div>`).join('')}</div>`;
+}
+async function shRevoke(t){ try{ const r = await run('hop','thu_hoi',{token:t},'',true); toast(r.text.split(',')[0]); shLoadLinks(); }catch(e){ toast(e.message); } }
+
+/* ---------- Second Brain: kho tri thức Obsidian (superHuy tra cứu khi trả lời) */
+async function openBrain(){
+  S.br = S.br || {}; S.br.q = ''; S.br.hits = null;
+  sheet(`<h2>Second Brain</h2><div class="card pad"><div class="skel" style="width:60%"></div><div class="skel"></div></div>`);
+  try{ S.br.d = await run('brain','tongquan',{},'',true); }catch(e){ S.br.d = {err:e.message}; }
+  brPaint();
+}
+function brPaint(){
+  const d = S.br.d||{}, st = d.stats||{}, sy = d.sync||{}, y = $('#sheet').scrollTop;
+  const row = (n, sub, act) => `<button onclick="${act}"><span class="thumb">${ico('brain',18)}</span><div class="grow" style="min-width:0"><div style="font-weight:600" class="clamp2">${esc(n)}</div><div class="meta">${esc(sub)}</div></div></button>`;
+  sheet(`<h2>Second Brain</h2><p class="lead">Kho Obsidian là bộ não thứ hai của anh. Trước khi trả lời, đề xuất hay biên tập họp, superHuy tra các ghi chú liên quan và nêu tên ghi chú đã dùng.</p>
+    ${d.err?`<div class="card pad">${esc(d.err)}</div>`:`
+    <div class="hstat brstat"><div><b>${st.notes||0}</b><span>ghi chú</span></div><div><b>${st.own||0}</b><span>anh tự viết</span></div><div><b>${st.changed_7d||0}</b><span>đổi trong 7 ngày</span></div><div><b>${(d.memory||0)+(d.memory_extra||0)}</b><span>điều superHuy nhớ</span></div></div>
+    <div class="card pad" style="margin:12px 0"><div class="row" style="align-items:center;gap:10px"><span class="dot ${sy.enabled?'ok':''}"></span><div class="grow"><div style="font-weight:600">${sy.enabled?'Đồng bộ hai chiều với Obsidian trên Mac':'Chưa bật đồng bộ'}</div>
+      <div class="meta">${sy.last_commit?'Lần đồng bộ gần nhất '+esc(sy.last_commit)+' · ':''}tự động mỗi 10 phút</div></div><button class="btn sm" id="brSync" onclick="brSync()">${ico('refresh',15)} Đồng bộ</button></div></div>`}
+    <form class="askbar" onsubmit="event.preventDefault();brSearch($('#brQ').value)"><span class="ic">${ico('brain',18)}</span><input id="brQ" value="${esc(S.br.q||'')}" placeholder="Tìm trong Obsidian…" autocomplete="off"><button class="btn pri sm">Tìm</button></form>
+    <div id="brHits">${brHitsHtml()}</div>
+    ${(d.mac||[]).length?`<p class="lbl" style="margin-top:18px">Anh vừa viết trên Obsidian</p><div class="card list">${d.mac.map(n=>row(n.title, (n.folder||'Gốc')+' · '+n.when, `brOpen('${esc(n.path).replace(/'/g,'&#39;')}')`)).join('')}</div>`:''}
+    ${(d.recent||[]).length?`<p class="lbl" style="margin-top:18px">Ghi chú mới nhất</p><div class="card list">${d.recent.slice(0,8).map(n=>row(n.title, n.folder, `brOpen('${esc(n.folder+'/'+n.title+'.md').replace(/'/g,'&#39;')}')`)).join('')}</div>`:''}
+    <div class="card pad" style="margin-top:18px"><div style="font-weight:600;margin-bottom:4px">Dạy superHuy ngay trong Obsidian</div>
+      <p class="meta" style="margin:0">Mở ghi chú <b>${esc((d.memory_note||'').replace(/\.md$/,''))}</b>, viết vào mục <b>Anh bổ sung</b> (mỗi ý một dòng). superHuy đọc mục này mỗi lần trả lời. Mọi ghi chú khác anh viết cũng được tra cứu tự động.</p>
+      <p class="meta" style="margin:8px 0 0">Trong chat, nói “lưu lại vào second brain” để superHuy ghi kết luận vừa bàn thành ghi chú.</p></div>`);
+  $('#sheet').scrollTop = y;
+}
+function brHitsHtml(){
+  const h = S.br.hits; if(h===null || h===undefined) return '';
+  if(!h.length) return `<div class="card empty" style="margin-top:10px">Không thấy ghi chú nào khớp.</div>`;
+  return `<div class="card list" style="margin-top:10px">${h.map(x=>`<button onclick="brOpen('${esc(x.path).replace(/'/g,'&#39;')}')"><span class="thumb">${ico('brain',18)}</span><div class="grow" style="min-width:0"><div style="font-weight:600">${esc(x.title)}${x.head?` <span class="meta" style="margin:0">› ${esc(x.head)}</span>`:''}</div>
+    <div class="meta clamp2">${esc(x.snippet)}</div><div class="meta">${x.own?'Anh viết':'superHuy lưu'} · sửa ${esc(x.updated)}</div></div></button>`).join('')}</div>`;
+}
+async function brSearch(q){ q = (q||'').trim(); if(!q) return; S.br.q = q; $('#brHits').innerHTML = `<div class="card pad" style="margin-top:10px"><div class="skel"></div></div>`;
+  try{ S.br.hits = (await run('brain','tim',{query:q},'',true)).items||[]; }catch(e){ S.br.hits = []; toast(e.message); } $('#brHits').innerHTML = brHitsHtml(); }
+async function brSync(){ const b = $('#brSync'); b.disabled = true; try{ const r = await run('brain','dongbo',{},'',true); toast(r.text.split('.')[0]); S.br.d = await run('brain','tongquan',{},'',true); brPaint(); }catch(e){ toast(e.message); b.disabled = false; } }
+function mdLite(t){
+  return esc(t).replace(/```[\s\S]*?```/g,'').split('\n').map(l=>{
+    let m; if((m=l.match(/^(#{1,4})\s+(.*)/))) return `<h${Math.min(m[1].length+1,4)} style="margin:14px 0 6px">${m[2]}</h${Math.min(m[1].length+1,4)}>`;
+    if((m=l.match(/^\s*[-*+]\s+(\[[ x]\]\s*)?(.*)/))) return `<div style="display:flex;gap:8px;margin:3px 0"><span style="color:var(--muted)">${m[1]?(m[1].includes('x')?'☑':'☐'):'•'}</span><span>${m[2]}</span></div>`;
+    if(l.startsWith('&gt;')) return `<div style="border-left:3px solid var(--line);padding-left:10px;color:var(--muted)">${l.replace(/^&gt;\s?/,'')}</div>`;
+    return l.trim() ? `<p style="margin:6px 0">${l}</p>` : '';
+  }).join('').replace(/\[\[([^\]|]+)(\|[^\]]+)?\]\]/g,'<b style="color:var(--jade)">$1</b>').replace(/\*\*([^*]+)\*\*/g,'<b>$1</b>');
+}
+async function brOpen(path){
+  try{ const n = await run('brain','doc',{path},'',true);
+    sheet(`<button class="back" onclick="brPaint()">${ico('chev',18)} Second Brain</button><h2 style="margin-top:6px">${esc(n.title)}</h2><div class="meta">${esc(n.path)} · sửa ${esc(n.updated)}</div>
+      <div class="notebody" style="margin-top:12px;font-size:15px;line-height:1.6">${mdLite(n.body)}</div>`); }
+  catch(e){ toast(e.message); }
+}
+async function chatSave(i){
+  const m = S.data.chat||[], a = m[i]; if(!a) return;
+  const q = [...m.slice(0,i)].reverse().find(x=>x.role==='user')?.content||'';
+  try{ const r = await run('brain','ghi',{title:(q||a.content).slice(0,80), content:(q?`Câu hỏi: ${q}\n\n`:'')+a.content, kind:'kien-thuc'},'',true); a.saved = true; toast('Đã lưu vào Obsidian'); if(S.tab==='chat') render(); }
+  catch(e){ toast(e.message); }
+}
+
 /* ---------- bong bóng trợ lý: gọi superHuy ở mọi trang */
 function dock(){
   let d = $('#dock');
@@ -1368,7 +1519,7 @@ function vChat(){
   <div class="row" style="justify-content:space-between;align-items:flex-end"><div><div class="date">Siêu trợ lý điều phối mọi trợ lý</div><h1 style="margin-bottom:10px">superHuy</h1></div>
   ${m.length?`<button class="btn" onclick="resetChat()">Cuộc mới</button>`:''}</div>
   <div class="chat">
-    ${m.length ? m.map(x=>`<div class="msg ${x.role==='user'?'me':'bot'}">${esc(x.content)}</div>${(x.actions||[]).length?`<div class="acts">${x.actions.filter((a,i,arr)=>arr.findIndex(b=>b.label===a.label)===i).map(a=>`<span class="${a.ok?'':'err'}">${a.ok?'✓':'!'} ${esc(a.label.split(': ').pop())}</span>`).join('')}</div>`:''}`).join('') : `
+    ${m.length ? m.map((x,i)=>`<div class="msg ${x.role==='user'?'me':'bot'}">${esc(x.content)}</div>${x.role==='assistant'&&x.content.length>120&&!x.content.startsWith('⚠️')?`<button class="savebtn" onclick="chatSave(${i})" ${x.saved?'disabled':''}>${ico('brain',14)} ${x.saved?'Đã lưu vào Obsidian':'Lưu vào Second Brain'}</button>`:''}${(x.actions||[]).length?`<div class="acts">${x.actions.filter((a,i,arr)=>arr.findIndex(b=>b.label===a.label)===i).map(a=>`<span class="${a.ok?'':'err'}">${a.ok?'✓':'!'} ${esc(a.label.split(': ').pop())}</span>`).join('')}</div>`:''}`).join('') : `
       <div class="hello"><p>Nói như với một trợ lý riêng. superHuy tự làm: lên lịch trình ngày, tạo và giao việc, ghi thu chi, đánh dấu thói quen, ghi cân nặng, đọc email, Lark, lịch… và ghi nhớ để ngày càng hiểu anh.</p>
       <div class="sug">${sug.map(q=>`<button onclick="ask('${esc(q)}')">${esc(q)}</button>`).join('')}</div></div>`}
     ${S.chatWait?`<div class="msg bot typing" aria-label="Đang trả lời"><span></span><span></span><span></span></div>`:''}

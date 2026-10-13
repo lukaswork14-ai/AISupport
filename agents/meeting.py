@@ -285,6 +285,7 @@ def _transcribe_range(audio, work, a: float, b: float, k: int, n: int, speakers:
 RECAP = """Bạn là chánh văn phòng của anh Huy, biên tập biên bản cuộc họp sắc gọn, đúng sự thật.
 Anh Huy: CEO Sellnity (AI + POD xuyên biên giới) và CGO kiêm CAO của Leversphere. superHuy là trợ lý AI của anh.
 {memory}
+{kb}
 BẢNG PHÂN LOẠI ĐÃ DÙNG (ưu tiên dùng lại đúng tên để ghi chú liên kết nhau; chỉ tạo tên mới khi thật sự khác):
 - Tổ chức: sellnity (anh là CEO) | leversphere (anh là CGO kiêm CAO) | ca-nhan | khac
 - Dự án đã có: {projects}
@@ -343,7 +344,17 @@ def recap(m: dict) -> dict:
         md = dt.date.fromisoformat((m.get("started") or "")[:10])
     except ValueError:
         md = dt.date.today()
-    prompt = RECAP.format(memory=memory.context(1500), projects=proj, departments=dept, people=people, types=" | ".join(TYPES),
+    kbq = " ".join([m.get("hint") or "", m.get("title") or "", " ".join(x["text"] for x in (m.get("segments") or [])[:40])])[:2500]
+    kb_block = ""
+    try:
+        from core import kb
+        kb_block, _ = kb.context(kbq, k=4, max_chars=2200, min_score=3.0)
+        if kb_block:
+            kb_block += ("\n(Bối cảnh Second Brain chỉ dùng để phân loại đúng và viết mục suggestions sát thực tế; "
+                         "KHÔNG đưa vào tóm tắt/quyết định như thể đã nói trong họp. Có thể nêu [[ghi chú]] trong suggestions.)")
+    except Exception:
+        pass
+    prompt = RECAP.format(memory=memory.context(1500), kb=kb_block, projects=proj, departments=dept, people=people, types=" | ".join(TYPES),
                           hint=hint, transcript=transcript_text(m), mdate=md.isoformat(),
                           wd=["Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu", "Thứ Bảy", "Chủ nhật"][md.weekday()])
     res = ask_json(prompt, 9000, 3, ok=lambda x: isinstance(x, dict) and x.get("summary") and x.get("sections"), tag="meeting-recap")
@@ -457,6 +468,10 @@ def to_obsidian(m: dict) -> str:
         except Exception:
             pass
     path.write_text("\n".join(fm + body), encoding="utf-8")
+    try:
+        _decision_log(m, org, proj, date, path.stem, r.get("decisions") or [])
+    except Exception:
+        log.exception("Không ghi được nhật ký quyết định")
     daily = OBSIDIAN_VAULT / "05 Daily" / f"{date}.md"
     daily.parent.mkdir(parents=True, exist_ok=True)
     line = f"- 🎙 [[{path.stem}]] ({org['name']}{' › ' + proj if proj else ''})\n"
@@ -464,6 +479,29 @@ def to_obsidian(m: dict) -> str:
     if path.stem not in cur:
         daily.write_text(cur + line, encoding="utf-8")
     return str(path)
+
+
+def _decision_log(m: dict, org: dict, proj: str, date: str, note: str, decisions: list[dict]):
+    """Nhật ký quyết định theo tổ chức (tích luỹ qua mọi cuộc họp): superHuy và anh tra lại "đã từng chốt gì" trước khi ra quyết định mới.
+    Mỗi cuộc họp là 1 khối có mốc <!-- superhuy:id -->, làm lại biên bản thì thay đúng khối đó."""
+    p = OBSIDIAN_VAULT / f"02 Areas/{org['name']}" / "Nhat ky quyet dinh.md"
+    p.parent.mkdir(parents=True, exist_ok=True)
+    head = (f"---\ntitle: \"Nhật ký quyết định {org['name']}\"\ntype: decision-log\ngenerated_by: superhuy\ntags: [decision-log, org/{_tag(org['name'])}]\n---\n"
+            f"# Nhật ký quyết định · {org['name']}\nsuperHuy tự ghi mọi quyết định đã chốt trong các cuộc họp (mới nhất ở trên). "
+            "Anh có thể ghi thêm quyết định ngoài họp ngay trong file này.\n\n")
+    cur = p.read_text(encoding="utf-8") if p.exists() else head
+    a, b = f"<!-- superhuy:{m['id']} -->", f"<!-- /superhuy:{m['id']} -->"
+    blocks = re.findall(r"<!-- superhuy:(\w+) -->[\s\S]*?<!-- /superhuy:\1 -->", cur)
+    found = {k: re.search(r"<!-- superhuy:" + k + r" -->[\s\S]*?<!-- /superhuy:" + k + r" -->", cur).group(0) for k in blocks}
+    rest = re.sub(r"<!-- superhuy:(\w+) -->[\s\S]*?<!-- /superhuy:\1 -->\n?", "", cur).rstrip("\n")
+    found.pop(m["id"], None)
+    if decisions:
+        block = [a, f"### {date} · [[{note}]]" + (f" · {proj}" if proj else "")]
+        block += [f"- {d['text']}" + (f" ({d['owner']})" if d.get("owner") else "") for d in decisions]
+        found[m["id"]] = "\n".join(block + [b])
+    day = lambda x: (re.search(r"### (\d{4}-\d{2}-\d{2})", x) or [None, ""])[1]  # noqa: E731
+    cur = rest + "\n\n" + "\n".join(sorted(found.values(), key=day, reverse=True)) + "\n"
+    p.write_text(cur, encoding="utf-8")
 
 
 def _mmsafe(s: str) -> str:

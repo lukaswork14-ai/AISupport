@@ -144,3 +144,16 @@ def save_any(arg: str) -> tuple[str, str]:
     folder = "03 Resources/Bai viet hay"
     return _write(folder, title, {"url": url, "topic": d.get("topic", "Khác"),
                                   "tags": d.get("tags", []) + ["bai-viet-hay"]}, body), title
+
+
+# ----------------------------------------------------- kiến thức tích luỹ từ trò chuyện / quyết định
+KNOW_FOLDER = {"kien-thuc": "03 Resources/Kien thuc", "bai-hoc": "03 Resources/Bai hoc", "y-tuong": "00 Inbox",
+               "quyet-dinh": "02 Areas/Quyet dinh"}
+
+
+def save_knowledge(title: str, content: str, kind: str = "kien-thuc", tags: list[str] | None = None, source: str = "superHuy chat") -> str:
+    """superHuy ghi lại một kiến thức / kết luận / quyết định đáng giữ. Anh sửa trong Obsidian thì lần sau superHuy đọc bản đã sửa."""
+    kind = kind if kind in KNOW_FOLDER else "kien-thuc"
+    title = (title or "").strip()[:90] or content.strip().split("\n")[0][:80]
+    body = f"# {title}\n\n{content.strip()}\n\n---\nGhi bởi superHuy lúc {dt.datetime.now():%H:%M %d/%m/%Y} ({source}). Anh cứ sửa trực tiếp, superHuy sẽ đọc bản mới.\n"
+    return _write(KNOW_FOLDER[kind], title, {"source": source, "topic": kind, "tags": (tags or []) + [kind, "superhuy"]}, body)

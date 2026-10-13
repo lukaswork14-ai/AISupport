@@ -25,7 +25,7 @@ BẠN LÀ AGENT HÀNH ĐỘNG, không chỉ trò chuyện: khi yêu cầu cần 
 (ví dụ xem thói quen rồi đánh dấu; xem việc rồi gia hạn; lập lịch trình rồi đưa vào Google Calendar khi anh đồng ý).
 Phát triển bản thân: dùng các tool phattrien__ để đánh dấu thói quen ("sáng nay chạy rồi" → checkin), ghi chỉ số ("nay 86,4kg" → ghi_chiso),
 thêm thói quen/mục tiêu, nhờ huấn luyện viên AI đề xuất, và LẬP LỊCH TRÌNH NGÀY (phattrien__lichtrinh) khi anh hỏi nên làm gì hôm nay/ngày mai.
-Obsidian (second brain): khi anh hỏi về điều anh từng ghi chép/lưu (ý tưởng, tài liệu, ghi chú), gọi brain__tim để tìm trong kho Obsidian rồi trả lời kèm tên ghi chú.
+Obsidian là SECOND BRAIN của anh: superHuy tự đưa các ghi chú liên quan vào ngữ cảnh (khối SECOND BRAIN bên dưới, nếu có) để trả lời và đề xuất sát thực tế của anh, nêu tên ghi chú [[...]] khi dựa vào. Cần tìm sâu hơn thì gọi brain__tim; đọc trọn 1 ghi chú thì gọi brain__doc.\nKhi anh nói "lưu lại", "ghi vào second brain/Obsidian" một kết luận, kiến thức, quyết định hay câu trả lời vừa rồi, gọi brain__ghi (viết lại gọn, có ngữ cảnh) để kiến thức tích luỹ dần.
 Cuộc họp (Meeting Studio): khi anh hỏi bất cứ điều gì đã bàn trong họp (ai làm gì, đã chốt gì, số liệu, "hôm trước họp với X nói gì"), gọi hop__hoi rồi trả lời NGẮN, giữ nguồn (tên cuộc họp + mốc giờ).
 Đổi tên người nói / sửa phân loại cuộc họp dùng hop__doi_ten, hop__nhan. Biên bản và việc cần làm từ cuộc họp có thể chuyển thành việc bằng viec__tao.
 Khi anh chia sẻ điều bền vững về bản thân (sức khoẻ, mục tiêu, sở thích, gia đình, nếp sinh hoạt) hoặc nói "nhớ giúp", gọi phattrien__nho.
@@ -78,9 +78,28 @@ def chat_ex(history: list[dict]) -> dict:
     return {"text": text, "actions": actions}
 
 
+def _kb_query(history: list[dict]) -> str:
+    users = [m.get("content") or "" for m in history if m.get("role") == "user"]
+    if not users:
+        return ""
+    q = users[-1]
+    if len(q) < 40 and len(users) > 1:  # câu nối tiếp ngắn ("còn dự án kia thì sao?") -> ghép câu trước cho đủ ngữ cảnh
+        q = users[-2][-300:] + " " + q
+    return q
+
+
 def _loop(history: list[dict], actions: list[dict]) -> str:
     system = SYSTEM.format(profile=profile.text(), today=dt.datetime.now(TZ).strftime("%A %d/%m/%Y %H:%M"), tz=TIMEZONE,
                            memory=memory.context())
+    q = _kb_query(history)
+    if len(q.strip()) >= 8:
+        from core import kb
+        block, used = kb.context(q)
+        if block:
+            system += "\n\n" + block
+            names = list(dict.fromkeys(h["note"] for h in used))
+            actions.append({"tool": "brain__thamchieu", "label": f"Second Brain: tham chiếu {len(names)} ghi chú", "ok": True,
+                            "result": ", ".join(names)[:160], "refs": [{"note": h["note"], "path": h["path"]} for h in used]})
     messages = [{"role": "system", "content": system}] + list(history)
     for _ in range(8):  # giới hạn vòng lặp gọi tool để tránh chạy vô hạn tốn tiền
         resp = client.chat.completions.create(

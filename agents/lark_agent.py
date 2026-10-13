@@ -69,6 +69,18 @@ def chats() -> list[dict]:
         page = d.get("page_token")
 
 
+def send_text(chat_id: str, text: str) -> str:
+    """Bot gửi tin nhắn văn bản vào 1 nhóm Lark (bot phải đang ở trong nhóm). Trả về tên nhóm."""
+    r = requests.post(f"{_base()}/open-apis/im/v1/messages", params={"receive_id_type": "chat_id"}, timeout=30,
+                      headers={"Authorization": f"Bearer {_token()}"},
+                      json={"receive_id": chat_id, "msg_type": "text", "content": json.dumps({"text": text}, ensure_ascii=False)})
+    d = r.json()
+    if d.get("code") != 0:
+        raise RuntimeError(f"Lark chưa gửi được tin ({d.get('msg')}). Kiểm tra bot đã ở trong nhóm và app có quyền gửi tin (im:message:send_as_bot).")
+    name = next((c["name"] for c in chats() if c["id"] == chat_id), chat_id)
+    return name
+
+
 def _text(msg: dict) -> str:
     try:
         body = json.loads(msg.get("body", {}).get("content", "{}"))

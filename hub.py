@@ -7,7 +7,7 @@ import os
 import re
 
 import targets as targets_mod
-from agents import (calendar_agent, content_agent, content_hub, meeting, email_agent, fb_connect, gcal_bridge, imagecard, lark_agent, mailbox, news_agent, publisher,
+from agents import (calendar_agent, content_agent, content_hub, meeting, meeting_share, email_agent, fb_connect, gcal_bridge, imagecard, lark_agent, mailbox, news_agent, publisher,
                     reel_video, second_brain)
 from config import CARD_HANDLE, DATA_DIR
 from core import digests, notify, store
@@ -552,6 +552,25 @@ def hop_tu_dien(words: str) -> dict:
     return {"text": "Đã thêm vào từ điển chép lời: " + words}
 
 
+def hop_chia_se(mid: str, parts: str = "", days: int = 14, note: str = "") -> dict:
+    return meeting_share.share_text(mid, parts or None, days, note)
+
+
+def hop_chia_se_email(mid: str, to: str, parts: str = "", note: str = "", cc: str = "", platform: str = "gmail", days: int = 14) -> dict:
+    return meeting_share.send_email(mid, to, parts or None, days, note, platform, cc)
+
+
+def hop_chia_se_lark(mid: str, chat_id: str, parts: str = "", note: str = "", days: int = 14) -> dict:
+    return meeting_share.send_lark(mid, chat_id, parts or None, days, note)
+
+
+def hop_lark_nhom() -> dict:
+    if not lark_agent.ready():
+        return {"items": [], "text": "Chưa kết nối Lark."}
+    items = lark_agent.chats()
+    return {"items": items, "text": "\n".join(f"• {c['name']} ({c['id']})" for c in items) or "Bot chưa ở nhóm Lark nào."}
+
+
 register(Agent("hop", "Họp", "🎙", "Meeting Studio: ghi âm, chép lời, biên bản họp, sơ đồ, hỏi lại nội dung các cuộc họp", order=33, actions=[
     Action("danhsach", "Các cuộc họp", hop_danhsach, icon="🗂", llm=True, desc="Danh sách cuộc họp đã ghi (id, tiêu đề, ngày, tổ chức, dự án, trạng thái)."),
     Action("xem", "Xem biên bản", hop_xem, hidden=True, llm=True, desc="Xem biên bản 1 cuộc họp theo id: tóm tắt, quyết định, việc tiếp theo.",
@@ -575,6 +594,26 @@ register(Agent("hop", "Họp", "🎙", "Meeting Studio: ghi âm, chép lời, bi
     Action("tu_dien", "Thêm từ vào từ điển chép lời", hop_tu_dien, icon="📖", llm=True,
            desc="Thêm tên riêng/thuật ngữ (cách nhau dấu phẩy) để chép lời đúng chính tả.",
            params=[Param("words", "Các từ", "textarea", required=True)]),
+    Action("chia_se", "Tạo liên kết chia sẻ biên bản", hop_chia_se, hidden=True, llm=True,
+           desc="Tạo trang web chia sẻ biên bản 1 cuộc họp (tóm tắt, quyết định, ai làm gì, sơ đồ, dòng thời gian) + tin nhắn soạn sẵn "
+                "để anh dán vào Zalo/Telegram/Lark/Messenger. parts: các phần, cách nhau dấu phẩy, trong "
+                "summary,decisions,next_steps,mindmap,sections,open_questions,suggestions,transcript,audio (bỏ trống = mặc định, không gồm lời thoại/âm thanh).",
+           params=[Param("mid", "ID cuộc họp", required=True), Param("parts", "Các phần", default=""),
+                   Param("days", "Số ngày hiệu lực", "number", default=14), Param("note", "Lời nhắn kèm", default="")]),
+    Action("chia_se_email", "Gửi biên bản qua email", hop_chia_se_email, hidden=True, llm=True,
+           desc="Gửi biên bản cuộc họp qua email (HTML đẹp + liên kết trang chia sẻ). PHẢI hỏi anh xác nhận người nhận trước khi gửi.",
+           params=[Param("mid", "ID cuộc họp", required=True), Param("to", "Email người nhận (nhiều người cách nhau dấu phẩy)", required=True),
+                   Param("parts", "Các phần", default=""), Param("note", "Lời nhắn kèm", default=""), Param("cc", "CC", default=""),
+                   Param("platform", "gmail hoặc lark", default="gmail"), Param("days", "Số ngày hiệu lực", "number", default=14)]),
+    Action("chia_se_lark", "Gửi biên bản vào nhóm Lark", hop_chia_se_lark, hidden=True, llm=True,
+           desc="Bot gửi biên bản + liên kết vào 1 nhóm Lark (lấy chat_id bằng hop__lark_nhom). PHẢI hỏi anh xác nhận nhóm trước khi gửi.",
+           params=[Param("mid", "ID cuộc họp", required=True), Param("chat_id", "ID nhóm Lark", required=True),
+                   Param("parts", "Các phần", default=""), Param("note", "Lời nhắn kèm", default=""), Param("days", "Số ngày hiệu lực", "number", default=14)]),
+    Action("lark_nhom", "Các nhóm Lark có bot", hop_lark_nhom, hidden=True, llm=True, desc="Danh sách nhóm Lark (id, tên) mà bot superHuy đang ở trong."),
+    Action("chia_se_ds", "Các liên kết đã chia sẻ", meeting_share.list_for, hidden=True, params=[Param("mid", "ID", required=True)]),
+    Action("thu_hoi", "Thu hồi liên kết chia sẻ", meeting_share.revoke, hidden=True, llm=True,
+           desc="Thu hồi 1 liên kết chia sẻ biên bản (người khác không mở được nữa).", params=[Param("token", "Mã liên kết", required=True)]),
+    Action("da_gui", "Đánh dấu đã gửi", meeting_share.mark, hidden=True, params=[Param("token", "Mã"), Param("how", "Kênh")]),
 ]))
 
 
@@ -650,11 +689,36 @@ def brain_gan_day(limit: int = 15) -> dict:
 
 
 def brain_tim(query: str) -> dict:
-    from core import vault_sync
-    hits = vault_sync.search(query)
+    from core import kb
+    hits = kb.search(query, k=8)
     if not hits:
         return {"text": f"Không thấy ghi chú nào khớp “{query}” trong Obsidian.", "items": []}
-    return {"items": hits, "text": "\n".join(f"• {h['title']} ({h['path']}): {h['snippet'][:220]}" for h in hits)}
+    items = [{"title": h["title"], "note": h["note"], "path": h["path"], "head": h["head"], "own": h["own"], "updated": h["updated"],
+              "snippet": re.sub(r"\s+", " ", h["text"])[:280]} for h in hits]
+    return {"items": items, "text": "\n".join(f"• [[{h['note']}]]{' › ' + h['head'] if h['head'] else ''} ({h['path']}): {h['snippet'][:220]}" for h in items)}
+
+
+def brain_doc(path: str) -> dict:
+    from core import kb
+    n = kb.read_note(path)
+    return {**n, "text": f"[[{n['title']}]] (sửa {n['updated']})\n{n['body'][:6000]}"}
+
+
+def brain_ghi(title: str, content: str, kind: str = "kien-thuc", tags: str = "") -> dict:
+    path = second_brain.save_knowledge(title, content, kind, [t.strip() for t in re.split(r"[,;]", tags or "") if t.strip()])
+    rel = path.replace(str(second_brain.OBSIDIAN_VAULT), "").lstrip("/")
+    return {"text": f"Đã ghi vào Second Brain: {rel}", "path": rel}
+
+
+def brain_tongquan() -> dict:
+    """Màn hình Second Brain: quy mô kho, đồng bộ, ghi chú anh vừa viết trên Mac, ghi chú superHuy vừa lưu."""
+    from core import kb, memory, vault_sync
+    st = vault_sync.status()
+    st.pop("public_key", None)
+    st.pop("remote", None)
+    out = {"stats": kb.stats(), "sync": st, "mac": vault_sync.recent_by("Obsidian Mac", 12), "recent": brain_gan_day(12)["items"],
+           "memory": len(memory.facts()), "memory_extra": len(memory.vault_additions()), "memory_note": memory.VAULT_NOTE}
+    return out
 
 
 def brain_dongbo() -> dict:
@@ -667,16 +731,25 @@ def brain_dongbo() -> dict:
     return {**st, "text": f"Đồng bộ Obsidian: {r}. Kho có {st['notes']} ghi chú, lần ghi gần nhất {st.get('last_commit', '?')}."}
 
 
-register(Agent("brain", "Second Brain", "🧠", "Lưu link/ý tưởng vào Obsidian theo PARA", order=60, actions=[
+register(Agent("brain", "Second Brain", "🧠", "Kho tri thức Obsidian: superHuy tra cứu khi trả lời, lưu kiến thức tích luỹ", order=60, actions=[
+    Action("tongquan", "Tổng quan Second Brain", brain_tongquan, hidden=True),
     Action("luu", "Lưu link hoặc ghi chú", brain_luu, icon="📥", long=True, llm=True,
            desc="Lưu một link bài viết hoặc đoạn văn vào Obsidian (tự tóm tắt, gắn thẻ).",
            params=[Param("text", "Link hoặc nội dung", "textarea", required=True)]),
+    Action("ghi", "Ghi kiến thức / kết luận", brain_ghi, icon="✍️", llm=True,
+           desc="Ghi một kiến thức, kết luận, quyết định hoặc câu trả lời đáng giữ vào Second Brain (Obsidian) để tích luỹ, "
+                "superHuy sẽ tham chiếu lại sau. content viết gọn, đủ ngữ cảnh (vì sao, khi nào áp dụng).",
+           params=[Param("title", "Tiêu đề", required=True), Param("content", "Nội dung", "textarea", required=True),
+                   Param("kind", "Loại: kien-thuc | quyet-dinh | bai-hoc | y-tuong", default="kien-thuc"),
+                   Param("tags", "Thẻ, cách nhau dấu phẩy", default="")]),
     Action("gan_day", "Ghi chú gần đây", brain_gan_day, icon="🗒", llm=True,
            desc="Liệt kê các ghi chú mới lưu gần đây trong Obsidian.", params=[Param("limit", "Số lượng", "number", default=15)]),
     Action("tim", "Tìm trong Obsidian", brain_tim, icon="🔎", llm=True,
-           desc="Tìm trong kho ghi chú Obsidian của anh (gồm ghi chú anh tự viết trên Mac, đồng bộ về mỗi 10 phút). "
-                "Dùng khi anh hỏi về điều anh đã ghi chép, ý tưởng, tài liệu đã lưu.",
+           desc="Tìm sâu trong kho ghi chú Obsidian của anh (gồm ghi chú anh tự viết trên Mac), không phân biệt dấu. "
+                "Dùng khi anh hỏi về điều anh đã ghi chép, ý tưởng, tài liệu, quyết định trước đây.",
            params=[Param("query", "Từ khoá", required=True)]),
+    Action("doc", "Đọc một ghi chú", brain_doc, hidden=True, llm=True,
+           desc="Đọc toàn văn 1 ghi chú Obsidian theo path (lấy từ brain__tim).", params=[Param("path", "Đường dẫn", required=True)]),
     Action("dongbo", "Đồng bộ Obsidian ngay", brain_dongbo, icon="🔄", llm=True,
            desc="Đồng bộ ngay kho ghi chú giữa superHuy và Obsidian trên Mac (qua repo git), và báo tình trạng."),
 ]))

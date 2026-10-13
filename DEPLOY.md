@@ -59,3 +59,12 @@ Dữ liệu và khoá **không bao giờ** nằm trong repo. Chúng ở `/opt/su
   - đổi tên thư mục `~/SecondBrain` cũ để giữ làm bản lưu;
   - `git clone <repo vault> ~/SecondBrain`, mở bằng Obsidian;
   - cài plugin cộng đồng **Obsidian Git** và bật tự động pull/push, ví dụ 10 phút một lần.
+
+## Second Brain và chia sẻ biên bản họp
+
+- **Second Brain:** mỗi khi trả lời (Telegram hoặc app), superHuy tra các ghi chú Obsidian liên quan và đưa vào ngữ cảnh. Tìm kiếm không phân biệt dấu, ưu tiên ghi chú anh tự viết.
+- **Ghi chú `02 Areas/superHuy/superHuy hieu ve anh.md`:** superHuy tự cập nhật. Những dòng anh viết dưới mục **Anh bổ sung** được superHuy đọc ngược lại mỗi lần trả lời.
+- **`02 Areas/<Tổ chức>/Nhat ky quyet dinh.md`:** nhật ký quyết định, tích luỹ qua mọi cuộc họp.
+- **Chia sẻ biên bản họp:** trang công khai `https://<tên miền>/s/<mã>` là bản chụp lúc tạo.
+  - Có hạn dùng và thu hồi được. Dữ liệu lưu ở `shared/data/meetings/shares.json`.
+  - Nginx/Caddy chỉ cần chuyển mọi đường dẫn về cổng 8787, như hiện tại.
