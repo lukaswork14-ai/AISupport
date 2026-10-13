@@ -1,0 +1,32 @@
+# Kiểm thử giao diện đầu-cuối với dữ liệu mẫu (không dùng khoá thật). Kết quả + ảnh chụp ghi vào nhánh "qa".
+name: Kiểm thử giao diện
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  ui:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Cài thư viện + Chromium
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq fonts-noto-core >/dev/null
+          pip install -q -r requirements.txt playwright
+          python -m playwright install --with-deps chromium >/dev/null
+      - name: Chạy kiểm thử
+        run: python deploy/ui_qa.py
+      - name: Ghi vào nhánh qa
+        if: always()
+        run: |
+          [ -d qa_out ] || exit 0
+          cp -r qa_out /tmp/qa_out
+          git config user.name "superHuy CI"; git config user.email "ci@superhuy.local"
+          git checkout --orphan qa-tmp && git rm -rq --cached . && find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} + && cp -r /tmp/qa_out/* .
+          git add -A && git commit -qm "UI QA $(date -Is)" && git push -qf origin HEAD:qa
