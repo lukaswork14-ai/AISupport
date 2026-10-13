@@ -54,7 +54,57 @@ def sync() -> str:
     if changed:
         _git("commit", "-m", f"superHuy {dt.datetime.now():%Y-%m-%d %H:%M}")
     has_remote_main = _git("ls-remote", "--heads", "origin", "main", check=False).stdout.strip() != ""
+    pulled = False
     if has_remote_main:
-        _git("pull", "--rebase", "--autostash", "origin", "main")
+        _git("fetch", "origin", "main")
+        before = _git("rev-parse", "HEAD", check=False).stdout.strip()
+        r = _git("pull", "--rebase", "--autostash", "--allow-unrelated-histories", "origin", "main", check=False)
+        if r.returncode != 0:
+            # xung đột (cùng một ghi chú sửa ở cả Mac và VPS): huỷ rebase, gộp và giữ cả hai phía, bản của Mac thắng ở dòng trùng
+            _git("rebase", "--abort", check=False)
+            _git("pull", "--no-rebase", "--no-edit", "--allow-unrelated-histories", "-X", "theirs", "origin", "main")
+            log.warning("Vault: có xung đột, đã gộp (ưu tiên bản trên repo/Mac)")
+        pulled = before != _git("rev-parse", "HEAD", check=False).stdout.strip()
     _git("push", "-u", "origin", "main")
-    return "đã đẩy thay đổi" if changed else "không có gì mới"
+    parts = (["đẩy ghi chú mới"] if changed else []) + (["nhận ghi chú từ Obsidian"] if pulled else [])
+    return ", ".join(parts) or "không có gì mới"
+
+
+def status() -> dict:
+    """Tình trạng đồng bộ để hiển thị trong app / trả lời trong chat."""
+    info = {"enabled": enabled(), "vault": str(OBSIDIAN_VAULT), "remote": os.getenv("VAULT_GIT_REMOTE", "")}
+    try:
+        info["notes"] = sum(1 for _ in OBSIDIAN_VAULT.rglob("*.md"))
+    except Exception:
+        info["notes"] = 0
+    if (OBSIDIAN_VAULT / ".git").exists():
+        r = _git("log", "-1", "--format=%cd", "--date=format:%H:%M %d/%m", check=False)
+        info["last_commit"] = r.stdout.strip()
+    key = os.getenv("VAULT_SSH_KEY", "").strip()
+    if key and os.path.exists(key + ".pub"):
+        info["public_key"] = open(key + ".pub").read().strip()
+    return info
+
+
+def search(query: str, limit: int = 8) -> list[dict]:
+    """Tìm trong kho Obsidian (cả ghi chú anh viết trên Mac): khớp từ khoá theo tiêu đề và nội dung."""
+    import re
+    words = [w for w in re.findall(r"\w+", (query or "").lower()) if len(w) > 1]
+    if not words or not OBSIDIAN_VAULT.exists():
+        return []
+    hits = []
+    for p in OBSIDIAN_VAULT.rglob("*.md"):
+        if ".git" in p.parts or ".obsidian" in p.parts:
+            continue
+        try:
+            text = p.read_text(encoding="utf-8", errors="ignore")
+        except Exception:
+            continue
+        low, title = text.lower(), p.stem.lower()
+        score = sum(low.count(w) + 5 * title.count(w) for w in words)
+        if score and all(w in low or w in title for w in words[:3]):
+            i = min((low.find(w) for w in words if w in low), default=0)
+            hits.append({"score": score, "title": p.stem, "path": str(p.relative_to(OBSIDIAN_VAULT)),
+                         "snippet": re.sub(r"\s+", " ", text[max(0, i - 120): i + 280]).strip()})
+    hits.sort(key=lambda h: -h["score"])
+    return hits[:limit]

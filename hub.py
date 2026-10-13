@@ -649,13 +649,38 @@ def brain_gan_day(limit: int = 15) -> dict:
     return {"items": items, "text": "\n".join(f"• {i['title']} ({i['folder']})" for i in items) or "Chưa có ghi chú."}
 
 
+def brain_tim(query: str) -> dict:
+    from core import vault_sync
+    hits = vault_sync.search(query)
+    if not hits:
+        return {"text": f"Không thấy ghi chú nào khớp “{query}” trong Obsidian.", "items": []}
+    return {"items": hits, "text": "\n".join(f"• {h['title']} ({h['path']}): {h['snippet'][:220]}" for h in hits)}
+
+
+def brain_dongbo() -> dict:
+    from core import vault_sync
+    st = vault_sync.status()
+    if not st["enabled"]:
+        return {**st, "text": "Chưa bật đồng bộ Obsidian (thiếu VAULT_GIT_REMOTE trên máy chủ)."}
+    r = vault_sync.sync()
+    st = vault_sync.status()
+    return {**st, "text": f"Đồng bộ Obsidian: {r}. Kho có {st['notes']} ghi chú, lần ghi gần nhất {st.get('last_commit', '?')}."}
+
+
 register(Agent("brain", "Second Brain", "🧠", "Lưu link/ý tưởng vào Obsidian theo PARA", order=60, actions=[
     Action("luu", "Lưu link hoặc ghi chú", brain_luu, icon="📥", long=True, llm=True,
            desc="Lưu một link bài viết hoặc đoạn văn vào Obsidian (tự tóm tắt, gắn thẻ).",
            params=[Param("text", "Link hoặc nội dung", "textarea", required=True)]),
     Action("gan_day", "Ghi chú gần đây", brain_gan_day, icon="🗒", llm=True,
            desc="Liệt kê các ghi chú mới lưu gần đây trong Obsidian.", params=[Param("limit", "Số lượng", "number", default=15)]),
+    Action("tim", "Tìm trong Obsidian", brain_tim, icon="🔎", llm=True,
+           desc="Tìm trong kho ghi chú Obsidian của anh (gồm ghi chú anh tự viết trên Mac, đồng bộ về mỗi 10 phút). "
+                "Dùng khi anh hỏi về điều anh đã ghi chép, ý tưởng, tài liệu đã lưu.",
+           params=[Param("query", "Từ khoá", required=True)]),
+    Action("dongbo", "Đồng bộ Obsidian ngay", brain_dongbo, icon="🔄", llm=True,
+           desc="Đồng bộ ngay kho ghi chú giữa superHuy và Obsidian trên Mac (qua repo git), và báo tình trạng."),
 ]))
+
 
 
 # ================================================================ Cài đặt

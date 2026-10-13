@@ -35,6 +35,15 @@ if [ ! -f $ROOT/shared/.env ] || ! grep -q "^TELEGRAM_TOKEN=" $ROOT/shared/.env;
   exit 0
 fi
 
+# cấu hình mặc định không bí mật (vd repo Obsidian): chỉ thêm khoá còn thiếu
+if [ -f "$REL/deploy/vps_defaults.env" ]; then
+  while IFS= read -r line || [ -n "$line" ]; do
+    case "$line" in ''|\#*) continue;; esac
+    k="${line%%=*}"
+    grep -q "^$k=" $ROOT/shared/.env || { echo "$line" >> $ROOT/shared/.env; echo "  + $k"; }
+  done < "$REL/deploy/vps_defaults.env"
+fi
+
 sudo systemctl restart superhuy
 ok=0
 for i in $(seq 1 30); do
