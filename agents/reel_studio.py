@@ -165,7 +165,7 @@ def render(cid: str, settings: dict | None = None, script: dict | None = None, r
                     notify.send(text=f"🎬 Đã dựng xong bản mới ({round(out['duration'])} giây): {rec['title'].replace('Reels: ', '')}. Mở app › Nội dung › Đã tạo để xem.")
             except Exception as e:
                 log.exception("Dựng video lỗi")
-                _set_render(cid, status="error", step="Lỗi", pct=0, error=str(e)[:300])
+                _set_render(cid, status="error", step="Lỗi", pct=0, error=str(e)[:700])
 
     threading.Thread(target=work, daemon=True, name=f"render-{cid}").start()
     return {**state(cid), "text": "Đang dựng bản mới"}

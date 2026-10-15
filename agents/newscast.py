@@ -178,7 +178,14 @@ def _has_libass(exe: str) -> bool:
 def run(args, timeout=900):
     r = subprocess.run(args, capture_output=True, text=True, timeout=timeout)
     if r.returncode != 0:
-        raise RuntimeError("ffmpeg: " + r.stderr[-900:])
+        lines = [x for x in (r.stderr or "").splitlines() if x.strip()]
+        bad = [x for x in lines if re.search(r"(error|invalid|failed|no such|cannot|unable|not found|no space|killed|denied|unknown|mismatch|too many)", x, re.I)
+               and "libx264" not in x]
+        why = " | ".join(dict.fromkeys(bad))[-700:] or " | ".join(lines[-4:])[-500:]
+        if r.returncode < 0 or r.returncode == 137:
+            why = f"bị hệ thống dừng (mã {r.returncode}, có thể thiếu RAM) | " + why
+        log.error("ffmpeg lỗi (mã %s): %s\n%s", r.returncode, why, (r.stderr or "")[-3000:])
+        raise RuntimeError(f"ffmpeg (mã {r.returncode}): {why}")
 
 
 def wav_dur(p: str) -> float:

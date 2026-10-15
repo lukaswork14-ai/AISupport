@@ -54,6 +54,12 @@ except Exception as e:
     print("ERR", type(e).__name__, str(e)[:200])
 ' 2>&1 | tail -2 | tr '\n' ' ' | cut -c1-400)"
 echo "render_meta: $(cd /opt/superhuy/current && SUPERHUY_HOME=$S timeout 60 /opt/superhuy/venv/bin/python -c 'from core import store; print([(r["id"], (r.get("meta") or {}).get("render"), [(v.get("id"), v.get("voice_engine") or v.get("engine"), v.get("note","")[:30]) for v in ((r.get("meta") or {}).get("versions") or [])][-3:]) for r in store.recent(3, "video")])' 2>&1 | tail -1 | cut -c1-1500)"
+echo "disk: $(df -h /opt /tmp 2>/dev/null | tail -2 | tr -s ' ' | tr '\n' '|')  mem: $(free -m | awk 'NR==2{print $2"MB tổng, "$7"MB trống"}')  swap: $(free -m | awk 'NR==3{print $2"MB"}')"
+echo "videos_dir: $(du -sh $S/data/videos 2>/dev/null | cut -f1) / $(ls $S/data/videos 2>/dev/null | wc -l) files"
+echo "oom: $(journalctl -k --since -12h 2>/dev/null | grep -i -E 'oom|killed process' | tail -3 | cut -c1-200 | tr '\n' '|')"
+echo "--- render test ---"
+(cd /opt/superhuy/current && SUPERHUY_HOME=$S timeout 420 /opt/superhuy/venv/bin/python deploy/render_test.py 2>&1 | tail -40 | cut -c1-400)
+echo "--- end render test ---"
 echo "--- journal render errors ---"
 journalctl -u superhuy --since -6h 2>/dev/null | grep -i -E -A12 'reel_studio|newscast|Traceback|Error' | grep -v -i -E 'token|key=|secret' | tail -80 | cut -c1-260
 echo "--- end journal ---"
