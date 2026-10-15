@@ -189,7 +189,7 @@ def wav_dur(p: str) -> float:
 # ------------------------------------------------------------------ ảnh nền / B-roll
 def _download_img(url: str, path: Path, min_w=500) -> str | None:
     try:
-        r = requests.get(url, headers=UA, timeout=20)
+        r = requests.get(url, headers=WIKI_UA if "wikimedia.org" in url or "wikipedia.org" in url else UA, timeout=20)
         r.raise_for_status()
         path.write_bytes(r.content)
         im = Image.open(path)
@@ -220,19 +220,24 @@ def og_image(url: str, work: Path) -> str | None:
     return None
 
 
+WIKI_UA = {"User-Agent": "superHuy/1.0 (https://app.roimaxxhub.com; personal assistant) python-requests"}
+
+
 def wiki_image(entity: str, work: Path) -> str | None:
     """Ảnh đại diện trang Wikipedia của công ty/nhân vật (miễn phí, không cần khoá)."""
     if not entity:
         return None
     try:
-        r = requests.get("https://en.wikipedia.org/w/api.php", headers=UA, timeout=15, params={
-            "action": "query", "format": "json", "prop": "pageimages", "piprop": "thumbnail", "pithumbsize": 1600,
-            "redirects": 1, "generator": "search", "gsrsearch": entity, "gsrlimit": 1})
-        pages = (r.json().get("query") or {}).get("pages") or {}
-        for p in pages.values():
-            src = (p.get("thumbnail") or {}).get("source")
-            if src and not src.lower().endswith(".svg.png"):
-                return _download_img(src, work / ("wk-" + hashlib.md5(entity.encode()).hexdigest()[:8]), 500)
+        r = requests.get("https://en.wikipedia.org/w/api.php", headers=WIKI_UA, timeout=15, params={
+            "action": "query", "format": "json", "list": "search", "srsearch": entity, "srlimit": 1})
+        hits = (r.json().get("query") or {}).get("search") or []
+        if not hits:
+            return None
+        title = hits[0]["title"].replace(" ", "_")
+        s = requests.get(f"https://en.wikipedia.org/api/rest_v1/page/summary/{title}", headers=WIKI_UA, timeout=15).json()
+        src = (s.get("originalimage") or {}).get("source") or (s.get("thumbnail") or {}).get("source")
+        if src and not src.lower().endswith(".svg"):
+            return _download_img(src, work / ("wk-" + hashlib.md5(entity.encode()).hexdigest()[:8]), 400)
     except Exception:
         pass
     return None

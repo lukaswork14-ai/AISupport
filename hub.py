@@ -538,6 +538,13 @@ register(Agent("noidung", "Nội dung", "🎬", "Săn tin theo chủ đề + cas
            params=[Param("cid", "ID video", required=True), Param("voice", "Giọng"), Param("fast", "Nhịp nhanh", "bool"),
                    Param("music", "Nhạc nền", "bool"), Param("reel_len", "Độ dài", "number"), Param("rewrite", "Viết lại kịch bản", "bool"),
                    Param("angle", "Chỉ đạo thêm", "textarea")]),
+    Action("hoi_bai", "Hỏi phóng viên về 1 bài", content_hub.reporter_ask, hidden=True, long=True, llm=True,
+           desc="Phóng viên công nghệ superHuy đào sâu 1 bài trong trang Nội dung (bối cảnh, số liệu, đối thủ, tin liên quan) và đề xuất ý tưởng "
+                "cho công việc của anh. iid = ID tin, question = câu hỏi.",
+           params=[Param("iid", "ID tin", required=True), Param("question", "Câu hỏi", "textarea", required=True)]),
+    Action("hoi_bai_ds", "Trao đổi về 1 bài", content_hub.reporter_thread, hidden=True, params=[Param("iid", "ID tin", required=True)]),
+    Action("hoi_bai_luu", "Lưu câu trả lời vào Second Brain", content_hub.reporter_save, hidden=True,
+           params=[Param("iid", "ID tin", required=True), Param("idx", "Vị trí", "number", default=-1)]),
     Action("gui_video", "Gửi video vào Telegram", content_hub.send_video, hidden=True, params=[Param("cid", "ID video", required=True)]),
     Action("tai_video", "Link tải video", noidung_tai_video, hidden=True, params=[Param("cid", "ID video", required=True)]),
 ]))

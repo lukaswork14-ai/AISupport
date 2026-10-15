@@ -70,7 +70,10 @@ def seed():
         ensure_ascii=False), encoding="utf-8")
     content_hub._save([{"id": "c1", "track": "roimaxx", "status": "new", "at": _dt.datetime.now().isoformat(timespec="seconds"), "topic": "Agentic",
                         "headline_vi": "Shopify cho AI agent thanh toán trực tiếp", "summary_vi": cao["tom_tat"], "why_hot": "", "score": 9,
-                        "title_en": "", "url": "https://example.com", "source": "TechCrunch", "cao": cao, "insight": "ins1"}])
+                        "title_en": "", "url": "https://example.com", "source": "TechCrunch", "cao": cao, "insight": "ins1",
+                        "chat": [{"role": "user", "content": "Bối cảnh và ai đứng sau chuyện này?"},
+                                 {"role": "assistant", "content": "## Bối cảnh\n- [Bài viết] Shopify mở checkout cho AI agent.\n- [Nhận định] Đây là bước giành vị trí hạ tầng.\n## Ý tưởng cho anh\n- Leversphere: chuẩn hoá feed sản phẩm.",
+                                  "followups": ["Đối thủ phản ứng ra sao?", "Chi phí triển khai?"], "sources": [{"title": "Stripe ra giao thức mới", "source": "Stripe", "url": "https://stripe.com"}]}]}])
     vdir = H / "data/videos"
     vdir.mkdir(parents=True, exist_ok=True)
     vid = vdir / "qa.mp4"
@@ -168,6 +171,7 @@ def main():
         step("20-dock", "closeSheet();go('home');S.dockOpen=true;dock()", 1000)
         step("24-content-swipe", "S.dockOpen=false;dock();go('content');S.cview='duyet';render()", 1800)
         step("25-cao-sheet", "cCao('c1')", 1500)
+        step("25b-reporter", "closeSheet();rptOpen('c1')", 1800)
         step("26-strategy", "closeSheet();S.cview='cl';S.cl=null;render()", 2500, True)
         step("27-strategy-doc", "clDoc('leversphere')", 1800)
         step("28-insight", "closeSheet();clInsight('ins1')", 1500)

@@ -557,6 +557,15 @@ html[data-scheme="dark"] .apps i{ background:color-mix(in srgb,var(--c) 22%,tran
 .vchap button{ flex:none; max-width:220px; text-align:left; padding:8px 11px; border-radius:12px; background:var(--surface); box-shadow:0 0 0 1px var(--line); font-size:13px; line-height:1.3 }
 .vchap button span{ display:block; font-size:11.5px; font-weight:700; color:var(--jade); margin-bottom:2px }
 .vacts{ display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px }
+.rptbox{ margin:14px 0 4px; padding:12px; border-radius:18px; background:var(--surface); box-shadow:0 0 0 1px var(--line) }
+.rptav{ width:28px; height:28px; border-radius:50%; display:grid; place-items:center; color:#fff; background:var(--aura, var(--jade)); flex:none }
+.rptform{ display:flex; gap:8px; align-items:center; background:var(--fill); border-radius:14px; padding:4px 4px 4px 12px }
+.rptform input{ flex:1; border:0; background:transparent; color:var(--text); font:inherit; font-size:15px; padding:8px 0; min-width:0 }
+.rptform input:focus{ outline:none } .rptform .send{ width:38px; height:38px; border-radius:12px; display:grid; place-items:center; background:var(--jade); color:var(--jade-ink); flex:none }
+.rptthread{ display:flex; flex-direction:column; gap:12px } .rq{ align-self:flex-end; max-width:85%; background:var(--jade); color:var(--jade-ink); padding:10px 13px; border-radius:16px 16px 4px 16px; font-size:15px }
+.ra{ background:var(--fill); border-radius:16px 16px 16px 4px; padding:12px 14px }
+.rsrc{ display:flex; flex-direction:column; gap:6px; margin-top:10px } .rsrc button{ text-align:left; font-size:12.5px; color:var(--muted); display:flex; gap:6px; align-items:flex-start }
+.ccard .chip{ font-size:12.5px }
 </style>
 </head>
 <body>
@@ -1664,10 +1673,11 @@ function cSwipeHtml(){
         : n.why_hot?`<div class="aisug">${ico('spark',15)}<span>${esc(n.why_hot)}</span></div>`:''}
       <div class="row" style="margin-top:auto;align-items:center"><span class="meta grow" style="margin:0">${esc(src(n.source))}</span><button class="btn sm" onpointerdown="event.stopPropagation()" onclick="event.stopPropagation();cCao('${n.id}')">${ico('spark',16)} ${n.cao?'Phân tích':'Phân tích CAO'}</button>${n.url?`<button class="btn sm" onpointerdown="event.stopPropagation()" onclick="event.stopPropagation();openLink('${esc(n.url)}')">${ico('link',16)} Bài gốc</button>`:''}</div>
     </article>`; }).join('')}</div>
+    ${rptBox(list[0])}
     <div class="swipebar"><button class="round" aria-label="Bỏ qua" onclick="cSwipe(-1)">${ico('x')}</button>
       <button class="iconbtn" aria-label="Tuỳ chỉnh rồi tạo" onclick="cCustom()">${ico('pen',20)}</button>
       <button class="round yes" aria-label="Tạo reels" onclick="cSwipe(1)">${ico('film')}</button></div>
-    <p class="muted small" style="text-align:center;margin-top:12px">Quẹt phải để tạo reels và bài đăng, quẹt trái để bỏ qua. Nút bút để chọn kiểu, độ dài.</p>`;
+    <p class="muted small" style="text-align:center;margin-top:12px">Quẹt phải để tạo video bản tin và bài đăng, quẹt trái để bỏ qua. Nút bút để chọn kiểu, độ dài.</p>`;
 }
 function cDoneHtml(){
   const d = cq().done, all = S.data.contents||[];
@@ -1764,6 +1774,51 @@ function cPaste(){
     catch(e){ toast(e.message, 5000); $('#pgo').disabled = false; $('#pgo').textContent = 'Gửi cho superHuy'; }
   };
 }
+
+/* ---------- Phóng viên công nghệ superHuy: hỏi đào sâu từng bài */
+const RPT_Q = ['Bối cảnh và ai đứng sau chuyện này?','Số liệu nào đáng chú ý, có đáng tin không?','Đối thủ và thị trường đang phản ứng ra sao?','Áp dụng gì cho Leversphere?','Cơ hội nào cho Roimaxx?','Ý tưởng nội dung từ bài này'];
+function rptBox(n){
+  if(!n) return '';
+  return `<div class="rptbox" data-id="${n.id}"><div class="row" style="align-items:center;gap:8px;margin-bottom:8px"><span class="rptav">${ico('chat',15)}</span><b class="grow" style="font-size:14.5px">Hỏi phóng viên superHuy về bài này</b>${n.chat_n?`<button class="link" onclick="rptOpen('${n.id}')">${n.chat_n} câu đã hỏi</button>`:''}</div>
+    <div class="chips" style="padding-top:0;margin-bottom:8px">${RPT_Q.slice(0,4).map(q=>`<button class="chip" onclick="rptAsk('${n.id}','${q}')">${q}</button>`).join('')}</div>
+    <form class="rptform" onsubmit="event.preventDefault();rptAsk('${n.id}',$('#rptIn').value)"><input id="rptIn" placeholder="Đào sâu: ai, vì sao, số liệu, áp dụng cho anh…" autocomplete="off" enterkeyhint="send"><button class="send" aria-label="Hỏi">${ico('arrow',18)}</button></form></div>`;
+}
+function rptPaint(){
+  const r = S.rpt; if(!r) return;
+  const msgs = r.chat||[], last = [...msgs].reverse().find(m=>m.role==='assistant');
+  const y = $('#sheet').classList.contains('on') ? $('#sheet').scrollTop : 0;
+  sheet(`<div class="row" style="align-items:center;gap:8px;margin-bottom:4px"><span class="rptav">${ico('chat',15)}</span><span class="meta" style="margin:0">Phóng viên superHuy · ${esc(src(r.source||''))}</span></div>
+    <h2 style="margin-bottom:12px">${esc(r.headline||'')}</h2>
+    <div class="rptthread">${msgs.map((m,i)=>m.role==='user'?`<div class="rq">${esc(m.content)}</div>`
+      :`<div class="ra"><div class="mdbody">${mdRender(m.content)}</div>
+        ${(m.sources||[]).length?`<div class="rsrc">${m.sources.map(x=>`<button onclick="openLink('${esc(x.url)}')">${ico('link',13)} ${esc(x.source||'')}: ${esc((x.title||'').slice(0,70))}</button>`).join('')}</div>`:''}
+        <div class="row" style="gap:8px;margin-top:8px"><button class="btn sm" onclick="rptSave(${i})">${ico('brain',14)} Lưu vào Second Brain</button><button class="btn sm" onclick="copyText(S.rpt.chat[${i}].content)">${ico('copy',14)} Chép</button></div></div>`).join('')}
+      ${r.wait?`<div class="ra"><div class="msg bot typing"><span></span><span></span><span></span></div><p class="meta" style="margin:6px 0 0">Đang đọc bài, tìm tin liên quan và phân tích…</p></div>`:''}</div>
+    ${!r.wait?`<div class="chips" style="padding-top:4px;flex-wrap:wrap;margin:10px 0">${((last&&last.followups&&last.followups.length)?last.followups:RPT_Q).map(q=>`<button class="chip" onclick="rptAsk('${r.id}',this.textContent)">${esc(q)}</button>`).join('')}</div>`:''}
+    <form class="rptform" style="position:sticky;bottom:0" onsubmit="event.preventDefault();rptAsk('${r.id}',$('#rptIn2').value)"><input id="rptIn2" placeholder="Hỏi tiếp phóng viên…" autocomplete="off" enterkeyhint="send" ${r.wait?'disabled':''}><button class="send" aria-label="Hỏi" ${r.wait?'disabled':''}>${ico('arrow',18)}</button></form>
+    ${r.status==='new'?`<button class="btn full" style="margin-top:10px" onclick="closeSheet();cCustomFor('${r.id}')">${ico('film',16)} Làm bản tin video theo góc vừa đào sâu</button>`:''}`);
+  const sh = $('#sheet'); sh.scrollTop = r.wait || r.jump ? sh.scrollHeight : y; r.jump = false;
+}
+async function rptOpen(id){
+  S.rpt = {id, chat:[], wait:false}; rptPaint();
+  try{ Object.assign(S.rpt, await run('noidung','hoi_bai_ds',{iid:id},'',true)); S.rpt.jump = true; rptPaint(); }catch(e){ toast(e.message); }
+}
+async function rptAsk(id, q){
+  q = (q||'').trim(); if(!q) return toast('Anh nhập câu hỏi trước nhé');
+  if(!S.rpt || S.rpt.id!==id){ S.rpt = {id, chat:[], wait:false}; try{ Object.assign(S.rpt, await run('noidung','hoi_bai_ds',{iid:id},'',true)); }catch(e){} }
+  if(S.rpt.wait) return;
+  S.rpt.chat = [...(S.rpt.chat||[]), {role:'user', content:q}]; S.rpt.wait = true; rptPaint(); haptic('light');
+  try{ const r = await run('noidung','hoi_bai',{iid:id, question:q},'',true); S.rpt.chat = r.chat; const n = cq().new.find(x=>x.id===id); if(n) n.chat_n = r.chat.filter(m=>m.role==='user').length; }
+  catch(e){ S.rpt.chat.push({role:'assistant', content:'⚠️ '+e.message}); }
+  S.rpt.wait = false; S.rpt.jump = true; if($('#sheet').classList.contains('on')) rptPaint();
+}
+async function rptSave(i){ try{ const r = await run('noidung','hoi_bai_luu',{iid:S.rpt.id, idx:i},'',true); toast(r.text+': '+r.path, 3500); notifyH('success'); }catch(e){ toast(e.message); } }
+function cCustomFor(id){
+  const q = cq(), i = q.new.findIndex(n=>n.id===id); if(i<0) return;
+  const last = [...(S.rpt?.chat||[])].reverse().find(m=>m.role==='user');
+  q.new.unshift(q.new.splice(i,1)[0]); render();
+  setTimeout(()=>{ cCustom(); S.copt.angle = last ? `Khai thác theo góc: ${last.content}` : ''; S.cpaint(); }, 200);
+}
 /* ---------- Chiến lược: phân tích CAO, tài liệu sống Roimaxx / Leversphere */
 const rel = c => { const r = c?.roimaxx?.lien_quan||0, l = c?.leversphere?.lien_quan||0; return `<span class="relpill" title="Mức liên quan">R ${r} · L ${l}</span>`; };
 function caoHtml(c, head){
@@ -1788,7 +1843,7 @@ async function cCao(id){
     try{ const r = await run('noidung','phan_tich',{iid:id},'',true); c = n.cao = r.cao; }catch(e){ closeSheet(); return toast(e.message); } }
   S.clCur = {cao:c, title:n.headline_vi, url:n.url, item:n.id};
   sheet(caoHtml(c, `<div class="meta" style="margin-bottom:4px">${esc(TRK[n.track]||'')} · ${esc(src(n.source))}</div><h2 style="margin-bottom:10px">${esc(n.headline_vi)}</h2>`) +
-    `<div class="row" style="margin-top:6px">${n.url?`<button class="btn grow" onclick="openLink('${esc(n.url)}')">${ico('link',16)} Bài gốc</button>`:''}${n.status==='new'?`<button class="btn pri grow" onclick="closeSheet();cApprove('${n.id}')">${ico('film',16)} Làm bản tin video</button>`:''}</div>`);
+    `<div class="row" style="margin-top:6px">${n.url?`<button class="btn grow" onclick="openLink('${esc(n.url)}')">${ico('link',16)} Bài gốc</button>`:''}<button class="btn grow" onclick="rptOpen('${n.id}')">${ico('chat',16)} Hỏi phóng viên</button>${n.status==='new'?`<button class="btn pri grow" onclick="closeSheet();cApprove('${n.id}')">${ico('film',16)} Làm bản tin video</button>`:''}</div>`);
 }
 async function clTask(i){
   const a = (S.clCur?.cao?.hanh_dong||[])[i]; if(!a) return;
