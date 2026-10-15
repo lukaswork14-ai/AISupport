@@ -38,6 +38,7 @@ APPLY = ("Anh Huy là CEO Sellnity (AI + POD thương mại điện tử xuyên 
 HOWTO = "https://github.com/luongnv89/claude-howto"
 HOWTO_RAW = "https://raw.githubusercontent.com/luongnv89/claude-howto/main/vi/{m}/README.md"
 DOCS = "https://code.claude.com/docs/en/{p}"
+W = "https://en.wikipedia.org/wiki/"
 TEMPLATES = {
     "claude-code-30": {
         "title": "Claude Code 30 ngày: xây đội agent cho Leversphere & Sellnity",
@@ -254,7 +255,7 @@ def _source_for(c: dict, d: dict) -> tuple[str, list[dict]]:
         res.append({"type": "doc", "title": f"Tư liệu: {host}", "url": d["ref"]})
         text = text or t
     for s in c.get("sources") or []:
-        if s.get("kind") == "ref" and s.get("url") and len(res) < 4:
+        if s.get("kind") == "ref" and s.get("url") and len(res) < 4 and all(r["url"] != s["url"] for r in res):
             res.append({"type": "doc", "title": s.get("title") or s["url"], "url": s["url"]})
         if s.get("kind") == "url" and s.get("url") and not text:
             text = _fetch_text(s["url"])
