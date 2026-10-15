@@ -24,6 +24,15 @@ rep.append(f"ffmpeg: {nc.ffmpeg()}")
 words = nc.tts("Shopify vừa công bố cho phép trợ lý AI thanh toán trực tiếp.", str(H / "t.mp3"), "vi-VN-NamMinhNeural", "+10%")
 rep.append(f"tts_words: {len(words)} sample={words[:4]}")
 rep.append(f"wiki_image(Shopify): {bool(nc.wiki_image('Shopify', H))}")
+try:
+    import requests as _rq
+    _r = _rq.get("https://en.wikipedia.org/w/api.php", headers=nc.WIKI_UA, timeout=15,
+                 params={"action": "query", "format": "json", "list": "search", "srsearch": "Shopify", "srlimit": 1})
+    rep.append(f"wiki_api: {_r.status_code} {_r.text[:160]}")
+    _s = _rq.get("https://en.wikipedia.org/api/rest_v1/page/summary/Shopify", headers=nc.WIKI_UA, timeout=15)
+    rep.append(f"wiki_summary: {_s.status_code} {str(_s.json().get('thumbnail'))[:200]}")
+except Exception as _e:
+    rep.append(f"wiki_debug_error: {_e}")
 script = json.loads((ROOT / "deploy/qa/newscast_sample.json").read_text(encoding="utf-8"))
 t = time.time()
 r = nc.make(script, {"source": "TechCrunch", "topic": "AI Commerce", "url": "https://techcrunch.com/"}, name="qa", brand="@superhuy",
