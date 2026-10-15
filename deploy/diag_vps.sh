@@ -36,5 +36,8 @@ echo "strategy: $(cd /opt/superhuy/current && SUPERHUY_HOME=$S timeout 60 /opt/s
 echo "fonts: $(ls $S/assets/fonts 2>/dev/null | tr '\n' ' ')"
 echo "content_log: $(grep -h -E 'newscast|Dựng bản tin|strategy|CAO|Phân tích' $S/data/agent.log 2>/dev/null | tail -4 | cut -c1-160 | tr '\n' '|')"
 echo "learning: $(cd /opt/superhuy/current && SUPERHUY_HOME=$S timeout 60 /opt/superhuy/venv/bin/python -c 'from agents import learning as l; import json; o=l.overview(); c=l._load(); print([(x["title"][:30], x["total"], x["today"]) for x in o["courses"]], [(d["day"], bool(d.get("lesson")), bool((d.get("lesson") or {}).get("audio")), len((d.get("lesson") or {}).get("md") or "")) for d in (c[0]["days"][:2] if c else [])])' 2>&1 | tail -1 | cut -c1-300)"
+echo "videos: $(cd /opt/superhuy/current && SUPERHUY_HOME=$S timeout 60 /opt/superhuy/venv/bin/python -c 'from core import store; import os; print([(r["id"], (r.get("meta") or {}).get("engine"), (r.get("meta") or {}).get("voice_engine"), len((r.get("meta") or {}).get("versions") or []), os.path.basename(r.get("video") or ""), r.get("created","")[5:16]) for r in store.recent(6, "video")])' 2>&1 | tail -1 | cut -c1-600)"
+echo "video_log: $(grep -h -E 'edge-tts|Dựng|newscast|dung_lai|rerender|reel' $S/data/agent.log 2>/dev/null | tail -8 | cut -c1-220 | tr '\n' '|')"
+echo "jobs_log: $(grep -h -E 'Job noidung|Traceback|Error' $S/data/agent.log 2>/dev/null | tail -6 | cut -c1-220 | tr '\n' '|')"
 echo "--- QA ---"
 (cd /opt/superhuy/current && SUPERHUY_HOME=$S timeout 400 /opt/superhuy/venv/bin/python deploy/qa_vps.py 2>/dev/null | grep '^qa_')
