@@ -18,6 +18,7 @@ import math
 import os
 import re
 import shutil
+import uuid
 import subprocess
 import wave
 from pathlib import Path
@@ -173,6 +174,17 @@ def _has_libass(exe: str) -> bool:
         return " ass " in r.stdout
     except Exception:
         return False
+
+
+def _sweep_tmp(root, hours: int = 6):
+    """Dọn thư mục dựng tạm cũ (bị bỏ dở do khởi động lại) — chỉ xoá thư mục cũ hơn vài giờ."""
+    import time as _t
+    try:
+        for p in root.iterdir():
+            if p.is_dir() and _t.time() - p.stat().st_mtime > hours * 3600:
+                shutil.rmtree(p, ignore_errors=True)
+    except Exception:
+        pass
 
 
 def run(args, timeout=900):
@@ -715,9 +727,9 @@ def make(script: dict, item: dict | None = None, name: str = "bantin", voice: st
     item = item or {}
     ensure_fonts()
     ff = ffmpeg()
-    work = DATA_DIR / "video_tmp" / name
-    shutil.rmtree(work, ignore_errors=True)
+    work = DATA_DIR / "video_tmp" / f"{name}-{uuid.uuid4().hex[:6]}"  # mỗi lượt dựng 1 thư mục riêng, không đụng nhau
     work.mkdir(parents=True, exist_ok=True)
+    _sweep_tmp(work.parent)
     scenes = [s for s in (script.get("scenes") or []) if (s.get("voiceover") or "").strip()]
     if len(scenes) < 2:
         raise ValueError("Kịch bản bản tin quá ngắn")

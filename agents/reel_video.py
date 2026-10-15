@@ -188,7 +188,7 @@ def make_bantin_video(items: list[dict], handle: str = "") -> tuple[str, str]:
     today = dt.date.today()
     date_str = today.strftime("%d.%m.%Y")
     date_vi = f"{today.day} tháng {today.month}"
-    work = DATA_DIR / "video_tmp"
+    work = DATA_DIR / "video_tmp" / "bantin"  # thư mục riêng: KHÔNG xoá cả video_tmp (đang có video khác dựng dở)
     shutil.rmtree(work, ignore_errors=True)
     work.mkdir(parents=True, exist_ok=True)
     frames = [str(work / f"f{i}.png") for i in range(len(items) + 2)]

@@ -144,9 +144,17 @@ def render(cid: str, settings: dict | None = None, script: dict | None = None, r
                     _set_render(cid, step="Viết kịch bản bản tin", pct=4)
                     body = it.get("body") or content_hub._page_text(it.get("url", "")) or it.get("raw", "") or it.get("summary_vi", "")
                     sc = newscast.write_script(it, body, st["len"], content_agent.get_style(), angle, rules=rules_text())
-                out = newscast.make(sc, it, name=f"reel-{cid}", voice=st["voice"], brand=CARD_HANDLE, rate=SPEEDS[st["speed"]][1],
-                                    music=MUSIC[st["music"]][1] > 0, music_vol=MUSIC[st["music"]][1] or 0.55,
-                                    progress=lambda msg, pct: _set_render(cid, step=msg, pct=max(5, min(99, pct))))
+                kw = dict(name=f"reel-{cid}", voice=st["voice"], brand=CARD_HANDLE, rate=SPEEDS[st["speed"]][1],
+                          music=MUSIC[st["music"]][1] > 0, music_vol=MUSIC[st["music"]][1] or 0.55,
+                          progress=lambda msg, pct: _set_render(cid, step=msg, pct=max(5, min(99, pct))))
+                try:
+                    out = newscast.make(sc, it, **kw)
+                except newscast.TTSError:
+                    raise
+                except Exception as e1:  # lỗi thoáng qua (ffmpeg/mạng ảnh): tự thử lại 1 lần trước khi báo anh
+                    log.warning("Dựng lỗi, thử lại 1 lần: %s", e1)
+                    _set_render(cid, step="Gặp lỗi, đang tự thử lại", pct=6)
+                    out = newscast.make(sc, it, **kw)
                 rec = store.get(cid)
                 mm = dict(rec.get("meta") or {})
                 vid = uuid.uuid4().hex[:6]
