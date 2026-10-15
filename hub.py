@@ -7,7 +7,7 @@ import os
 import re
 
 import targets as targets_mod
-from agents import (calendar_agent, content_agent, content_hub, strategy, learning, gemini_notebook, knowledge_sources, meeting, meeting_share, email_agent, fb_connect, gcal_bridge, imagecard, lark_agent, mailbox, news_agent, publisher,
+from agents import (calendar_agent, content_agent, content_hub, strategy, learning, reel_studio, gemini_notebook, knowledge_sources, meeting, meeting_share, email_agent, fb_connect, gcal_bridge, imagecard, lark_agent, mailbox, news_agent, publisher,
                     reel_video, second_brain)
 from config import CARD_HANDLE, DATA_DIR
 from core import digests, notify, store
@@ -534,10 +534,28 @@ register(Agent("noidung", "Nội dung", "🎬", "Săn tin theo chủ đề + cas
     Action("cap_nhat_tai_lieu", "Cập nhật tài liệu chiến lược", strategy.build, hidden=True, long=True, llm=True,
            desc="Viết lại tài liệu chiến lược từ insight mới nhất + Second Brain. lens = roimaxx | leversphere.",
            params=[Param("lens", "Lăng kính", required=True)]),
-    Action("dung_lai", "Dựng lại video", content_hub.rerender, hidden=True, long=True,
-           params=[Param("cid", "ID video", required=True), Param("voice", "Giọng"), Param("fast", "Nhịp nhanh", "bool"),
-                   Param("music", "Nhạc nền", "bool"), Param("reel_len", "Độ dài", "number"), Param("rewrite", "Viết lại kịch bản", "bool"),
-                   Param("angle", "Chỉ đạo thêm", "textarea")]),
+    Action("dung_lai", "Dựng lại video", reel_studio.rerender, hidden=True,
+           params=[Param("cid", "ID video", required=True), Param("voice", "Giọng"), Param("speed", "Tốc độ"), Param("music", "Nhạc nền"),
+                   Param("length", "Độ dài", "number"), Param("rewrite", "Viết lại kịch bản", "bool"), Param("angle", "Chỉ đạo thêm", "textarea")]),
+    Action("studio", "Trạng thái Reel Studio", reel_studio.state, hidden=True, params=[Param("cid", "ID video", required=True)]),
+    Action("chinh_nhanh", "Chỉnh nhanh video bằng lời", reel_studio.quick_edit, hidden=True, long=True, llm=True,
+           desc="Sửa video bản tin theo yêu cầu bằng lời (giọng, tốc độ, nhạc, độ dài, hook, nội dung) rồi dựng lại. cid = ID video.",
+           params=[Param("cid", "ID video", required=True), Param("instruction", "Yêu cầu", "textarea", required=True)]),
+    Action("sua_kich_ban", "Sửa kịch bản và dựng lại", reel_studio.edit_script, hidden=True,
+           params=[Param("cid", "ID video", required=True), Param("scenes", "Các cảnh (JSON)", "textarea", required=True)]),
+    Action("chon_ban", "Chọn phiên bản video", reel_studio.choose_version, hidden=True,
+           params=[Param("cid", "ID video", required=True), Param("vid", "ID phiên bản", required=True)]),
+    Action("caption", "Lưu caption", reel_studio.set_caption, hidden=True,
+           params=[Param("cid", "ID video", required=True), Param("caption", "Caption", "textarea")]),
+    Action("cong_thuc_luu", "Lưu công thức reels", reel_studio.save_recipe, hidden=True, long=True, llm=True,
+           desc="Lưu công thức làm reels anh ưng ý (cài đặt + cấu trúc + quy tắc) vào Second Brain, đặt làm mặc định cho video sau.",
+           params=[Param("cid", "ID video", required=True), Param("name", "Tên công thức"), Param("notes", "Ghi chú", "textarea"),
+                   Param("make_default", "Đặt mặc định", "bool", default=True)]),
+    Action("cong_thuc_ds", "Các công thức reels", reel_studio.recipes, hidden=True),
+    Action("cong_thuc_macdinh", "Đặt công thức mặc định", reel_studio.set_default, hidden=True, params=[Param("rid", "ID", required=True)]),
+    Action("cong_thuc_xoa", "Xoá công thức", reel_studio.delete_recipe, hidden=True, params=[Param("rid", "ID", required=True)]),
+    Action("skill_xem", "Skill News Studio", reel_studio.skill_view, hidden=True),
+    Action("skill_capnhat", "Cập nhật skill News Studio", reel_studio.build_skill, hidden=True, long=True),
     Action("hoi_bai", "Hỏi phóng viên về 1 bài", content_hub.reporter_ask, hidden=True, long=True, llm=True,
            desc="Phóng viên công nghệ superHuy đào sâu 1 bài trong trang Nội dung (bối cảnh, số liệu, đối thủ, tin liên quan) và đề xuất ý tưởng "
                 "cho công việc của anh. iid = ID tin, question = câu hỏi.",

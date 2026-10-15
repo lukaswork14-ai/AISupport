@@ -351,7 +351,7 @@ body.locked #lock{ display:flex } body.locked #app, body.locked #nav, body.locke
 .note{ padding:12px 14px; border-radius:14px; background:var(--amber-soft); color:var(--text); font-size:14px; margin-bottom:14px }
 
 /* ---------- hộp thư */
-.stack{ position:relative; height:min(440px,52vh); min-height:340px; margin:6px 0 14px }
+.stack{ position:relative; height:min(420px,50vh); min-height:330px; margin:6px 0 12px }
 .mcard{ position:absolute; inset:0; padding:20px; display:flex; flex-direction:column; gap:12px; touch-action:pan-y; user-select:none; will-change:transform }
 .mcard.back1{ transform:translateY(10px) scale(.96); opacity:.7 } .mcard.back2{ transform:translateY(20px) scale(.92); opacity:.4 }
 .mcard .who{ display:flex; gap:12px; align-items:center }
@@ -576,6 +576,15 @@ html[data-scheme="dark"] .apps i{ background:color-mix(in srgb,var(--c) 22%,tran
 .lqo.right{ box-shadow:inset 0 0 0 2px #199e70 } .lqo.wrong{ box-shadow:inset 0 0 0 2px var(--danger) }
 .lgrade{ margin-top:12px } .mdcode{ background:var(--fill); border-radius:12px; padding:10px 12px; overflow-x:auto; font-size:12.5px; line-height:1.5; margin:8px 0 }
 .segscroll{ overflow-x:auto; max-width:100%; -webkit-overflow-scrolling:touch; scrollbar-width:none } .segscroll::-webkit-scrollbar{ display:none } .segscroll button{ white-space:nowrap; flex:none }
+.stwrap video.media.reel{ max-height:52vh }
+.stvers{ display:flex; gap:8px; overflow-x:auto; padding:2px 0 10px; -webkit-overflow-scrolling:touch }
+.stvers button{ flex:none; text-align:left; padding:8px 11px; border-radius:12px; background:var(--surface); box-shadow:0 0 0 1px var(--line); display:flex; flex-direction:column; gap:1px; min-width:120px; font-size:13px }
+.stvers button.on{ box-shadow:0 0 0 2px var(--jade) } .stvers button span{ color:var(--muted); font-size:12px } .stvers button em{ font-style:normal; color:var(--muted); font-size:11.5px; max-width:150px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+.stprog{ margin-bottom:12px } .stprog .pbar.big{ margin-top:10px } .stprog.err{ box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--danger) 40%,transparent) }
+.stquick{ margin-bottom:6px } .stscene{ margin-bottom:10px }
+.stbar{ position:sticky; bottom:-1px; display:grid; grid-template-columns:1.2fr 1fr 1fr; gap:8px; padding:10px 0 4px; background:var(--surface); margin-top:12px }
+.chip[disabled]{ opacity:.5 }
+.pbar i{ display:block; height:100%; background:var(--jade); border-radius:3px; transition:width .6s ease }
 </style>
 </head>
 <body>
@@ -1664,7 +1673,7 @@ function vContent(){
 function cWorkHtml(){
   const w = cq().working; if(!w.length) return '';
   return `<div class="card list" style="margin-bottom:14px">${w.map(i=>`<div class="wk">${i.status==='error'?`<span class="thumb" style="color:var(--danger)">${ico('x',20)}</span>`:'<div class="spin"></div>'}
-    <div class="grow"><div class="ttl2">${esc(i.headline_vi)}</div><div class="meta">${i.status==='error'?esc('Lỗi: '+(i.err||'')):i.status==='working'?esc(i.step||'Đang viết kịch bản, dựng video và bài đăng…'):'Đang xếp hàng'}</div></div>
+    <div class="grow"><div class="ttl2">${esc(i.headline_vi)}</div><div class="meta">${i.status==='error'?esc('Lỗi: '+(i.err||'')):i.status==='working'?esc(i.step||'Đang viết kịch bản, dựng video và bài đăng…'):'Đang xếp hàng'}</div>${i.status==='working'?`<div class="pbar" style="margin-top:6px"><i style="width:${i.pct||3}%"></i></div>`:''}</div>
     ${i.status==='error'?`<button class="btn sm" onclick="cApprove('${i.id}')">Thử lại</button>`:''}</div>`).join('')}</div>`;
 }
 function cSwipeHtml(){
@@ -1683,11 +1692,11 @@ function cSwipeHtml(){
         : n.why_hot?`<div class="aisug">${ico('spark',15)}<span>${esc(n.why_hot)}</span></div>`:''}
       <div class="row" style="margin-top:auto;align-items:center"><span class="meta grow" style="margin:0">${esc(src(n.source))}</span><button class="btn sm" onpointerdown="event.stopPropagation()" onclick="event.stopPropagation();cCao('${n.id}')">${ico('spark',16)} ${n.cao?'Phân tích':'Phân tích CAO'}</button>${n.url?`<button class="btn sm" onpointerdown="event.stopPropagation()" onclick="event.stopPropagation();openLink('${esc(n.url)}')">${ico('link',16)} Bài gốc</button>`:''}</div>
     </article>`; }).join('')}</div>
-    ${rptBox(list[0])}
     <div class="swipebar"><button class="round" aria-label="Bỏ qua" onclick="cSwipe(-1)">${ico('x')}</button>
       <button class="iconbtn" aria-label="Tuỳ chỉnh rồi tạo" onclick="cCustom()">${ico('pen',20)}</button>
       <button class="round yes" aria-label="Tạo reels" onclick="cSwipe(1)">${ico('film')}</button></div>
-    <p class="muted small" style="text-align:center;margin-top:12px">Quẹt phải để tạo video bản tin và bài đăng, quẹt trái để bỏ qua. Nút bút để chọn kiểu, độ dài.</p>`;
+    <p class="muted small" style="text-align:center;margin:10px 0 0">Quẹt phải để tạo video bản tin và bài đăng, quẹt trái để bỏ qua. Nút bút để chọn kiểu, độ dài.</p>
+    ${rptBox(list[0])}`;
 }
 function cDoneHtml(){
   const d = cq().done, all = S.data.contents||[];
@@ -1919,6 +1928,123 @@ async function clUpdate(lens){
   try{ const r = await run('noidung','cap_nhat_tai_lieu',{lens},'Cập nhật tài liệu chiến lược'); toast(r.text, 3500); S.cl = null; clLoad(); }catch(e){ toast(e.message); }
 }
 
+/* ---------- Reel Studio: xem, chỉnh nhanh, dựng lại có tiến độ, phiên bản, công thức, skill News Studio */
+const ST_QUICK = ['Giọng nam, đọc vừa phải','Giọng nữ','Đọc chậm, rõ hơn','Nhanh hơn kiểu reels','Tắt nhạc nền','Hook 3 giây đầu mạnh hơn','Thêm số liệu cụ thể','Rút còn 30 giây'];
+const ST_MAIN = {hook:'text', headline:'title', stat:'value', quote:'quote', list:'title', analysis:'label', cta:'text', image:'caption'};
+const fmtS = t => `${String(Math.floor((t||0)/60)).padStart(2,'0')}:${String(Math.floor((t||0)%60)).padStart(2,'0')}`;
+async function studioOpen(cid, iid){
+  S.st = {cid, iid, tab: S.st?.cid===cid ? S.st.tab : 'edit', preview:null};
+  sheet(`<h2>Reel Studio</h2><div class="card pad"><div class="spin"></div></div>`);
+  try{ S.st.d = await run('noidung','studio',{cid},'',true); stPaint(); stPoll(); }catch(e){ closeSheet(); toast(e.message); }
+}
+function stPaint(keep){
+  const st = S.st, d = st.d, r = d.render||{}, busy = r.status==='running', o = d.options, set = st.set || {...d.settings};
+  st.set = set;
+  const cur = d.versions.find(v=>v.id===d.current) || d.versions[d.versions.length-1];
+  const pv = st.preview ? d.versions.find(v=>v.id===st.preview) : null, show = pv || {video:d.video, image:d.image, chapters:d.chapters};
+  const y = $('#sheet').scrollTop;
+  const parts = Object.keys(S.cpack?.parts||{}).filter(k=>k!=='reel');
+  sheet(`<div class="row" style="align-items:center;gap:8px;margin-bottom:2px"><span class="itype">Reel Studio</span>${d.recipe?`<span class="meta" style="margin:0">Công thức: ${esc(d.recipe)}</span>`:''}<span class="grow"></span>${parts.map(k=>`<button class="link" onclick="cPack('${st.iid}','${k}')">${COUT[k]}</button>`).join(' ')}</div>
+    <h2 style="margin:4px 0 10px">${esc(d.title.replace('Reels: ',''))}</h2>
+    <div class="stwrap"><video id="vplayer" class="media reel" src="${show.video||''}" controls playsinline preload="metadata" poster="${show.image||''}"></video></div>
+    ${d.voice_engine==='silent'&&!pv?`<div class="note" style="margin-bottom:10px;border-color:var(--danger)">Bản này chưa có giọng đọc (lỗi bộ đọc giọng cũ). Bấm “Dựng lại” để có thuyết minh.</div>`:''}
+    ${d.versions.length?`<div class="stvers">${d.versions.slice().reverse().map((v,i)=>`<button class="${(st.preview||d.current)===v.id?'on':''}" onclick="stPreview('${v.id}')"><b>Bản ${d.versions.length-i}${v.id===d.current?' ★':''}</b><span>${fmtS(v.duration)} · ${esc(o.voices[v.settings?.voice]?.split(' ')[0]||'')}${v.voice_engine==='silent'?' · không tiếng':''}</span><em>${esc((v.note||'').slice(0,34))}</em></button>`).join('')}</div>`:''}
+    ${pv&&pv.id!==d.current?`<button class="btn pri full" style="margin-bottom:10px" onclick="stChoose('${pv.id}')">${ico('check',16)} Dùng bản này làm bản chính</button>`:''}
+    ${(show.chapters||[]).length?`<div class="vchap">${show.chapters.map(x=>`<button onclick="vSeek(${x.t})"><span>${fmtS(x.t)}</span>${esc(x.label)}</button>`).join('')}</div>`:''}
+    <div id="stProg">${stProgHtml(r)}</div>
+    <div class="stquick"><form class="rptform" onsubmit="event.preventDefault();stQuick($('#stQ').value)"><input id="stQ" placeholder="Muốn sửa gì? Ví dụ: giọng nam, hook mạnh hơn, bỏ nhạc…" autocomplete="off" ${busy?'disabled':''}><button class="send" aria-label="Chỉnh" ${busy?'disabled':''}>${ico('arrow',18)}</button></form>
+      <div class="chips" style="padding-top:8px">${ST_QUICK.map(q=>`<button class="chip" ${busy?'disabled':''} onclick="stQuick('${q}')">${q}</button>`).join('')}</div></div>
+    <div class="seg" style="margin:6px 0 12px">${[['edit','Cài đặt'],['script','Kịch bản'],['cap','Caption'],['recipe','Công thức']].map(([k,l])=>`<button class="${st.tab===k?'on':''}" onclick="S.st.tab='${k}';stPaint(true)">${l}</button>`).join('')}</div>
+    <div id="stTab">${stTabHtml()}</div>
+    <div class="stbar"><button class="btn pri" onclick="vDownload('${d.id}')">${ico('upload',16)} Lưu về máy</button><button class="btn" onclick="vSendTg('${d.id}')">${ico('send',16)} Gửi Telegram</button><button class="btn" onclick="openPublish('${d.id}')">${ico('send',16)} Đăng…</button></div>`);
+  if(keep) $('#sheet').scrollTop = y;
+}
+function stProgHtml(r){
+  if(r.status==='running'){ const el = r.started ? Math.max(0, Math.round((Date.now()-Date.parse(r.started))/1000)) : 0;
+    return `<div class="card pad stprog"><div class="row" style="align-items:center;gap:10px"><div class="spin"></div><b class="grow">Đang dựng bản mới · ${r.pct||0}%</b><span class="meta" style="margin:0">${el}s</span></div>
+      <div class="pbar big"><span style="width:${r.pct||2}%"></span></div><div class="meta" style="margin:4px 0 0">${esc(r.step||'')}${r.note?` · theo yêu cầu: “${esc(r.note)}”`:''}</div></div>`; }
+  if(r.status==='error') return `<div class="card pad stprog err"><b style="color:var(--danger)">Chưa dựng được</b><p class="meta" style="margin:4px 0 8px">${esc(r.error||'')}</p><button class="btn sm" onclick="stRender({})">${ico('refresh',14)} Thử lại</button></div>`;
+  return '';
+}
+function stTabHtml(){
+  const st = S.st, d = st.d, o = d.options, s = st.set, busy = (d.render||{}).status==='running';
+  if(st.tab==='edit') return `<p class="lbl">Giọng thuyết minh</p><div class="seg" style="margin-bottom:10px">${Object.entries(o.voices).map(([k,l])=>`<button class="${s.voice===k?'on':''}" onclick="S.st.set.voice='${k}';stPaint(true)">${esc(l.split(' (')[0])}</button>`).join('')}</div>
+    <p class="lbl">Tốc độ đọc</p><div class="seg" style="margin-bottom:10px">${Object.entries(o.speeds).map(([k,l])=>`<button class="${s.speed===k?'on':''}" onclick="S.st.set.speed='${k}';stPaint(true)">${esc(l)}</button>`).join('')}</div>
+    <p class="lbl">Nhạc nền</p><div class="seg" style="margin-bottom:10px">${Object.entries(o.music).map(([k,l])=>`<button class="${s.music===k?'on':''}" onclick="S.st.set.music='${k}';stPaint(true)">${esc(l)}</button>`).join('')}</div>
+    <p class="lbl">Độ dài</p><div class="seg" style="margin-bottom:10px">${o.lens.map(x=>`<button class="${+s.len===x?'on':''}" onclick="S.st.set.len=${x};stPaint(true)">${x}s</button>`).join('')}</div>
+    <label class="pick"><input type="checkbox" id="stRw" ${st.rw?'checked':''} onchange="S.st.rw=this.checked"><div class="grow"><div style="font-weight:600">Viết lại kịch bản</div><div class="meta">Bỏ chọn để giữ nội dung, chỉ đổi giọng, nhịp, nhạc</div></div></label>
+    <button class="btn pri full" ${busy?'disabled':''} onclick="stRender(S.st.set, S.st.rw)">${ico('refresh',16)} Dựng lại với cài đặt này</button>`;
+  if(st.tab==='script'){ const sc = (d.script||{}).scenes||[];
+    if(!sc.length) return `<div class="card empty">Bản này chưa có kịch bản bản tin. Bấm “Dựng lại” (tab Cài đặt, chọn Viết lại kịch bản) để tạo.</div>`;
+    return `<p class="meta" style="margin:0 0 10px">Sửa trực tiếp lời đọc và chữ trên màn hình từng cảnh, rồi dựng lại (không cần AI viết lại).</p>${sc.map((x,i)=>{ const k = ST_MAIN[x.type], v = k ? (x.on_screen||{})[k] : '';
+      return `<div class="card pad stscene"><div class="row" style="align-items:center;gap:8px;margin-bottom:6px"><span class="itype">${i+1}. ${esc(x.type)}</span></div>
+        ${k?`<label class="field" style="margin-bottom:8px"><span>Chữ trên màn hình</span><input type="text" data-i="${i}" data-k="${k}" class="stOn" value="${esc(v||'')}"></label>`:''}
+        <label class="field" style="margin:0"><span>Lời đọc</span><textarea data-i="${i}" class="stVo" rows="2">${esc(x.voiceover||'')}</textarea></label></div>`; }).join('')}
+      <button class="btn pri full" ${busy?'disabled':''} onclick="stScript()">${ico('refresh',16)} Dựng lại theo kịch bản đã sửa</button>`; }
+  if(st.tab==='cap') return `<label class="field"><span>Caption đăng kèm</span><textarea id="stCap" style="min-height:140px">${esc(d.caption||'')}</textarea></label>
+    <div class="row" style="margin-bottom:12px"><button class="btn grow" onclick="stCaption()">${ico('check',16)} Lưu</button><button class="btn grow" onclick="copyText($('#stCap').value)">${ico('copy',16)} Sao chép</button></div>
+    ${d.first_comment?`<p class="lbl">Comment đầu (chứa link nguồn)</p><div class="card out" style="margin-bottom:8px">${esc(d.first_comment)}</div><button class="btn full" onclick="copyText(S.st.d.first_comment)">${ico('copy',16)} Sao chép comment</button>`:''}`;
+  const R = st.rc;
+  if(!R){ stRecipes(); return `<div class="card pad"><div class="skel"></div></div>`; }
+  return `<div class="note" style="margin-bottom:12px">Ưng bản này? Lưu thành <b>công thức</b>: superHuy ghi cài đặt, cấu trúc cảnh và quy tắc rút ra từ các lần anh chỉnh vào Second Brain, rồi dùng cho mọi video sau. Các công thức gộp thành skill <b>News Studio</b>.</div>
+    <label class="field"><span>Tên công thức</span><input type="text" id="rcName" placeholder="Ví dụ: Bản tin 60s giọng nam nhịp vừa"></label>
+    <label class="field"><span>Ghi chú thêm (không bắt buộc)</span><textarea id="rcNote" rows="2" placeholder="Ví dụ: luôn mở bằng con số, kết bằng câu hỏi cho seller"></textarea></label>
+    <label class="pick"><input type="checkbox" id="rcDef" checked><div class="grow"><div style="font-weight:600">Đặt làm mặc định</div><div class="meta">Video sau tự theo công thức này</div></div></label>
+    <button class="btn pri full" id="rcGo" onclick="stSaveRecipe()">${ico('brain',16)} Lưu công thức vào Second Brain</button>
+    ${(R.items||[]).length?`<p class="lbl" style="margin-top:16px">Công thức đã lưu</p><div class="card list">${R.items.slice().reverse().map(x=>`<div style="align-items:center"><div class="grow"><div style="font-weight:600">${esc(x.name)}${x.default?' <span class="itype">Mặc định</span>':''}</div><div class="meta">${esc(x.summary||'')}</div></div>
+      ${x.default?'':`<button class="btn sm" onclick="stRecipeDef('${x.id}')">Mặc định</button>`}<button class="iconbtn sm" aria-label="Xoá" onclick="stRecipeDel('${x.id}')">${ico('x',16)}</button></div>`).join('')}</div>`:''}
+    <div class="card pad" style="margin-top:12px"><div class="row" style="align-items:center"><div class="grow"><div style="font-weight:600">Skill News Studio</div><div class="meta">${R.skill?'Cập nhật '+esc(ago(R.skill)):'Chưa có'} · SKILL.md trong Obsidian › Skills/news-studio</div></div><button class="btn sm" onclick="stSkill()">Xem</button></div></div>`;
+}
+function stPreview(vid){ S.st.preview = vid===S.st.d.current ? null : vid; stPaint(true); const v = $('#vplayer'); v && v.play().catch(()=>{}); }
+async function stChoose(vid){ try{ S.st.d = await run('noidung','chon_ban',{cid:S.st.cid, vid},'',true); S.st.preview = null; toast('Đã chọn làm bản chính'); stPaint(true); cReload(); }catch(e){ toast(e.message); } }
+async function stRender(set, rewrite){
+  try{ S.st.d = await run('noidung','dung_lai',{cid:S.st.cid, voice:set.voice||'', speed:set.speed||'', music:set.music||'', length:set.len||0, rewrite:!!rewrite},'',true); S.st.preview = null; stPaint(true); stPoll(); haptic('medium'); }
+  catch(e){ toast(e.message); }
+}
+async function stQuick(q){
+  q = (q||'').trim(); if(!q) return toast('Anh nói muốn sửa gì nhé');
+  const inp = $('#stQ'); if(inp){ inp.value = ''; inp.disabled = true; }
+  $('#stProg').innerHTML = stProgHtml({status:'running', pct:1, step:'superHuy đang hiểu yêu cầu và sửa kịch bản…', note:q, started:new Date().toISOString()});
+  try{ const r = await run('noidung','chinh_nhanh',{cid:S.st.cid, instruction:q},'',true); S.st.d = r; S.st.set = null; S.st.preview = null; toast(r.text, 3500); stPaint(true); stPoll(); }
+  catch(e){ toast(e.message, 4500); try{ S.st.d = await run('noidung','studio',{cid:S.st.cid},'',true); }catch(_){} stPaint(true); }
+}
+async function stScript(){
+  const sc = JSON.parse(JSON.stringify(S.st.d.script.scenes));
+  document.querySelectorAll('.stVo').forEach(t=>{ sc[+t.dataset.i].voiceover = t.value.trim(); });
+  document.querySelectorAll('.stOn').forEach(t=>{ const x = sc[+t.dataset.i]; x.on_screen = {...(x.on_screen||{}), [t.dataset.k]: t.value.trim()}; });
+  try{ S.st.d = await run('noidung','sua_kich_ban',{cid:S.st.cid, scenes:JSON.stringify(sc.map(x=>({voiceover:x.voiceover, on_screen:x.on_screen})))},'',true); S.st.preview = null; toast('Đang dựng lại theo kịch bản mới'); stPaint(true); stPoll(); }
+  catch(e){ toast(e.message); }
+}
+async function stCaption(){ try{ await run('noidung','caption',{cid:S.st.cid, caption:$('#stCap').value},'',true); S.st.d.caption = $('#stCap').value; toast('Đã lưu caption'); }catch(e){ toast(e.message); } }
+function stPoll(){
+  clearTimeout(S.stTimer);
+  if((S.st?.d?.render||{}).status!=='running') return;
+  S.stTimer = setTimeout(async ()=>{
+    if(!S.st || !$('#sheet').classList.contains('on') || !$('#stProg')) return;
+    try{ const d = await run('noidung','studio',{cid:S.st.cid},'',true); const was = S.st.d.render?.status; S.st.d = d;
+      if(d.render?.status==='running'){ $('#stProg').innerHTML = stProgHtml(d.render); return stPoll(); }
+      if(was==='running'){ S.st.set = null; stPaint(true); if(d.render?.status==='done'){ notifyH('success'); toast(`Xong bản mới (${fmtS(d.duration)}). Bấm ▶ để xem.`, 3500); const v = $('#vplayer'); v && v.scrollIntoView({behavior:'smooth', block:'center'}); } else toast('Dựng chưa thành công'); cReload(); }
+    }catch(e){ stPoll(); }
+  }, 2000);
+}
+async function stRecipes(){ try{ S.st.rc = await run('noidung','cong_thuc_ds',{},'',true); }catch(e){ S.st.rc = {items:[]}; } if(S.st.tab==='recipe') $('#stTab').innerHTML = stTabHtml(); }
+async function stSaveRecipe(){
+  const b = $('#rcGo'); b.disabled = true; b.textContent = 'superHuy đang rút công thức…';
+  try{ const r = await run('noidung','cong_thuc_luu',{cid:S.st.cid, name:$('#rcName').value.trim(), notes:$('#rcNote').value.trim(), make_default:$('#rcDef').checked},'Lưu công thức reels'); toast(r.text, 4000); notifyH('success'); S.st.rc = null; S.st.d.recipe = r.default?r.name:S.st.d.recipe; stPaint(true); }
+  catch(e){ toast(e.message); b.disabled = false; b.textContent = 'Lưu công thức vào Second Brain'; }
+}
+async function stRecipeDef(id){ try{ const r = await run('noidung','cong_thuc_macdinh',{rid:id},'',true); toast(r.text); S.st.rc = null; stPaint(true); }catch(e){ toast(e.message); } }
+async function stRecipeDel(id){ try{ await run('noidung','cong_thuc_xoa',{rid:id},'',true); S.st.rc = null; stPaint(true); }catch(e){ toast(e.message); } }
+async function stSkill(){
+  try{ const s = await run('noidung','skill_xem',{},'',true);
+    sheet(`<button class="back" onclick="studioOpen('${S.st.cid}','${S.st.iid}')">${ico('chev',18)} Reel Studio</button><h2 style="margin:6px 0 4px">Skill News Studio</h2>
+      <div class="meta" style="margin-bottom:10px">${s.updated?'Cập nhật '+esc(ago(s.updated))+' · ':''}${s.obsidian?esc(s.obsidian):''}</div>
+      ${s.md?`<div class="mdbody">${mdRender(s.md.replace(/^---[\s\S]*?---\n/,''))}</div><button class="btn full" style="margin-top:10px" onclick="copyText(S.stSkillMd)">${ico('copy',16)} Sao chép SKILL.md</button>`:`<div class="card empty">Chưa có skill. Lưu ít nhất 1 công thức, superHuy sẽ soạn skill từ đó.</div>`}
+      <button class="btn pri full" style="margin-top:10px" id="skGo" onclick="stSkillBuild()">${ico('refresh',16)} Cập nhật skill từ công thức và phản hồi</button>`); S.stSkillMd = s.md; }
+  catch(e){ toast(e.message); }
+}
+async function stSkillBuild(){ const b = $('#skGo'); b.disabled = true; b.textContent = 'superHuy đang soạn skill…'; try{ await run('noidung','skill_capnhat',{},'Cập nhật skill News Studio'); stSkill(); }catch(e){ toast(e.message); b.disabled = false; } }
+
 /* ---------- Xem trước và lưu video */
 function vPlayer(c){
   const m = c.meta||{}, ch = m.chapters||[];
@@ -1991,13 +2117,14 @@ function cSettings(){
   S.cspaint = () => { const t = $('#tnew')?.value||''; const y = $('#sheet').scrollTop; paint(); $('#sheet').scrollTop = y; if($('#tnew')) $('#tnew').value = t.trim()&&S.cset.topics.includes(t.trim())?'':t; }; paint();
 }
 async function cPack(iid, part){
-  let d; try{ d = S.cpack?.item?.id===iid && part ? S.cpack : await run('noidung','bo',{iid},'',true); }catch(e){ return toast(e.message); }
+  let d; try{ d = await run('noidung','bo',{iid},'',true); }catch(e){ return toast(e.message); }
   S.cpack = d; const parts = d.parts||{}, keys = ['reel','group','page'].filter(k=>parts[k]);
   if(!keys.length) return toast('Bộ nội dung này không còn trong thư viện');
   part = keys.includes(part) ? part : keys[0];
+  if(part==='reel') return studioOpen(parts.reel.id, iid);
   const c = parts[part], m = c.meta||{};
   sheet(`<div class="meta" style="margin-bottom:4px">${esc(TRK[d.item.track]||'')} · ${esc(CSTYLE[m.style]||'')}</div><h2 style="margin-bottom:12px">${esc(d.item.headline_vi)}</h2>
-    <div class="seg" style="margin-bottom:14px">${keys.map(k=>`<button class="${k===part?'on':''}" onclick="cPack('${iid}','${k}')">${COUT[k]}</button>`).join('')}</div>
+    <div class="seg" style="margin-bottom:14px">${keys.map(k=>`<button class="${k===part?'on':''}" onclick="cPack('${iid}','${k}')">${k==='reel'?'Reel Studio':COUT[k]}</button>`).join('')}</div>
     ${c.video?vPlayer(c):''}
     ${part!=='reel'&&c.image?`<img class="media" src="${c.image}" alt="">`:''}
     <label class="field"><span>${part==='reel'?'Caption đăng kèm':'Nội dung bài'}, sửa trực tiếp</span><textarea id="ctext" style="min-height:${part==='reel'?120:240}px">${esc(c.text)}</textarea></label>

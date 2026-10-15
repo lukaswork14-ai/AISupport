@@ -435,7 +435,7 @@ def _work_loop():
     while True:
         iid, opt = _jobs.get()
         try:
-            _patch(iid, status="working", started_at=_now())
+            _patch(iid, status="working", started_at=_now(), step="Bắt đầu", pct=1)
             r = make_pack(iid, **opt)
             _patch(iid, status="done", done_at=_now(), pack=r["pack"])
             try:
@@ -559,18 +559,26 @@ def make_pack(iid: str, style: str = "", reel_len: int = 0, outputs: list[str] |
                                 meta={**meta, "variant": "page", "reel_data": reel, "reel": content_agent.format_reel({"reel": reel})})
         made.append("page")
     if "reel" in outputs:
+        from agents import reel_studio
         vmeta, path, poster = {}, None, None
-        try:  # bản tin chiều sâu (đồ hoạ dữ liệu, B-roll, phụ đề theo giọng đọc, nhạc nền)
-            _patch(iid, step="Viết kịch bản bản tin")
-            sc = newscast.write_script(it, body, sec if sec in newscast.SCENES_BY_LEN else 60, content_agent.get_style(), angle)
-            r = newscast.make(sc, it, name=f"reel-{pack}", voice=c.get("voice") or "NamMinh", fast=c.get("fast", True),
-                              brand=CARD_HANDLE, music=c.get("music", True), progress=lambda m: _patch(iid, step=m))
+        st = reel_studio._norm({"len": sec if sec in newscast.SCENES_BY_LEN else None})
+        try:  # bản tin chiều sâu (đồ hoạ dữ liệu, B-roll, phụ đề theo giọng đọc, nhạc nền), theo công thức kênh mặc định
+            _patch(iid, step="Viết kịch bản bản tin", pct=3)
+            sc = newscast.write_script(it, body, st["len"], content_agent.get_style(), angle, rules=reel_studio.rules_text())
+            r = newscast.make(sc, it, name=f"reel-{pack}", voice=st["voice"], brand=CARD_HANDLE, rate=reel_studio.SPEEDS[st["speed"]][1],
+                              music=reel_studio.MUSIC[st["music"]][1] > 0, music_vol=reel_studio.MUSIC[st["music"]][1] or 0.55,
+                              progress=lambda m, pct: _patch(iid, step=m, pct=pct))
             path, poster = r["video"], r.get("poster")
-            vmeta = {"engine": "newscast", "voice_engine": r["engine"], "newscast": sc, "chapters": r["chapters"],
-                     "duration": r["duration"], "reel": newscast.script_text(sc)}
+            vid = uuid.uuid4().hex[:6]
+            vmeta = {"engine": "newscast", "voice_engine": r["engine"], "newscast": sc, "chapters": r["chapters"], "settings": st,
+                     "duration": r["duration"], "reel": newscast.script_text(sc), "current_version": vid,
+                     "versions": [{"id": vid, "video": path, "image": poster, "duration": r["duration"], "chapters": r["chapters"],
+                                   "settings": st, "script": sc, "note": "Bản đầu", "at": _now(), "voice_engine": r["engine"]}]}
             reel["caption"] = sc.get("caption") or reel.get("caption")
             if sc.get("hashtags"):
                 tags = " ".join(h if h.startswith("#") else "#" + h for h in sc["hashtags"][:5])
+        except newscast.TTSError:
+            raise
         except Exception:
             log.exception("Dựng bản tin lỗi, chuyển sang reels chữ")
             label = "Founder AI" if it["track"] == "founder" else (it.get("topic") or "Tin nóng")
@@ -579,7 +587,7 @@ def make_pack(iid: str, style: str = "", reel_len: int = 0, outputs: list[str] |
             vmeta = {"engine": "reel-chu", "voice_engine": engine, "reel": content_agent.format_reel({"reel": reel})}
         cap = (reel.get("caption") or title).strip() + ("\n\n" + tags if tags and tags not in (reel.get("caption") or "") else "")
         ids["reel"] = store.add("video", "Reels: " + title, cap, video=path, image=poster or img,
-                                meta={**meta, "variant": "reel", "reel_data": reel, "len": sec, "versions": [], **vmeta})
+                                meta={**meta, "variant": "reel", "reel_data": reel, "len": sec, **vmeta})
         made.append("reel")
         video = path
     return {"pack": {"id": pack, "ids": ids, "image": img, "angle": p.get("angle", ""), "style": st, "len": sec}, "made": made, "video": video}
@@ -599,28 +607,11 @@ def pack_view(iid: str) -> dict:
 
 # ------------------------------------------------------------------ video: tạo lại, tải về, gửi Telegram
 def rerender(cid: str, voice: str = "", fast=None, music=None, reel_len: int = 0, rewrite: bool = False, angle: str = "") -> dict:
-    """Dựng lại video bản tin (giữ kịch bản hoặc viết lại), giữ bản cũ trong danh sách phiên bản."""
-    r = store.get(cid)
-    if not r or r.get("kind") != "video":
-        raise ValueError("Không tìm thấy video")
-    m = dict(r.get("meta") or {})
-    c = cfg()
-    it = find(m.get("item", "")) or {"headline_vi": r["title"].replace("Reels: ", ""), "source": m.get("source", ""),
-                                      "url": m.get("url", ""), "topic": m.get("topic", ""), "track": m.get("track", "tin")}
-    sc = m.get("newscast")
-    sec = int(reel_len or m.get("len") or c["reel_len"])
-    if rewrite or not sc or (reel_len and sc.get("len") != sec):
-        body = it.get("body") or _page_text(it.get("url", "")) or it.get("raw", "") or it.get("summary_vi", "")
-        sc = newscast.write_script(it, body, sec if sec in newscast.SCENES_BY_LEN else 60, content_agent.get_style(), angle)
-    out = newscast.make(sc, it, name=f"reel-{cid}", voice=voice or c.get("voice") or "NamMinh",
-                        fast=c.get("fast", True) if fast is None else bool(fast), brand=CARD_HANDLE,
-                        music=c.get("music", True) if music is None else bool(music))
-    vers = (m.get("versions") or []) + [{"video": r.get("video"), "image": r.get("image"), "at": r.get("created"),
-                                        "duration": m.get("duration")}]
-    m.update(newscast=sc, chapters=out["chapters"], duration=out["duration"], voice_engine=out["engine"], engine="newscast",
-             reel=newscast.script_text(sc), versions=vers[-5:], len=sec)
-    store.update(cid, video=out["video"], image=out.get("poster") or r.get("image"), meta=m)
-    return {"text": f"Đã dựng lại video ({round(out['duration'])} giây).", "video": out["video"], "id": cid}
+    """(Giữ cho tương thích) -> Reel Studio dựng nền có tiến độ."""
+    from agents import reel_studio
+    sp = "" if fast is None else ("nhanh" if fast else "vua")
+    mu = "" if music is None else ("vua" if music else "tat")
+    return reel_studio.rerender(cid, voice, sp, mu, int(reel_len or 0), bool(rewrite), angle)
 
 
 def send_video(cid: str) -> dict:

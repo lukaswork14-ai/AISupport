@@ -567,6 +567,54 @@ def tts(text: str, mp3: str, voice: str, rate: str) -> list[tuple[float, float, 
     return words
 
 
+class TTSError(RuntimeError):
+    pass
+
+
+_heal = {"at": 0.0}
+
+
+def self_heal_tts(err: Exception):
+    """Microsoft hay đổi cách xác thực -> edge-tts cũ bị từ chối (403). Tự nâng cấp thư viện rồi khởi động lại bot (tối đa 6 giờ/lần)."""
+    import sys
+    import threading
+    import time
+    if not re.search(r"403|Invalid response status|handshake|401", str(err), re.I) or time.time() - _heal["at"] < 6 * 3600:
+        return
+    _heal["at"] = time.time()
+
+    def work():
+        try:
+            import importlib.metadata as md
+            before = md.version("edge-tts")
+            subprocess.run([sys.executable, "-m", "pip", "install", "-q", "--upgrade", "edge-tts"], capture_output=True, timeout=300)
+            after = subprocess.run([sys.executable, "-c", "import importlib.metadata as m;print(m.version('edge-tts'))"],
+                                   capture_output=True, text=True, timeout=60).stdout.strip()
+            log.warning("Tự nâng cấp edge-tts: %s -> %s", before, after)
+            if after and after != before:
+                (DATA_DIR / "restart.flag").write_text("edge-tts upgraded", encoding="utf-8")
+                from core import notify
+                notify.send(text=f"🔧 Giọng đọc video bị Microsoft từ chối, superHuy đã tự cập nhật bộ đọc ({before} → {after}) và khởi động lại. Anh bấm dựng lại video nhé.")
+        except Exception:
+            log.exception("Tự nâng cấp edge-tts lỗi")
+    threading.Thread(target=work, daemon=True).start()
+
+
+def tts_retry(text: str, mp3: str, voice: str, rate: str, tries: int = 3):
+    import time
+    last = None
+    for k in range(tries):
+        try:
+            return tts(text, mp3, voice, rate)
+        except Exception as e:
+            last = e
+            if re.search(r"403|401", str(e)):
+                break
+            time.sleep(1.5 * (k + 1))
+    self_heal_tts(last)
+    raise TTSError(f"Giọng đọc đang lỗi ({type(last).__name__}: {str(last)[:120]}). superHuy đang tự sửa, anh thử dựng lại sau vài phút.")
+
+
 def even_words(text: str, dur: float) -> list[tuple[float, float, str]]:
     ws = text.split()
     if not ws:
@@ -654,7 +702,7 @@ def music_bed(path: Path, dur: float, ff: str):
 
 # ------------------------------------------------------------------ dựng
 def make(script: dict, item: dict | None = None, name: str = "bantin", voice: str = "NamMinh", fast: bool = True,
-         brand: str = "", music: bool = True, progress=None) -> dict:
+         brand: str = "", music: bool = True, progress=None, rate: str = "", music_vol: float = 0.55, allow_silent: bool = False) -> dict:
     """script = {title, kicker, strap, scenes:[{type, voiceover, on_screen, visual_query, entity}], ...}
     Trả về {video, poster, duration, chapters, engine}."""
     item = item or {}
@@ -668,7 +716,8 @@ def make(script: dict, item: dict | None = None, name: str = "bantin", voice: st
         raise ValueError("Kịch bản bản tin quá ngắn")
     family, fontsdir = _family("Bold")
     vname = VOICES.get(voice, voice or VOICES["NamMinh"])
-    rate = "+10%" if fast else "+3%"
+    rate = rate or ("+10%" if fast else "+3%")
+    prog = (lambda m, p: progress(m, p)) if progress else (lambda m, p: None)
     today = dt.date.today()
     date_str = f"{today:%d.%m.%Y}"
     source = (item.get("source") or "").replace("GNews: ", "").strip()[:40]
@@ -696,15 +745,15 @@ def make(script: dict, item: dict | None = None, name: str = "bantin", voice: st
     st_png = strap(work / "strap.png", kicker, strap_txt)
     sh_png, sh_strong = shade(work / "shade.png"), shade(work / "shade2.png", strong=True)
     for i, sc in enumerate(scenes):
-        if progress:
-            progress(f"Dựng cảnh {i + 1}/{n}")
+        prog(f"Giọng đọc và đồ hoạ cảnh {i + 1}/{n}", 5 + int(80 * i / n))
         mp3, wav = work / f"v{i}.mp3", work / f"v{i}.wav"
         text = sc["voiceover"].strip()
         try:
-            words = tts(text, str(mp3), vname, rate)
+            words = tts_retry(text, str(mp3), vname, rate)
             run([ff, "-y", "-i", str(mp3), "-ar", "44100", "-ac", "1", str(wav)])
-        except Exception as e:
-            log.warning("edge-tts lỗi (%s), dùng im lặng", e)
+        except TTSError:
+            if not allow_silent:
+                raise
             engine = "silent"
             secs = max(2.5, len(text.split()) / 2.7)
             run([ff, "-y", "-f", "lavfi", "-i", "anullsrc=r=44100:cl=mono", "-t", f"{secs:.2f}", str(wav)])
@@ -766,8 +815,7 @@ def make(script: dict, item: dict | None = None, name: str = "bantin", voice: st
                                       label.get("quote") or sc["voiceover"])[:60]})
         total_t += D
     # 4) ghép + nhạc nền tự né giọng + chuẩn âm lượng + thanh tiến trình toàn video
-    if progress:
-        progress("Ghép và trộn âm thanh")
+    prog("Ghép cảnh, trộn nhạc nền và chuẩn âm lượng", 88)
     lst = work / "list.txt"
     lst.write_text("".join(f"file '{p}'\n" for p in parts), encoding="utf-8")
     cat = work / "cat.mp4"
@@ -783,7 +831,7 @@ def make(script: dict, item: dict | None = None, name: str = "bantin", voice: st
     if music:
         music_bed(work / "bed.wav", T, ff)
         args += ["-i", str(work / "bed.wav")]
-        g.append("[0:a]asplit=2[vo][sc];[1:a]volume=0.55[m];[m][sc]sidechaincompress=threshold=0.03:ratio=9:attack=15:release=450[md];"
+        g.append(f"[0:a]asplit=2[vo][sc];[1:a]volume={music_vol}[m];[m][sc]sidechaincompress=threshold=0.03:ratio=9:attack=15:release=450[md];"
                  f"[vo][md]amix=inputs=2:duration=first:normalize=0,loudnorm=I=-15:TP=-1.5:LRA=11,afade=t=out:st={max(0, T - 0.6)}:d=0.6[a]")
     else:
         g.append("[0:a]loudnorm=I=-15:TP=-1.5:LRA=11[a]")
@@ -795,6 +843,7 @@ def make(script: dict, item: dict | None = None, name: str = "bantin", voice: st
     except Exception:
         poster = None
     shutil.rmtree(work, ignore_errors=True)
+    prog("Xong", 100)
     return {"video": str(out), "poster": str(poster) if poster else None, "duration": T, "chapters": chapters, "engine": engine}
 
 
@@ -852,11 +901,12 @@ def _ok(x) -> bool:
     return isinstance(sc, list) and len(sc) >= 4 and all(isinstance(s, dict) and s.get("voiceover") for s in sc)
 
 
-def write_script(item: dict, body: str, sec: int = 60, voice_style: str = "", angle: str = "") -> dict:
+def write_script(item: dict, body: str, sec: int = 60, voice_style: str = "", angle: str = "", rules: str = "") -> dict:
     from llm import ask_json
     sec = sec if sec in SCENES_BY_LEN else 60
     n = SCENES_BY_LEN[sec]
-    prompt = SCRIPT.format(voice=f"VĂN PHONG KÊNH: {voice_style}" if voice_style else "", angle=f"CHỈ ĐẠO THÊM: {angle}" if angle else "",
+    voice = (f"VĂN PHONG KÊNH: {voice_style}" if voice_style else "") + (("\n" + rules) if rules else "")
+    prompt = SCRIPT.format(voice=voice, angle=f"CHỈ ĐẠO THÊM: {angle}" if angle else "",
                            sec=sec, words=int(sec * 2.7), n=n, topic=item.get("topic", ""), source=item.get("source", ""),
                            url=item.get("url", ""), headline=item.get("headline_vi", ""), title_en=item.get("title_en", ""),
                            summary=item.get("summary_vi", ""), body=(body or "(chỉ có tóm tắt)")[:8000])

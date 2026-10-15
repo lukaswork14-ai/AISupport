@@ -81,9 +81,13 @@ def seed():
              "-shortest", "-pix_fmt", "yuv420p", str(vid)])
     from core import store
     cid = store.add("video", "Reels: Shopify cho AI agent thanh toán", "Caption thử", video=str(vid), image=None,
-                    meta={"item": "c2", "variant": "reel", "engine": "newscast", "duration": 4, "len": 60,
+                    meta={"item": "c2", "variant": "reel", "engine": "newscast", "duration": 4, "len": 60, "voice_engine": "edge-tts",
+                          "settings": {"voice": "NamMinh", "speed": "nhanh", "music": "vua", "len": 60}, "current_version": "v2",
+                          "newscast": {"title": "Shopify", "scenes": [{"type": "hook", "voiceover": "Khách hàng mới là AI?", "on_screen": {"text": "Khách hàng mới là AI?"}},
+                                                                      {"type": "stat", "voiceover": "Tăng 7 lần.", "on_screen": {"value": "7 lần", "label": "lưu lượng"}}]},
                           "chapters": [{"t": 0, "type": "hook", "label": "Khách hàng mới là AI?"}, {"t": 2, "type": "stat", "label": "7 lần"}],
-                          "reel": "1. [hook] ...", "versions": [{"video": str(vid), "at": "2026-10-15T09:00:00", "duration": 4}]})
+                          "reel": "1. [hook] ...", "versions": [{"id": "v1", "video": str(vid), "at": "2026-10-15T09:00:00", "duration": 4, "settings": {"voice": "NamMinh"}, "note": "Bản đầu", "voice_engine": "silent"},
+                                                         {"id": "v2", "video": str(vid), "at": "2026-10-15T09:10:00", "duration": 4, "settings": {"voice": "HoaiMy"}, "note": "Giọng nữ, đọc chậm", "voice_engine": "edge-tts"}]})
     items = content_hub._load()
     items.append({"id": "c2", "track": "tin", "status": "done", "at": _dt.datetime.now().isoformat(timespec="seconds"), "done_at": _dt.datetime.now().isoformat(timespec="seconds"),
                   "topic": "AI", "headline_vi": "Shopify cho AI agent thanh toán", "summary_vi": "", "url": "", "source": "TechCrunch",
@@ -195,14 +199,17 @@ def main():
         step("27-strategy-doc", "clDoc('leversphere')", 1800)
         step("28-insight", "closeSheet();clInsight('ins1')", 1500)
         step("29-pack-video", "closeSheet();S.cview='tao';render();setTimeout(()=>cPack('c2','reel'),300)", 2500)
-        step("30-video-redo", "vRedo(S.cpack.parts.reel.id)", 1200)
+        step("30-studio-preview", "stPreview('v1')", 1200)
+        step("30b-studio-progress", "S.st.d.render={status:'running',pct:46,step:'Giọng đọc và đồ hoạ cảnh 4/8',note:'Giọng nam, đọc vừa phải',started:new Date(Date.now()-42000).toISOString()};S.st.preview=null;stPaint()", 900)
+        step("30c-studio-script", "S.st.d.render={};S.st.tab='script';stPaint()", 900)
+        step("30d-studio-recipe", "S.st.tab='recipe';S.st.rc={items:[{id:'r1',name:'Bản tin 60s giọng nam',summary:'Mở bằng con số, nhịp vừa',default:true}],skill:''};stPaint()", 900)
         step("31-learn", "closeSheet();go('growth');S.gr.view='learn';S.lr=null;render()", 2500, True)
         step("32-learn-day", "lrDay('lc1',1)", 2500)
         step("33-learn-quiz", "S.ld.ans={q1:0,q2:0};lrQuiz()", 1800)
         step("34-learn-practice", "$('#sheet').scrollTop=$('#sheet').scrollHeight", 800)
         step("35-learn-course", "lrCourse('lc1')", 1800)
         try:
-            dl = page.evaluate("run('noidung','tai_video',{cid:S.cpack.parts.reel.id},'',true).then(r=>r.url)")
+            dl = page.evaluate("run('noidung','tai_video',{cid:S.st.cid},'',true).then(r=>r.url)")
             import urllib.request
             u = dl if dl.startswith("http") else "http://127.0.0.1:8787" + dl
             with urllib.request.urlopen(u) as rr:

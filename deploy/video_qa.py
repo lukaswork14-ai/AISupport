@@ -36,7 +36,7 @@ except Exception as _e:
 script = json.loads((ROOT / "deploy/qa/newscast_sample.json").read_text(encoding="utf-8"))
 t = time.time()
 r = nc.make(script, {"source": "TechCrunch", "topic": "AI Commerce", "url": "https://techcrunch.com/"}, name="qa", brand="@superhuy",
-            progress=lambda m: None)
+            progress=lambda m, p=None: None)
 rep.append(f"render: {round(time.time() - t, 1)}s duration={r['duration']} engine={r['engine']} chapters={len(r['chapters'])}")
 v = r["video"]
 subprocess.run(["cp", v, str(OUT / "newscast.mp4")])
@@ -45,6 +45,30 @@ for k, x in enumerate([1.0, 6.0, 10.0, 17.0, 24.0, 30.0, 37.0, r["duration"] - 1
                     str(OUT / f"frame{k}.jpg")])
 ln = subprocess.run(["ffmpeg", "-i", v, "-af", "ebur128", "-f", "null", "-"], capture_output=True, text=True).stderr
 rep.append("loudness: " + " ".join(l.strip() for l in ln.splitlines()[-12:] if "I:" in l or "LRA:" in l))
+# Reel Studio: dựng lại nền có tiến độ + phiên bản (giọng thật)
+try:
+    from core import store
+    from agents import reel_studio
+    cid = store.add("video", "Reels: Shopify cho AI agent", "cap", video=v, image=r.get("poster"),
+                    meta={"engine": "newscast", "newscast": script, "settings": {"voice": "NamMinh", "speed": "nhanh", "music": "vua", "len": 60},
+                          "versions": [], "source": "TechCrunch", "url": "https://techcrunch.com/"})
+    reel_studio.render(cid, {"voice": "HoaiMy", "speed": "vua", "music": "nhe"}, note="QA: giọng nữ")
+    steps, t = [], time.time()
+    while time.time() - t < 400:
+        stt = reel_studio.state(cid)["render"]
+        if stt.get("step") and (not steps or steps[-1] != f"{stt.get('pct')}% {stt.get('step')}"):
+            steps.append(f"{stt.get('pct')}% {stt.get('step')}")
+        if stt.get("status") in ("done", "error"):
+            break
+        time.sleep(1)
+    st = reel_studio.state(cid)
+    rep.append(f"studio_render: {st['render'].get('status')} err={st['render'].get('error', '')[:120]} versions={len(st['versions'])} "
+               f"voice_engine={st['voice_engine']} settings={st['settings']} secs={st['render'].get('secs')}")
+    rep.append("studio_steps: " + " | ".join(steps[:14]))
+    subprocess.run(["cp", st["video"], str(OUT / "studio_v2.mp4")])
+except Exception as e:
+    import traceback
+    rep.append("studio_error: " + traceback.format_exc()[-400:])
 # nguồn tin chiến lược
 for lens, L in strategy.LENSES.items():
     for name, url in L["sources"]:
