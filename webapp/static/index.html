@@ -4,6 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
 <title>superHuy</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="superHuy">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#F4F1F8" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#131019" media="(prefers-color-scheme: dark)">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -621,12 +629,77 @@ html[data-scheme="dark"] .vd.thu_nghiem{ color:#7DB6FF } .vd.bo_qua{ color:var(-
 .xppop b{ font-size:26px; letter-spacing:-.02em } .xppop span{ font-size:13px; opacity:.9 } .xppop em{ font-style:normal; font-size:13px; font-weight:600 } .xppop strong{ font-size:15px; margin-top:4px }
 .xppop.out{ opacity:0; transform:translate(-50%,-20px) } @keyframes xpin{ from{ transform:translate(-50%,20px) scale(.8); opacity:0 } to{ transform:translate(-50%,0) scale(1); opacity:1 } }
 @media (prefers-reduced-motion: reduce){ .xppop{ animation:none; transition:none } }
+
+/* ================= App iPhone: chuyển động, hiệu ứng, tương tác ================= */
+:root{ --spring:cubic-bezier(.22,1.2,.36,1); --ease-out:cubic-bezier(.16,1,.3,1); --safe-t:env(safe-area-inset-top) }
+body.standalone{ padding-top:var(--safe-t) }
+body.standalone .sheet{ max-height:calc(100vh - var(--safe-t) - 12px) }
+/* chuyển tab: nội dung trượt nhẹ + các thẻ xuất hiện so le */
+@keyframes viewIn{ from{ opacity:0; transform:translateY(14px) } to{ opacity:1; transform:none } }
+@keyframes cardIn{ from{ opacity:0; transform:translateY(18px) scale(.985) } to{ opacity:1; transform:none } }
+#app.enter{ animation:viewIn .34s var(--ease-out) both }
+#app.enter > .card, #app.enter > .sec, #app.enter > .cldocs, #app.enter > .stack, #app.enter > .gmhead, #app.enter > .seg, #app.enter > .chips{ animation:cardIn .5s var(--ease-out) both }
+#app.enter > :nth-child(2){ animation-delay:.03s } #app.enter > :nth-child(3){ animation-delay:.06s } #app.enter > :nth-child(4){ animation-delay:.09s }
+#app.enter > :nth-child(5){ animation-delay:.12s } #app.enter > :nth-child(6){ animation-delay:.15s } #app.enter > :nth-child(n+7){ animation-delay:.18s }
+/* bấm: co nhẹ như nút iOS */
+.btn, .chip, .iconbtn, .seg button, .card.list > button, .round, .rpopt, nav button{ transition:transform .18s var(--spring), background-color .2s, color .2s, box-shadow .2s }
+.btn:active, .chip:active, .iconbtn:active, .seg button:active, .round:active{ transform:scale(.95) }
+.card.list > button:active{ transform:scale(.985); background:var(--fill) }
+/* thanh điều hướng: viên nền trượt theo tab, biểu tượng nảy */
+nav{ backdrop-filter:saturate(1.6) blur(18px); -webkit-backdrop-filter:saturate(1.6) blur(18px) }
+nav .pill{ position:absolute; top:8px; height:48px; border-radius:18px; background:var(--jade-soft); transition:left .42s var(--spring), width .42s var(--spring), opacity .2s; pointer-events:none }
+nav button{ position:relative; z-index:1 }
+@keyframes pop{ 0%{ transform:scale(1) } 40%{ transform:scale(1.22) translateY(-2px) } 100%{ transform:scale(1) } }
+nav button.on.pop svg{ animation:pop .45s var(--spring) }
+nav .ai span.orb{ transition:transform .35s var(--spring), box-shadow .3s }
+nav .ai:active span.orb{ transform:translateX(-50%) scale(.9) }
+nav .ai.on span.orb{ transform:translateX(-50%) rotate(45deg) }
+@keyframes breathe{ 0%,100%{ box-shadow:0 10px 24px color-mix(in srgb,#9B3FC0 45%,transparent), 0 0 0 5px var(--bg) } 50%{ box-shadow:0 12px 30px color-mix(in srgb,#9B3FC0 65%,transparent), 0 0 0 5px var(--bg) } }
+nav .ai span.orb{ animation:breathe 3.2s ease-in-out infinite }
+/* tấm trượt: lò xo, kéo xuống để đóng */
+.sheet{ transition:transform .42s var(--spring) } .sheet.drag{ transition:none }
+.sheet .grab{ cursor:grab; touch-action:none; padding:8px 0; background-clip:content-box; height:21px; margin:-4px auto 6px; width:60px; position:relative }
+.sheet .grab::after{ content:""; position:absolute; left:10px; right:10px; top:8px; height:5px; border-radius:9px; background:var(--line) }
+.scrim{ backdrop-filter:blur(2px); -webkit-backdrop-filter:blur(2px) }
+/* thông báo nổi */
+#toast{ transition:none } #toast.in{ animation:toastIn .45s var(--spring) both }
+@keyframes toastIn{ from{ opacity:0; transform:translate(-50%,16px) scale(.96) } to{ opacity:1; transform:translate(-50%,0) } }
+/* khung xương có ánh sáng chạy */
+.skel{ background:linear-gradient(90deg, var(--fill) 0%, color-mix(in srgb,var(--text) 11%,transparent) 50%, var(--fill) 100%); background-size:200% 100%; animation:shimmer 1.3s linear infinite }
+@keyframes shimmer{ from{ background-position:200% 0 } to{ background-position:-200% 0 } }
+/* kéo để làm mới (app iPhone) */
+#ptr{ position:fixed; left:50%; top:calc(var(--safe-t) + 6px); z-index:15; width:38px; height:38px; margin-left:-19px; border-radius:50%; background:var(--surface);
+  box-shadow:var(--sh); display:grid; place-items:center; color:var(--jade); transform:translateY(-70px); opacity:0; pointer-events:none }
+#ptr svg{ width:20px; height:20px; transition:transform .1s } #ptr.spin svg{ animation:rot .8s linear infinite } @keyframes rot{ to{ transform:rotate(360deg) } }
+/* màn khoá: nền ánh sáng chuyển động, phím gợn sóng, mở khoá mượt */
+#lock{ overflow:hidden; background:var(--bg) }
+#lock::before, #lock::after{ content:""; position:absolute; width:120vmax; height:120vmax; border-radius:50%; z-index:-1; filter:blur(60px); opacity:.55 }
+#lock::before{ left:-70vmax; top:-80vmax; background:radial-gradient(circle, #7B5CF0 0%, transparent 60%); animation:drift 14s ease-in-out infinite alternate }
+#lock::after{ right:-70vmax; bottom:-85vmax; background:radial-gradient(circle, #C13F96 0%, transparent 60%); animation:drift 17s ease-in-out infinite alternate-reverse }
+#lock{ isolation:isolate }
+@keyframes drift{ from{ transform:translate(0,0) } to{ transform:translate(14vmax,10vmax) } }
+#lock .mark{ background:var(--aura); color:#fff; box-shadow:0 14px 34px color-mix(in srgb,#9B3FC0 40%,transparent); animation:markIn .7s var(--spring) both }
+@keyframes markIn{ from{ transform:scale(.6) rotate(-25deg); opacity:0 } to{ transform:none; opacity:1 } }
+.keys button{ position:relative; overflow:hidden; transition:transform .16s var(--spring), background-color .2s }
+.keys button .rip{ position:absolute; inset:0; border-radius:50%; background:var(--aura); opacity:.0; transform:scale(.2); pointer-events:none }
+.keys button.hit .rip{ animation:rip .45s var(--ease-out) }
+@keyframes rip{ 0%{ opacity:.45; transform:scale(.2) } 100%{ opacity:0; transform:scale(1.25) } }
+.dots i{ transition:background .15s, border-color .15s, transform .25s var(--spring) } .dots i.on{ transform:scale(1.18); background:var(--aura); border-color:transparent }
+body.unlocking #lock{ animation:lockOut .5s var(--ease-out) forwards; display:flex }
+@keyframes lockOut{ to{ opacity:0; transform:scale(1.06); filter:blur(6px) } }
+#lock .hint{ margin-top:22px; font-size:12.5px; color:var(--muted); text-align:center; max-width:300px; line-height:1.5 }
+#lock .hint b{ color:var(--text) }
+@media (prefers-reduced-motion:reduce){
+  #app.enter, #app.enter > *, nav .ai span.orb, #lock::before, #lock::after, #lock .mark, .skel, #toast.in{ animation:none!important }
+  .sheet, nav .pill{ transition:none }
+}
 </style>
 </head>
 <body>
 <div class="jobs" id="jobs"></div>
 <div class="toast" id="toast" role="status"></div>
-<section id="lock" aria-label="Mở khóa superHuy"><div class="mark" id="lockMark"></div><h2>superHuy</h2><p class="sub" id="lockSub" role="status">Nhập mã PIN</p><div class="dots" id="dots" aria-hidden="true"></div><div class="keys" id="keys"></div></section>
+<section id="lock" aria-label="Mở khóa superHuy"><div class="mark" id="lockMark"></div><h2>superHuy</h2><p class="sub" id="lockSub" role="status">Nhập mã PIN</p><div class="dots" id="dots" aria-hidden="true"></div><div class="keys" id="keys"></div><p class="hint" id="lockHint"></p></section>
+<div id="ptr" aria-hidden="true"></div>
 <main class="wrap" id="app"><div class="center"><div class="spin" style="color:var(--jade)"></div></div></main>
 <nav id="nav" hidden></nav>
 <div class="scrim" id="scrim"></div>
@@ -640,6 +713,8 @@ html[data-scheme="dark"] .vd.thu_nghiem{ color:#7DB6FF } .vd.bo_qua{ color:var(-
   window.addEventListener('unhandledrejection', e => { const m = (e.reason && (e.reason.message||e.reason)) || 'unhandled'; if(!/Mất kết nối|Đã khóa|Phiên hết hạn|mã PIN/.test(String(m))) send(m, 'promise', ''); });
 })();
 const tg = window.Telegram?.WebApp;
+const IN_TG = !!tg?.initData;  // mở trong Telegram; ngược lại là app iPhone/trình duyệt (đăng nhập bằng PIN)
+const STANDALONE = !!(navigator.standalone || matchMedia('(display-mode: standalone)').matches);
 const S = { tok:null, tab:'home', data:{}, jobs:{}, busy:{}, kind:'', calDay:'today', cal:{}, chatWait:false, first:'' };
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -677,7 +752,7 @@ const AGENT_ICON = { phattrien:'sprout', viec:'tasks', taichinh:'wallet', lich:'
 const KIND = { post:['Bài viết','pen'], bantin:['Ảnh bản tin','image'], video:['Video','film'], note:['Ghi chú','save'] };
 
 /* ---------- tiện ích */
-function toast(m, ms=2600){ const t=$('#toast'); t.textContent=m; t.style.display='block'; clearTimeout(t._h); t._h=setTimeout(()=>t.style.display='none', ms); }
+function toast(m, ms=2600){ const t=$('#toast'); t.textContent=m; t.style.display='block'; t.classList.remove('in'); void t.offsetWidth; t.classList.add('in'); clearTimeout(t._h); t._h=setTimeout(()=>t.style.display='none', ms); }
 async function api(path, body){
   const opt = body ? {method:'POST', headers:{'Content-Type':'application/json','X-Session':S.tok||''}, body:JSON.stringify(body)} : {headers:{'X-Session':S.tok||''}};
   let r; try{ r = await fetch(path, opt); }catch(e){ throw new Error('Mất kết nối tới bot. Đóng app và bấm “Mở app” trong chat để mở lại.'); }
@@ -731,10 +806,20 @@ function nav(){
   n.innerHTML = TABS.map(([id,l,i]) => id==='ai' ? `<button data-t="ai" class="ai ${S.dockOpen||S.tab==='chat'?'on':''}" aria-label="Trò chuyện với superHuy"><span class="orb">${ico('spark',26)}</span><em>${l}</em></button>`
     : `<button data-t="${id}" class="${S.tab===id?'on':''}" aria-label="${l}">${ico(i)}<span>${l}</span></button>`).join('');
   n.querySelectorAll('button').forEach(b => b.onclick = () => b.dataset.t==='ai' ? aiToggle() : go(b.dataset.t));
+  // viên nền trượt theo tab đang mở + biểu tượng nảy khi vừa chuyển tab
+  const on = n.querySelector('button.on:not(.ai)'), pill = document.createElement('i'); pill.className = 'pill';
+  n.prepend(pill);
+  const place = () => { if(!on){ pill.style.opacity = 0; return; } const nb = n.getBoundingClientRect(), b = on.getBoundingClientRect();
+    pill.style.opacity = 1; pill.style.width = Math.min(64, b.width - 6) + 'px'; pill.style.left = (b.left - nb.left + (b.width - Math.min(64, b.width - 6)) / 2) + 'px'; };
+  if(S.pillX != null){ pill.style.transition = 'none'; pill.style.left = S.pillX + 'px'; pill.style.width = (S.pillW||56) + 'px'; void pill.offsetWidth; pill.style.transition = ''; }
+  requestAnimationFrame(()=>{ place(); S.pillX = parseFloat(pill.style.left)||null; S.pillW = parseFloat(pill.style.width)||56; });
+  if(on && S.popTab === S.tab){ on.classList.add('pop'); S.popTab = null; }
 }
-function go(tab){ if(tab==='news'||tab==='studio'){ S.cview = tab==='news'?'duyet':'tao'; tab='content'; } if(S.tab!==tab) haptic('soft'); S.tab = tab; closeSheet(); render(); window.scrollTo(0,0); if(tab==='chat') setTimeout(()=>$('#msgIn')?.focus(), 200); }
+function go(tab){ if(tab==='news'||tab==='studio'){ S.cview = tab==='news'?'duyet':'tao'; tab='content'; } if(S.tab!==tab){ haptic('soft'); S.enter = true; S.popTab = tab; } S.tab = tab; closeSheet(); render(); window.scrollTo(0,0); if(tab==='chat') setTimeout(()=>$('#msgIn')?.focus(), 200); }
 function render(){
   nav();
+  const app = $('#app');
+  if(S.enter){ S.enter = false; app.classList.remove('enter'); void app.offsetWidth; app.classList.add('enter'); clearTimeout(S.enterT); S.enterT = setTimeout(()=>app.classList.remove('enter'), 900); }
   $('#app').innerHTML = ({home:vHome, meet:vMeet, mail:vMail, chat:vChat, content:vContent, news:vContent, studio:vContent, more:vMore, tasks:vTasks, money:vMoney, growth:vGrowth})[S.tab]();
   paintBusy();
   if(S.tab==='home'){ loadCal(true); loadInv(true); liveDigests(); loadHomeStats(); }
@@ -3164,7 +3249,9 @@ function showLock(a){
   try{ closeSheet(); }catch(e){}
   $('#lockMark').innerHTML = ico('lock', 28);
   $('#keys').innerHTML = [1,2,3,4,5,6,7,8,9].map(n=>`<button data-k="${n}" aria-label="Số ${n}">${n}</button>`).join('')
-    + `<button class="ghost" data-k="x">Đóng</button><button data-k="0" aria-label="Số 0">0</button><button class="ghost" data-k="del" aria-label="Xóa">${ico('del',26)}</button>`;
+    + `${IN_TG?'<button class="ghost" data-k="x">Đóng</button>':'<span></span>'}<button data-k="0" aria-label="Số 0">0</button><button class="ghost" data-k="del" aria-label="Xóa">${ico('del',26)}</button>`;
+  $('#keys').querySelectorAll('button:not(.ghost)').forEach(b => b.insertAdjacentHTML('beforeend','<span class="rip"></span>'));
+  $('#lockHint').innerHTML = (!IN_TG && !STANDALONE) ? `Cài lên iPhone: trong Safari bấm <b>Chia sẻ</b> rồi <b>Thêm vào Màn hình chính</b>. Lần sau chỉ cần mở biểu tượng superHuy và nhập PIN.` : '';
   paintDots();
   setSub(a.wait ? `Tạm khóa do nhập sai nhiều lần. Thử lại sau ${Math.ceil(a.wait/60)} phút.` : 'Nhập mã PIN để mở', !!a.wait);
   document.body.classList.add('locked');
@@ -3176,14 +3263,18 @@ async function pinKey(k){
   if(k==='del'){ LOCK.buf = LOCK.buf.slice(0,-1); paintDots(); return; }
   if(LOCK.buf.length >= LOCK.len) return;
   LOCK.buf += k; haptic('light'); paintDots();
+  const kb = $('#keys').querySelector(`button[data-k="${k}"]`); if(kb){ kb.classList.remove('hit'); void kb.offsetWidth; kb.classList.add('hit'); }
   if(LOCK.buf.length < LOCK.len) return;
   LOCK.busy = true; setSub('Đang kiểm tra…');
   try{
     let r;
-    try{ r = await api('/api/pin', {pre:LOCK.pre, pin:LOCK.buf}); }
+    const body = () => ({pre:LOCK.pre, pin:LOCK.buf, app:!IN_TG, device:deviceId()});
+    try{ r = await api('/api/pin', body()); }
     catch(e){ if(!/hết hạn/i.test(e.message)) throw e;  // vé tạm hết hạn (để app mở lâu): xin vé mới rồi thử lại 1 lần
-      const a = await api('/api/auth', {initData: tg.initData}); LOCK.pre = a.pre; r = await api('/api/pin', {pre:LOCK.pre, pin:LOCK.buf}); }
-    if(r.ok){ S.tok = r.session; LOCK.buf=''; notifyH('success'); document.body.classList.remove('locked'); LOCK.resolve?.(r.session); return; }
+      const a = await authStart(); LOCK.pre = a.pre; r = await api('/api/pin', body()); }
+    if(r.ok){ S.tok = r.session; LOCK.buf=''; notifyH('success'); S.enter = true;
+      document.body.classList.add('unlocking'); document.body.classList.remove('locked');
+      setTimeout(()=>document.body.classList.remove('unlocking'), 520); LOCK.resolve?.(r.session); return; }
     notifyH('error'); const d = $('#dots'); d.classList.remove('shake'); void d.offsetWidth; d.classList.add('shake');
     LOCK.buf = ''; setTimeout(paintDots, 200); setSub(r.msg || 'Sai mã PIN', true);
   }catch(e){ LOCK.buf=''; paintDots(); setSub(e.message, true); }
@@ -3191,8 +3282,10 @@ async function pinKey(k){
 }
 $('#keys').addEventListener('click', e => { const b = e.target.closest('button[data-k]'); if(b) pinKey(b.dataset.k); });
 document.addEventListener('keydown', e => { if(!lockOn()) return; if(/^\d$/.test(e.key)) pinKey(e.key); else if(e.key==='Backspace') pinKey('del'); });
+function deviceId(){ try{ let d = localStorage.getItem('sh_dev'); if(!d){ d = (crypto.randomUUID?.() || String(Math.random()).slice(2)) ; localStorage.setItem('sh_dev', d); } return d; }catch(e){ return ''; } }
+const authStart = () => IN_TG ? api('/api/auth', {initData: tg.initData}) : api('/api/app/hello', {});
 async function unlockFlow(){
-  const a = await api('/api/auth', {initData: tg.initData});
+  const a = await authStart();
   S.first = a.user?.first_name || S.first;
   if(a.need_pin) await showLock(a); else S.tok = a.session;
 }
@@ -3223,6 +3316,29 @@ setInterval(()=>{
 }, 60000);
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && S.tok && !lockOn() && S.tab==='home'){ loadCal(true); loadInv(true); } });
 
+/* ---------- tương tác kiểu iOS: kéo tấm trượt xuống để đóng, kéo trang xuống để làm mới */
+(function(){
+  const sh = $('#sheet'); let y0 = null, dy = 0, t0 = 0;
+  const start = e => { const fromGrab = e.target.closest('.grab'); if(!fromGrab && sh.scrollTop > 0) return; y0 = e.touches[0].clientY; dy = 0; t0 = Date.now(); };
+  const move = e => { if(y0 === null) return; dy = e.touches[0].clientY - y0; if(dy <= 0 || (sh.scrollTop > 0 && !e.target.closest('.grab'))){ dy = 0; return; }
+    sh.classList.add('drag'); sh.style.transform = `translateY(${dy < 0 ? 0 : dy * (dy > 140 ? .8 : 1)}px)`; $('#scrim').style.opacity = Math.max(0, 1 - dy / 400); if(e.cancelable) e.preventDefault(); };
+  const end = () => { if(y0 === null) return; const v = dy / Math.max(1, Date.now() - t0); y0 = null; sh.classList.remove('drag'); sh.style.transform = ''; $('#scrim').style.opacity = '';
+    if(dy > 120 || (dy > 40 && v > .6)){ haptic('light'); closeSheet(); } };
+  sh.addEventListener('touchstart', start, {passive:true}); sh.addEventListener('touchmove', move, {passive:false}); sh.addEventListener('touchend', end); sh.addEventListener('touchcancel', end);
+})();
+(function(){
+  if(IN_TG) return;  // Telegram tự có cử chỉ riêng
+  const p = $('#ptr'); p.innerHTML = ico('refresh', 20); let y0 = null, d = 0, busy = false;
+  addEventListener('touchstart', e => { if(window.scrollY > 0 || busy || lockOn() || $('#sheet').classList.contains('on') || S.tab==='chat') return; y0 = e.touches[0].clientY; d = 0; }, {passive:true});
+  addEventListener('touchmove', e => { if(y0 === null) return; d = Math.max(0, e.touches[0].clientY - y0); const k = Math.min(1, d / 90);
+    p.style.transition = 'none'; p.style.opacity = k; p.style.transform = `translateY(${Math.min(70, d * .6) - 50}px) rotate(${d * 3}deg)`; }, {passive:true});
+  addEventListener('touchend', async () => { if(y0 === null) return; y0 = null; p.style.transition = 'transform .35s var(--spring), opacity .3s';
+    if(d < 90){ p.style.opacity = 0; p.style.transform = 'translateY(-70px)'; return; }
+    busy = true; p.classList.add('spin'); p.style.transform = 'translateY(14px)';
+    try{ await refresh(); S.cl = S.rp = S.lr = null; toast('Đã cập nhật'); }catch(e){ toast(e.message); }
+    p.classList.remove('spin'); p.style.opacity = 0; p.style.transform = 'translateY(-70px)'; busy = false; });
+})();
+
 /* ---------- khởi động */
 (async function boot(){
   try{
@@ -3230,10 +3346,13 @@ document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && S.tok
     document.documentElement.dataset.scheme = tg?.colorScheme || (matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');
     tg?.onEvent?.('themeChanged', ()=>{ document.documentElement.dataset.scheme = tg.colorScheme; });
     try{ const dk = document.documentElement.dataset.scheme==='dark'; tg?.setHeaderColor(dk?'#131019':'#F4F1F8'); tg?.setBackgroundColor(dk?'#131019':'#F4F1F8'); tg?.setBottomBarColor?.(dk?'#131019':'#F4F1F8'); }catch(e){}
-    if(!tg?.initData) throw new Error('Mở app này từ nút “Mở app” trong chat với bot.');
+    if(STANDALONE) document.body.classList.add('standalone');
+    if(!IN_TG && 'serviceWorker' in navigator){ navigator.serviceWorker.register('/sw.js').catch(()=>{}); }
+    if(!IN_TG){ try{ history.replaceState(null, '', '/app'); }catch(e){} }
     await unlockFlow();
+    S.enter = true;
     S.data = await api('/api/bootstrap');
-    const sp = tg.initDataUnsafe?.start_param; if(TABS.some(t=>t[0]===sp)) S.tab = sp;
+    const sp = tg?.initDataUnsafe?.start_param; if(TABS.some(t=>t[0]===sp)) S.tab = sp;
     render();
   }catch(e){
     $('#app').innerHTML = `<div class="center"><div><p style="font-weight:600;color:var(--text)">Chưa mở được app</p><p>${esc(e.message)}</p></div></div>`;

@@ -272,6 +272,47 @@ def main():
         page.evaluate("document.documentElement.dataset.scheme='dark'")
         step("22-dark-meet", "closeSheet();meetOpen('demo01')", 2000)
         step("23-dark-brain", "openBrain()", 2000)
+        # ---- App iPhone (PWA, ngoài Telegram): đăng nhập bằng PIN
+        try:
+            from core import security
+            security.set_pin("246810")
+            ip = b.new_context(viewport={"width": 390, "height": 844}, device_scale_factor=2, locale="vi-VN", has_touch=True, is_mobile=True,
+                               user_agent="Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1")
+            ap = ip.new_page()
+            ap.route("https://telegram.org/js/telegram-web-app.js", lambda r: r.fulfill(status=200, content_type="text/javascript",
+                     body="window.Telegram={WebApp:{initData:'',initDataUnsafe:{},ready(){},expand(){},onEvent(){},HapticFeedback:{impactOccurred(){},notificationOccurred(){}}}};"))
+            ap.on("pageerror", lambda e: errs.append(f"[app pageerror] {e}"))
+            for r_ in ("/manifest.webmanifest", "/sw.js", "/apple-touch-icon.png"):
+                import urllib.request
+                with urllib.request.urlopen("http://127.0.0.1:8787" + r_) as rr:
+                    report.append(f"app file {r_}: {rr.status} {rr.headers.get('Content-Type')}")
+            ap.goto("http://127.0.0.1:8787/app")
+            ap.wait_for_timeout(2500)
+            ap.screenshot(path=str(OUT / "50-app-lock.png"))
+            for k in "1234":
+                ap.keyboard.press(k)
+                ap.wait_for_timeout(120)
+            ap.screenshot(path=str(OUT / "51-app-typing.png"))
+            for k in "56":
+                ap.keyboard.press(k)
+            ap.wait_for_timeout(1500)
+            ap.screenshot(path=str(OUT / "52-app-wrong.png"))
+            for k in "246810":
+                ap.keyboard.press(k)
+                ap.wait_for_timeout(80)
+            ap.wait_for_timeout(3000)
+            ap.screenshot(path=str(OUT / "53-app-home.png"))
+            ap.evaluate("go('growth')")
+            ap.wait_for_timeout(250)
+            ap.screenshot(path=str(OUT / "54-app-tab-anim.png"))
+            ap.wait_for_timeout(1500)
+            ap.evaluate("go('content');S.cview='repo';render();setTimeout(()=>rpOpen('r1'),300)")
+            ap.wait_for_timeout(2000)
+            ap.screenshot(path=str(OUT / "55-app-sheet.png"))
+            report.append("app unlocked: " + str(ap.evaluate("!!S.tok && !document.body.classList.contains('locked')")))
+            ip.close()
+        except Exception as e:
+            errs.append(f"[app] {e}")
         b.close()
     lines = ["# UI QA", f"time: {time.strftime('%Y-%m-%d %H:%M:%S')}", "", f"## Lỗi JS ({len(errs)})"] + errs[:80] + \
             ["", f"## API trả lỗi ({len(apierr)})"] + apierr[:80] + ["", "## Nhật ký"] + report

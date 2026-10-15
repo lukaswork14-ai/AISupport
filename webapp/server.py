@@ -8,6 +8,8 @@ import json
 import re
 import logging
 import mimetypes
+mimetypes.add_type("application/manifest+json", ".webmanifest")
+mimetypes.add_type("text/javascript", ".js")
 import secrets
 import threading
 import time
@@ -89,6 +91,36 @@ def check_pre(pre: str) -> bool:
         return hmac.compare_digest(good, sig) and int(exp) > time.time() and int(uid) == OWNER_CHAT_ID
     except Exception:
         return False
+
+
+# ------------------------------------------------------------------ app iPhone (PWA)
+APP_FILES = {"/manifest.webmanifest": "manifest.webmanifest", "/sw.js": "sw.js", "/icons/icon-180.png": "icons/icon-180.png",
+             "/icons/icon-192.png": "icons/icon-192.png", "/icons/icon-512.png": "icons/icon-512.png",
+             "/icons/icon-maskable-512.png": "icons/icon-maskable-512.png", "/apple-touch-icon.png": "icons/icon-180.png"}
+_HELLO: dict[str, list[float]] = {}
+
+
+def _hello_ok(ip: str) -> bool:
+    now = time.time()
+    xs = [t for t in _HELLO.get(ip, []) if t > now - 600]
+    xs.append(now)
+    _HELLO[ip] = xs[-40:]
+    return len(xs) <= 30
+
+
+def _note_device(dev: str, ua: str):
+    """Báo chủ nhân khi app được đăng nhập trên thiết bị mới."""
+    try:
+        f = DATA_DIR / "app_devices.json"
+        known = json.loads(f.read_text()) if f.exists() else []
+        if dev and dev not in known:
+            known.append(dev)
+            f.write_text(json.dumps(known[-20:]))
+            kind = "iPhone" if "iPhone" in ua else "iPad" if "iPad" in ua else "Mac" if "Macintosh" in ua else "Android" if "Android" in ua else "trình duyệt"
+            security.alert_once(f"dev:{dev}", f"🔐 superHuy vừa được đăng nhập bằng mã PIN trên thiết bị mới ({kind}). "
+                                "Nếu không phải anh, hãy đổi PIN ngay (app › Thêm › Đổi mã PIN).", every=10**9)
+    except Exception:
+        log.exception("Ghi thiết bị app lỗi")
 
 
 # ------------------------------------------------------------------ tải file (link ký, hết hạn 30 phút, không cần phiên)
@@ -233,8 +265,10 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         u = urlparse(self.path)
         q = dict(parse_qsl(u.query))
-        if u.path in ("/", "/index.html"):
+        if u.path in ("/", "/index.html", "/app"):
             return self._file(STATIC / "index.html", cache=False)
+        if u.path in APP_FILES:  # ứng dụng iPhone (PWA): manifest, service worker, biểu tượng
+            return self._file(STATIC / APP_FILES[u.path], cache=u.path.startswith("/icons/"))
         if u.path == "/health":
             return self._json(200, {"ok": True})
         if u.path == "/lark/callback":  # Lark chuyển về sau khi chủ nhân bấm Cho phép
@@ -330,12 +364,25 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(200, {"need_pin": True, "pre": make_pre(int(user["id"])), "pin_len": security.pin_length(),
                                         "wait": security.locked_out(), "user": info})
             return self._json(200, {"session": make_session(int(user["id"])), "user": info})
+        if u.path == "/api/app/hello":  # mở app iPhone (không qua Telegram): chỉ cho nhập PIN
+            if not OWNER_CHAT_ID or not security.pin_enabled():
+                return self._json(403, {"error": "Chưa đặt mã PIN cho superHuy. Mở app trong Telegram › Thêm › Đổi mã PIN để đặt, rồi đăng nhập lại."})
+            ip = self.headers.get("X-Forwarded-For", self.client_address[0]).split(",")[0].strip()
+            if not _hello_ok(ip):
+                return self._json(429, {"error": "Thử lại sau ít phút."})
+            return self._json(200, {"need_pin": True, "pre": make_pre(OWNER_CHAT_ID), "pin_len": security.pin_length(),
+                                    "wait": security.locked_out(), "user": {"first_name": "Huy"}})
         if u.path == "/api/pin":
             if not check_pre(data.get("pre", "")):
                 return self._json(401, {"error": "Phiên đăng nhập hết hạn, hãy mở lại app.", "expired": True})
-            ok, msg = security.verify(str(data.get("pin", ""))[:12], "Mini App")
+            app = bool(data.get("app"))
+            ok, msg = security.verify(str(data.get("pin", ""))[:12], "App iPhone" if app else "Mini App")
             if not ok:
+                if app:
+                    security.alert_once("app-fail", "⚠️ Có lượt nhập sai mã PIN trên app superHuy (ngoài Telegram). Nếu không phải anh, hãy đổi PIN (app › Thêm › Đổi mã PIN).")
                 return self._json(200, {"ok": False, "msg": msg, "wait": security.locked_out()})
+            if app:
+                _note_device(str(data.get("device", ""))[:40], self.headers.get("User-Agent", ""))
             security.unlock_bot()
             return self._json(200, {"ok": True, "session": make_session(OWNER_CHAT_ID)})
         tok = self._tok({})
