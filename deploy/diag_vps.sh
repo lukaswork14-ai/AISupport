@@ -32,5 +32,8 @@ echo "share_route_unknown: $(curl -s -o /dev/null -w '%{http_code}' -m 5 http://
 echo "kb_stats: $(cd /opt/superhuy/current && SUPERHUY_HOME=$S timeout 60 /opt/superhuy/venv/bin/python -c 'from core import kb; print(kb.stats())' 2>&1 | tail -1 | cut -c1-200)"
 echo "memory_note: $([ -f "$V/02 Areas/superHuy/superHuy hieu ve anh.md" ] && echo yes || echo no)"
 echo "gemini: $(cd /opt/superhuy/current && SUPERHUY_HOME=$S timeout 60 /opt/superhuy/venv/bin/python -c 'from agents import gemini_notebook as g; s=g.status(); print({k: s[k] for k in ("library","connected","syncing","last_sync","last_error","notebooks","sources","notes")})' 2>&1 | tail -1 | cut -c1-300)"
+echo "strategy: $(cd /opt/superhuy/current && SUPERHUY_HOME=$S timeout 60 /opt/superhuy/venv/bin/python -c 'from agents import strategy as s; o=s.overview(); print({"insights": o["counts"], "docs": [(d["lens"], d["version"], len(s.doc(d["lens"]).get("md") or "")) for d in o["docs"]]})' 2>&1 | tail -1 | cut -c1-300)"
+echo "fonts: $(ls $S/assets/fonts 2>/dev/null | tr '\n' ' ')"
+echo "content_log: $(grep -h -E 'newscast|Dựng bản tin|strategy|CAO|Phân tích' $S/data/agent.log 2>/dev/null | tail -4 | cut -c1-160 | tr '\n' '|')"
 echo "--- QA ---"
 (cd /opt/superhuy/current && SUPERHUY_HOME=$S timeout 400 /opt/superhuy/venv/bin/python deploy/qa_vps.py 2>/dev/null | grep '^qa_')
