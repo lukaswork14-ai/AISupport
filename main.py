@@ -219,6 +219,32 @@ async def job_content_scan(app: Application):
         await send(app, f"📰 {r['added']} tin mới đang chờ anh duyệt ở trang Nội dung (quẹt phải để tạo reels). Tổng chờ duyệt: {r['pending']}.")
 
 
+async def job_learning_nightly():
+    from agents import learning
+    await asyncio.to_thread(learning.nightly)
+
+
+async def job_learning_remind():
+    from agents import learning
+    from core import notify
+    t = learning.today_text()
+    if t:
+        notify.send(text=t + "\nMở app › Phát triển › Học tập để học, làm quiz và nộp bài thực hành.")
+
+
+def _learning_bootstrap():
+    """Lần đầu: tạo khoá Claude Code 30 ngày (dựa trên Claude HowTo) với bài thực hành cho Leversphere và Sellnity."""
+    from agents import learning
+    try:
+        if not learning._load():
+            learning.create_course("", template="claude-code-30")
+            from core import notify
+            notify.send(text="📚 superHuy đã tạo khoá “Claude Code 30 ngày: xây đội agent cho Leversphere & Sellnity”. "
+                             "Bài ngày 1 (kèm audio, quiz, bài thực hành) đã sẵn trong app › Phát triển › Học tập.")
+    except Exception:
+        log.exception("Tạo khoá học đầu tiên lỗi")
+
+
 async def job_strategy_weekly():
     """Thứ Hai: viết lại 2 tài liệu sống (Roimaxx, Leversphere) từ insight tuần qua."""
     from agents import strategy
@@ -324,6 +350,8 @@ async def post_init(app: Application):
     if vault_sync.enabled():
         scheduler.add_job(job_vault_sync, "interval", minutes=10, args=[app], coalesce=True, max_instances=1,
                           misfire_grace_time=600, next_run_time=dt.datetime.now() + dt.timedelta(minutes=1))
+    scheduler.add_job(job_learning_nightly, CronTrigger(hour=23, minute=20), misfire_grace_time=3 * 3600, coalesce=True)
+    scheduler.add_job(job_learning_remind, CronTrigger(hour=20, minute=0), misfire_grace_time=3600, coalesce=True)
     scheduler.add_job(job_strategy_weekly, CronTrigger(day_of_week="mon", hour=6, minute=20), misfire_grace_time=6 * 3600, coalesce=True)
     scheduler.add_job(job_knowledge_sync, "interval", hours=6, coalesce=True, max_instances=1, misfire_grace_time=3600,
                       next_run_time=dt.datetime.now() + dt.timedelta(minutes=3))
@@ -376,6 +404,7 @@ async def post_init(app: Application):
         log.exception("Không khôi phục được hàng chờ Meeting Studio")
 
     threading.Thread(target=_strategy_bootstrap, daemon=True, name="strategy-boot").start()
+    threading.Thread(target=_learning_bootstrap, daemon=True, name="learning-boot").start()
     try:  # phông chữ cho video bản tin (tải 1 lần)
         from agents import newscast
         threading.Thread(target=newscast.ensure_fonts, daemon=True).start()

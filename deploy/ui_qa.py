@@ -89,6 +89,25 @@ def seed():
                   "topic": "AI", "headline_vi": "Shopify cho AI agent thanh toán", "summary_vi": "", "url": "", "source": "TechCrunch",
                   "pack": {"id": "p1", "ids": {"reel": cid}, "image": None}})
     content_hub._save(items)
+    # Học tập: khoá Claude Code 30 ngày với bài ngày 1 soạn sẵn
+    from agents import learning
+    T = learning.TEMPLATES["claude-code-30"]
+    lesson = {"objectives": ["Hiểu Claude Code là gì", "Cài đặt và chạy phiên đầu tiên", "Áp dụng cho Leversphere"],
+              "md": "## Claude Code là gì?\nClaude Code là trợ lý lập trình dạng agent chạy trong terminal.\n\n## Cài đặt\n```bash\nnpm install -g @anthropic-ai/claude-code\nclaude\n```\n\n## Ví dụ cho Leversphere\n- Tự viết script đổi tên file thiết kế theo SKU\n| Việc | Trước | Sau |\n|---|---|---|\n| Đổi tên 500 file | 2 giờ | 2 phút |",
+              "key_points": ["Agent đọc và sửa file thay anh", "Luôn bắt đầu bằng mục tiêu rõ"],
+              "quiz": [{"id": "q1", "q": "Claude Code chạy ở đâu?", "options": ["Terminal", "Excel", "Photoshop", "Zalo"], "answer": 0, "explain": "Claude Code là công cụ dòng lệnh."},
+                       {"id": "q2", "q": "Lệnh khởi động?", "options": ["start", "claude", "run-ai", "go"], "answer": 1, "explain": "Gõ claude."}],
+              "practice": {"task": "Dùng Claude Code viết script đổi tên file thiết kế theo SKU cho Leversphere", "context": "Leversphere",
+                           "steps": ["Chuẩn bị 10 file mẫu", "Yêu cầu Claude viết script", "Chạy thử"], "deliverable": "Script + ảnh chụp kết quả",
+                           "rubric": ["Chạy đúng", "Xử lý lỗi", "Dễ dùng lại"], "submit": True},
+              "reflection": "Việc lặp lại nào ở Leversphere nên tự động hoá đầu tiên?",
+              "resources": [{"type": "doc", "title": "Tài liệu chính thức Claude Code", "url": "https://code.claude.com/docs/en/overview"},
+                            {"type": "video", "title": "Video: Claude Code là gì", "url": "https://www.youtube.com/results?search_query=claude+code"}]}
+    learning._put({"id": "lc1", "template": "claude-code-30", "title": T["title"], "topic": T["topic"], "goal": T["goal"], "level": T["level"],
+                   "sources": T["sources"], "outcomes": [], "created": "2026-10-16T00:00:00", "start": learning._today().isoformat(),
+                   "status": "active", "review": [], "streak": 0,
+                   "days": [{"day": n, "title": t, "module": m, "doc": dp, "kind": k, "focus": "", "status": "todo", **({"lesson": lesson} if n == 1 else {})}
+                            for n, t, m, dp, k in T["days"]]})
 
 
 def init_data() -> str:
@@ -177,6 +196,11 @@ def main():
         step("28-insight", "closeSheet();clInsight('ins1')", 1500)
         step("29-pack-video", "closeSheet();S.cview='tao';render();setTimeout(()=>cPack('c2','reel'),300)", 2500)
         step("30-video-redo", "vRedo(S.cpack.parts.reel.id)", 1200)
+        step("31-learn", "closeSheet();go('growth');S.gr.view='learn';S.lr=null;render()", 2500, True)
+        step("32-learn-day", "lrDay('lc1',1)", 2500)
+        step("33-learn-quiz", "S.ld.ans={q1:0,q2:0};lrQuiz()", 1800)
+        step("34-learn-practice", "$('#sheet').scrollTop=$('#sheet').scrollHeight", 800)
+        step("35-learn-course", "lrCourse('lc1')", 1800)
         try:
             dl = page.evaluate("run('noidung','tai_video',{cid:S.cpack.parts.reel.id},'',true).then(r=>r.url)")
             import urllib.request

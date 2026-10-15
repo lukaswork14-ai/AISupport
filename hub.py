@@ -7,7 +7,7 @@ import os
 import re
 
 import targets as targets_mod
-from agents import (calendar_agent, content_agent, content_hub, strategy, gemini_notebook, knowledge_sources, meeting, meeting_share, email_agent, fb_connect, gcal_bridge, imagecard, lark_agent, mailbox, news_agent, publisher,
+from agents import (calendar_agent, content_agent, content_hub, strategy, learning, gemini_notebook, knowledge_sources, meeting, meeting_share, email_agent, fb_connect, gcal_bridge, imagecard, lark_agent, mailbox, news_agent, publisher,
                     reel_video, second_brain)
 from config import CARD_HANDLE, DATA_DIR
 from core import digests, notify, store
@@ -547,6 +547,42 @@ register(Agent("noidung", "Nội dung", "🎬", "Săn tin theo chủ đề + cas
            params=[Param("iid", "ID tin", required=True), Param("idx", "Vị trí", "number", default=-1)]),
     Action("gui_video", "Gửi video vào Telegram", content_hub.send_video, hidden=True, params=[Param("cid", "ID video", required=True)]),
     Action("tai_video", "Link tải video", noidung_tai_video, hidden=True, params=[Param("cid", "ID video", required=True)]),
+]))
+
+
+# ================================================================ Học tập (trong Phát triển)
+def hoc_tongquan() -> dict:
+    v = learning.overview()
+    t = learning.today_text()
+    return {**v, "text": t or ("Chưa có khoá học nào." if not v["courses"] else "Hôm nay anh đã học xong các bài.")}
+
+
+register(Agent("hoc", "Học tập", "📚", "Khoá học theo chủ đề: bài học, audio, quiz, ôn tập giãn cách, thực hành áp dụng Leversphere & Sellnity", order=56, actions=[
+    Action("tongquan", "Khoá học của anh", hoc_tongquan, hidden=True, llm=True,
+           desc="Các khoá học đang học, bài hôm nay, tiến độ, điểm quiz, câu cần ôn."),
+    Action("tao", "Tạo khoá học", learning.create_course, hidden=True, long=True, llm=True,
+           desc="Thiết kế khoá học mới theo chủ đề (bài mỗi ngày, quiz, thực hành áp dụng Leversphere/Sellnity). "
+                "template: claude-code-30 (Claude Code 30 ngày) hoặc bỏ trống; sources: link tài liệu/repo tham khảo.",
+           params=[Param("topic", "Chủ đề"), Param("goal", "Mục tiêu", "textarea"), Param("days", "Số ngày", "number", default=30),
+                   Param("level", "Trình độ"), Param("sources", "Link tham khảo", "textarea"), Param("template", "Mẫu")]),
+    Action("khoa", "Xem khoá học", learning.course, hidden=True, params=[Param("cid", "ID", required=True)]),
+    Action("ngay", "Bài học 1 ngày", learning.day_view, hidden=True, long=True, llm=True,
+           desc="Mở bài học của 1 ngày (tự soạn nếu chưa có): nội dung, tài nguyên, quiz, bài thực hành.",
+           params=[Param("cid", "ID khoá", required=True), Param("day", "Ngày", "number", required=True)]),
+    Action("audio", "Bài giảng audio", learning.make_audio, hidden=True, long=True,
+           params=[Param("cid", "ID khoá", required=True), Param("day", "Ngày", "number", required=True), Param("voice", "Giọng")]),
+    Action("quiz", "Nộp quiz", learning.quiz_submit, hidden=True,
+           params=[Param("cid", "ID khoá", required=True), Param("day", "Ngày", "number", required=True), Param("answers", "Đáp án", required=True)]),
+    Action("on_tap", "Câu cần ôn", learning.review_due, hidden=True, params=[Param("cid", "ID khoá", required=True)]),
+    Action("on_tap_nop", "Nộp ôn tập", learning.review_submit, hidden=True,
+           params=[Param("cid", "ID khoá", required=True), Param("answers", "Đáp án", required=True)]),
+    Action("nop", "Nộp bài thực hành", learning.submit, hidden=True, long=True, llm=True,
+           desc="Nộp bài thực hành của 1 ngày học để superHuy chấm theo tiêu chí và nhận xét.",
+           params=[Param("cid", "ID khoá", required=True), Param("day", "Ngày", "number", required=True), Param("text", "Bài làm", "textarea"),
+                   Param("link", "Link"), Param("reflection", "Phản tư", "textarea")]),
+    Action("xong", "Đánh dấu xong ngày", learning.mark_done, hidden=True,
+           params=[Param("cid", "ID khoá", required=True), Param("day", "Ngày", "number", required=True)]),
+    Action("luu_tru", "Lưu trữ khoá", learning.archive, hidden=True, params=[Param("cid", "ID khoá", required=True)]),
 ]))
 
 

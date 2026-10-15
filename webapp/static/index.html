@@ -566,6 +566,15 @@ html[data-scheme="dark"] .apps i{ background:color-mix(in srgb,var(--c) 22%,tran
 .ra{ background:var(--fill); border-radius:16px 16px 16px 4px; padding:12px 14px }
 .rsrc{ display:flex; flex-direction:column; gap:6px; margin-top:10px } .rsrc button{ text-align:left; font-size:12.5px; color:var(--muted); display:flex; gap:6px; align-items:flex-start }
 .ccard .chip{ font-size:12.5px }
+.lcourse{ display:flex; flex-direction:column; gap:8px; margin-bottom:12px } .lcourse h3{ margin:0; font-size:18px; line-height:1.3 }
+.lnext{ display:flex; align-items:center; gap:12px; text-align:left; padding:12px; border-radius:14px; background:var(--fill); margin-top:4px }
+.lday{ flex:none; font-weight:800; font-size:13px; padding:8px 10px; border-radius:10px; background:var(--jade); color:var(--jade-ink) }
+.ldot{ width:30px; height:30px; flex:none; border-radius:50%; display:grid; place-items:center; font-size:12.5px; font-weight:700; background:var(--fill); color:var(--muted) }
+.ldot.on{ background:var(--jade); color:var(--jade-ink) } .ldot.half{ box-shadow:inset 0 0 0 2px var(--jade); color:var(--jade) }
+.lq{ padding:10px 0; border-bottom:1px solid var(--line) } .lq:last-child{ border-bottom:0 } .lqq{ font-weight:600; margin:2px 0 8px }
+.lqo{ display:flex; gap:10px; align-items:flex-start; padding:8px 10px; border-radius:10px; margin:4px 0; background:var(--fill); font-size:14.5px }
+.lqo.right{ box-shadow:inset 0 0 0 2px #199e70 } .lqo.wrong{ box-shadow:inset 0 0 0 2px var(--danger) }
+.lgrade{ margin-top:12px } .mdcode{ background:var(--fill); border-radius:12px; padding:10px 12px; overflow-x:auto; font-size:12.5px; line-height:1.5; margin:8px 0 }
 </style>
 </head>
 <body>
@@ -1879,7 +1888,10 @@ function mdRender(t){
   const flush = () => { if(!tb.length) return; const rows = tb.filter(r=>!/^\s*\|?\s*:?-{2,}/.test(r)).map(r=>r.trim().replace(/^\||\|$/g,'').split('|').map(c=>c.trim()));
     out.push(`<div class="mdtable"><table>${rows.map((r,i)=>`<tr>${r.map(c=>i?`<td>${inl(c)}</td>`:`<th>${inl(c)}</th>`).join('')}</tr>`).join('')}</table></div>`); tb = []; };
   const inl = x => esc(x).replace(/\*\*([^*]+)\*\*/g,'<b>$1</b>').replace(/\[\[([^\]|]+)(\|[^\]]+)?\]\]/g,'<b style="color:var(--jade)">$1</b>');
+  let code = null;
   for(const l of lines){
+    if(/^\s*```/.test(l)){ if(code===null){ flush(); code = []; } else { out.push(`<pre class="mdcode"><code>${esc(code.join('\n'))}</code></pre>`); code = null; } continue; }
+    if(code!==null){ code.push(l); continue; }
     if(/^\s*\|/.test(l)){ tb.push(l); continue; } flush();
     let m;
     if((m=l.match(/^(#{1,4})\s+(.*)/))) out.push(`<h${Math.min(m[1].length+1,4)} class="mdh">${inl(m[2])}</h${Math.min(m[1].length+1,4)}>`);
@@ -1888,6 +1900,7 @@ function mdRender(t){
     else if(l.startsWith('>')) out.push(`<div class="mdq">${inl(l.replace(/^>\s?(\[![a-z]+\]\s*)?/,''))}</div>`);
     else if(l.trim()) out.push(`<p class="mdp">${inl(l)}</p>`);
   }
+  if(code!==null) out.push(`<pre class="mdcode"><code>${esc(code.join('\n'))}</code></pre>`);
   flush(); return out.join('');
 }
 async function clDoc(lens){
@@ -2406,11 +2419,116 @@ function pring(done, due){ const r = 32, c = 2*Math.PI*r, f = due ? done/due : 0
 function vGrowth(){
   const d = S.gr.data, v = S.gr.view;
   const head = `<div class="date">${S.gr.loading?'<span class="spin" style="width:12px;height:12px;display:inline-block;vertical-align:-1px"></span> Đang tải…':'Mục tiêu, thói quen và lịch trình của anh'}</div><h1>Phát triển</h1>
-    <div class="seg" style="margin-bottom:14px">${[['today','Hôm nay'],['goals','Mục tiêu'],['habits','Thói quen'],['mind','Hiểu anh']].map(([k,l])=>`<button class="${v===k?'on':''}" onclick="S.gr.view='${k}';render()">${l}</button>`).join('')}</div>`;
+    <div class="seg" style="margin-bottom:14px">${[['today','Hôm nay'],['learn','Học tập'],['goals','Mục tiêu'],['habits','Thói quen'],['mind','Hiểu anh']].map(([k,l])=>`<button class="${v===k?'on':''}" onclick="S.gr.view='${k}';render()">${l}</button>`).join('')}</div>`;
   if(!d) return head + `<div class="card pad"><div class="skel" style="width:60%"></div><div class="skel"></div></div>`;
   setTimeout(()=>tipBind($('#app')), 0);
-  return head + ({today:grToday, goals:grGoals, habits:grHabits, mind:grMind})[v](d);
+  return head + ({today:grToday, learn:grLearn, goals:grGoals, habits:grHabits, mind:grMind})[v](d);
 }
+
+/* ---------- Học tập: khoá học, bài mỗi ngày, audio, quiz, ôn tập, thực hành */
+const LKIND = {learn:'Học', practice:'Thực hành', review:'Ôn tập', project:'Dự án'};
+function grLearn(){
+  if(!S.lr){ lrLoad(); return `<div class="card pad"><div class="skel" style="width:60%"></div><div class="skel"></div></div>`; }
+  const cs = S.lr.courses||[];
+  return `<p class="lead" style="margin:0 0 12px">Mỗi ngày 30-60 phút: đọc hoặc nghe bài, làm quiz để nhớ lâu, rồi thực hành ngay trên Leversphere và Sellnity. Câu sai tự quay lại theo lịch ôn giãn cách.</p>
+    ${cs.map(c=>{ const pct = Math.round(100*c.done/c.total);
+      return `<article class="card pad lcourse"><div class="row" style="align-items:center;gap:8px"><span class="itype">${c.total} ngày</span>${c.streak?`<span class="fire">🔥 ${c.streak} ngày liền</span>`:''}<span class="grow"></span><button class="link" onclick="lrCourse('${c.id}')">Lộ trình</button></div>
+        <h3>${esc(c.title)}</h3><div class="pbar"><i style="width:${pct}%"></i></div><div class="meta">Đã xong ${c.done}/${c.total} ngày${c.avg_quiz!==null?` · quiz trung bình ${c.avg_quiz}/10`:''}</div>
+        <button class="lnext" onclick="lrDay('${c.id}',${c.today})"><span class="lday">Ngày ${c.today}</span><span class="grow"><b>${esc(c.today_title)}</b><span class="meta" style="display:block;margin:2px 0 0">Bài học · audio · quiz · thực hành</span></span>${ico('chev',18)}</button>
+        ${c.review_due?`<button class="btn full" style="margin-top:8px" onclick="lrReview('${c.id}')">${ico('refresh',16)} Ôn ${c.review_due} câu đến hạn</button>`:''}</article>`; }).join('')}
+    ${cs.length?'':`<div class="card empty">Chưa có khoá học nào. Tạo khoá đầu tiên bên dưới.</div>`}
+    <button class="btn pri full" style="margin-top:12px" onclick="lrNew()">${ico('plus',16)} Tạo khoá học mới</button>`;
+}
+async function lrLoad(){ try{ S.lr = await run('hoc','tongquan',{},'',true); }catch(e){ S.lr = {courses:[]}; toast(e.message); } if(S.tab==='growth' && S.gr.view==='learn' && !$('#sheet').classList.contains('on')) render(); }
+function lrNew(){
+  S.ln = {days:30, tpl:''};
+  const paint = () => { const n = S.ln; sheet(`<h2>Tạo khoá học</h2><p class="lead">superHuy thiết kế lộ trình theo ngày, soạn bài, audio, quiz và bài thực hành áp dụng cho Leversphere và Sellnity.</p>
+    <p class="lbl">Mẫu có sẵn</p><div class="chips" style="padding-top:0;flex-wrap:wrap;margin-bottom:12px">${Object.entries(S.lr?.templates||{}).map(([k,l])=>`<button class="chip ${n.tpl===k?'on':''}" onclick="S.ln.tpl=S.ln.tpl==='${k}'?'':'${k}';S.lnp()">${esc(l)}</button>`).join('')}</div>
+    ${n.tpl?'':`<label class="field"><span>Chủ đề</span><input type="text" id="lnTopic" value="${esc(n.topic||'')}" placeholder="Ví dụ: Quảng cáo TikTok Shop cho POD, Tài chính cho CEO, n8n tự động hoá"></label>
+    <label class="field"><span>Mục tiêu đầu ra</span><textarea id="lnGoal" placeholder="Ví dụ: tự dựng được 3 luồng tự động hoá chăm sóc khách cho Leversphere">${esc(n.goal||'')}</textarea></label>
+    <label class="field"><span>Trình độ hiện tại</span><input type="text" id="lnLevel" value="${esc(n.level||'')}" placeholder="Mới bắt đầu / đã biết cơ bản…"></label>
+    <label class="field"><span>Tài liệu, repo tham khảo (không bắt buộc, mỗi link 1 dòng)</span><textarea id="lnSrc" placeholder="https://github.com/...">${esc(n.src||'')}</textarea></label>
+    <p class="lbl">Thời lượng</p><div class="seg" style="margin-bottom:12px">${[7,14,30].map(x=>`<button class="${n.days===x?'on':''}" onclick="S.ln.days=${x};S.lnp()">${x} ngày</button>`).join('')}</div>`}
+    <button class="btn pri full" id="lnGo" onclick="lrCreate()">${ico('spark',16)} Thiết kế khoá học</button>`); };
+  S.lnp = () => { ['topic','goal','level','src'].forEach(k=>{ const el = $('#ln'+k[0].toUpperCase()+k.slice(1)); if(el) S.ln[k] = el.value; }); paint(); }; paint();
+}
+async function lrCreate(){
+  S.lnp(); const n = S.ln; if(!n.tpl && !(n.topic||'').trim()) return toast('Anh nhập chủ đề');
+  const b = $('#lnGo'); b.disabled = true; b.textContent = 'superHuy đang thiết kế lộ trình…';
+  try{ const r = await run('hoc','tao',{topic:n.topic||'', goal:n.goal||'', days:n.days, level:n.level||'', sources:n.src||'', template:n.tpl||''},'Thiết kế khoá học'); closeSheet(); toast(r.text, 4000); S.lr = null; render(); }
+  catch(e){ toast(e.message); b.disabled = false; b.textContent = 'Thiết kế khoá học'; }
+}
+async function lrCourse(cid){
+  try{ const c = await run('hoc','khoa',{cid},'',true);
+    sheet(`<div class="meta" style="margin-bottom:4px">${c.done}/${c.total} ngày · bắt đầu ${esc(c.start.split('-').reverse().join('/'))}</div><h2 style="margin-bottom:6px">${esc(c.title)}</h2>
+      <p class="lead" style="margin:0 0 10px">${esc(c.goal)}</p>
+      ${(c.sources||[]).length?`<div class="meta" style="margin-bottom:10px">Nguồn: ${c.sources.map(x=>`<a href="#" onclick="event.preventDefault();openLink('${esc(x.url)}')">${esc(x.title)}</a>`).join(' · ')}</div>`:''}
+      <div class="card list">${c.days.map(d=>`<button onclick="lrDay('${cid}',${d.day})"><span class="ldot ${d.status==='done'?'on':d.status==='learning'?'half':''}">${d.status==='done'?ico('check',14):d.day}</span>
+        <div class="grow"><div style="font-weight:${d.day===c.today?700:500}">${esc(d.title)}</div><div class="meta">${LKIND[d.kind]||''}${d.quiz_score!=null?` · quiz ${d.quiz_score}/10`:''}${d.best?` · bài ${d.best}/10`:''}${d.day===c.today?' · hôm nay':''}</div></div><span class="chev">${ico('chev',18)}</span></button>`).join('')}</div>
+      <button class="btn full" style="margin-top:12px;color:var(--danger)" onclick="lrArchive('${cid}')">Lưu trữ khoá này</button>`);
+  }catch(e){ toast(e.message); }
+}
+async function lrArchive(cid){ try{ await run('hoc','luu_tru',{cid},'',true); closeSheet(); S.lr = null; render(); }catch(e){ toast(e.message); } }
+async function lrDay(cid, day){
+  sheet(`<h2>Ngày ${day}</h2><div class="card pad"><div class="spin"></div><p class="meta">superHuy đang chuẩn bị bài học (lần đầu mất khoảng 30-60 giây)…</p></div>`);
+  try{ S.ld = await run('hoc','ngay',{cid, day},'',true); S.ld.ans = {}; lrPaint(); }catch(e){ closeSheet(); toast(e.message); }
+}
+function lrPaint(keep){
+  const d = S.ld, L = d.lesson||{}, P = L.practice||{}, y = $('#sheet').scrollTop;
+  const qz = (L.quiz||[]).map((q,i)=>{ const r = d.qres?.detail?.find(x=>x.id===q.id);
+    return `<div class="lq"><div class="lqq">${i+1}. ${esc(q.q)}</div>${q.options.map((o,k)=>`<label class="lqo ${r?(k===r.answer?'right':(d.ans[q.id]===k?'wrong':'')):''}"><input type="radio" name="q${q.id}" ${d.ans[q.id]===k?'checked':''} ${r?'disabled':''} onchange="S.ld.ans['${q.id}']=${k}"><span>${esc(o)}</span></label>`).join('')}
+      ${r?`<div class="meta" style="margin:4px 0 0">${r.ok?'✓ Đúng':'✗ Chưa đúng'} — ${esc(r.explain)}</div>`:''}</div>`; }).join('');
+  const subs = (d.submissions||[]).slice().reverse();
+  sheet(`<div class="meta" style="margin-bottom:4px">${esc(d.course)} · Ngày ${d.day}/${d.total} · ${LKIND[d.kind]||''}</div><h2 style="margin-bottom:10px">${esc(d.title)}</h2>
+    ${(L.objectives||[]).length?`<div class="note" style="margin-bottom:12px"><b>Mục tiêu buổi học</b><ul style="margin:6px 0 0;padding-left:18px">${L.objectives.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>`:''}
+    <div class="card pad laudio">${L.audio?`<div class="meta" style="margin:0 0 6px">Bài giảng audio · nghe khi lái xe, tập thể dục</div><audio controls preload="none" src="${L.audio}" style="width:100%"></audio>`
+      :`<div class="row" style="align-items:center"><span class="grow meta" style="margin:0">Bài giảng audio 3-5 phút</span><button class="btn sm" id="lrAud" onclick="lrAudio()">${ico('play',14)} Tạo audio</button></div>`}</div>
+    <div class="mdbody" style="margin-top:12px">${mdRender(L.md||'')}</div>
+    ${(L.key_points||[]).length?`<div class="mblk dec"><h3>${ico('check',16)} Ý cần nhớ</h3><ul>${L.key_points.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>`:''}
+    ${(L.resources||[]).length?`<div class="sec" style="margin-top:6px"><h2 style="font-size:17px">Tài liệu & video</h2></div><div class="card list">${L.resources.map(r=>`<button onclick="openLink('${esc(r.url)}')"><span class="thumb">${ico(r.type==='video'?'play':'link',18)}</span><div class="grow"><div style="font-weight:600">${esc(r.title)}</div><div class="meta">${r.type==='video'?'Tìm video trên YouTube':'Mở tài liệu'}</div></div></button>`).join('')}</div>`:''}
+    <div class="sec"><h2 style="font-size:17px">Quiz ôn bài</h2>${d.quiz_score!=null?`<span class="meta">Điểm cao nhất ${d.quiz_score}/10</span>`:''}</div>
+    <div class="card pad">${qz||'<div class="meta">Không có quiz.</div>'}${(L.quiz||[]).length?`<div class="row" style="margin-top:10px">${d.qres?`<b class="grow">${esc(d.qres.text)}</b><button class="btn sm" onclick="S.ld.qres=null;S.ld.ans={};lrPaint()">Làm lại</button>`:`<button class="btn pri full" onclick="lrQuiz()">Nộp quiz</button>`}</div>`:''}</div>
+    ${P.task?`<div class="sec"><h2 style="font-size:17px">Thực hành · ${esc(P.context||'')}</h2>${d.best?`<span class="meta">Điểm cao nhất ${d.best}/10</span>`:''}</div>
+    <div class="card pad"><p style="margin:0 0 8px;font-weight:600">${esc(P.task)}</p>${(P.steps||[]).length?`<ol style="margin:0 0 8px;padding-left:18px">${P.steps.map(x=>`<li>${esc(x)}</li>`).join('')}</ol>`:''}
+      <div class="meta" style="margin:0 0 4px"><b>Nộp:</b> ${esc(P.deliverable||'')}</div>${(P.rubric||[]).length?`<div class="meta" style="margin:0"><b>Tiêu chí chấm:</b> ${P.rubric.map(esc).join(' · ')}</div>`:''}</div>
+    <label class="field" style="margin-top:12px"><span>Bài làm của anh</span><textarea id="lrText" style="min-height:160px" placeholder="Dán kết quả, nội dung file, câu lệnh, ảnh chụp mô tả… ">${esc(S.ldDraft||'')}</textarea></label>
+    <label class="field"><span>Link (Google Docs, GitHub, Sheets… không bắt buộc)</span><input type="url" id="lrLink" placeholder="https://"></label>
+    <label class="field"><span>Phản tư: ${esc(L.reflection||'Hôm nay anh rút ra điều gì?')}</span><textarea id="lrRef"></textarea></label>
+    <button class="btn pri full" id="lrGo" onclick="lrSubmit()">${ico('send',16)} Nộp bài để superHuy chấm</button>`:''}
+    ${subs.map(s=>{ const g = s.grade||{}; return `<div class="card pad lgrade"><div class="row" style="align-items:center"><b class="grow">Điểm ${g.score}/10 · ${g.pass?'Đạt':'Chưa đạt'}</b><span class="meta" style="margin:0">${esc(ago(s.at))}</span></div>
+      ${(g.criteria||[]).map(c=>`<div class="meta" style="margin:6px 0 0"><b style="color:var(--text)">${esc(c.name)}: ${c.score}/10</b> — ${esc(c.comment)}</div>`).join('')}
+      ${(g.strengths||[]).length?`<div style="margin-top:8px"><b>Làm tốt:</b> ${g.strengths.map(esc).join('; ')}</div>`:''}
+      ${(g.improve||[]).length?`<div style="margin-top:6px"><b>Cần sửa:</b><ul style="margin:4px 0 0;padding-left:18px">${g.improve.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>`:''}
+      ${g.next?`<div class="note" style="margin-top:8px">${esc(g.next)}</div>`:''}${s.note?`<div class="meta">Đã lưu Obsidian: ${esc(s.note)}</div>`:''}</div>`; }).join('')}
+    <div class="row" style="margin-top:12px">${d.status!=='done'?`<button class="btn grow" onclick="lrDone()">${ico('check',16)} Đánh dấu đã học xong</button>`:'<span class="meta grow">✓ Đã hoàn thành ngày này</span>'}${d.day<d.total?`<button class="btn grow" onclick="lrDay('${d.cid}',${d.day+1})">Ngày ${d.day+1} ${ico('chev',14)}</button>`:''}</div>`);
+  if(keep) $('#sheet').scrollTop = y;
+}
+async function lrAudio(){ const b = $('#lrAud'); b.disabled = true; b.textContent = 'Đang tạo…';
+  try{ const r = await run('hoc','audio',{cid:S.ld.cid, day:S.ld.day},'',true); S.ld.lesson.audio = r.audio; lrPaint(true); }catch(e){ toast(e.message); b.disabled = false; } }
+async function lrQuiz(){
+  const n = (S.ld.lesson.quiz||[]).length; if(Object.keys(S.ld.ans).length < n) return toast('Anh trả lời hết các câu trước nhé');
+  try{ S.ld.qres = await run('hoc','quiz',{cid:S.ld.cid, day:S.ld.day, answers:JSON.stringify(S.ld.ans)},'',true); S.ld.quiz_score = Math.max(S.ld.quiz_score||0, S.ld.qres.score); notifyH(S.ld.qres.right===n?'success':'warning'); lrPaint(true); S.lr = null; }
+  catch(e){ toast(e.message); }
+}
+async function lrSubmit(){
+  const text = $('#lrText').value.trim(), link = $('#lrLink').value.trim(), reflection = $('#lrRef').value.trim();
+  if(text.length < 20 && !link) return toast('Anh dán bài làm (hoặc link) trước khi nộp');
+  S.ldDraft = text; const b = $('#lrGo'); b.disabled = true; b.textContent = 'superHuy đang chấm bài…';
+  try{ const r = await run('hoc','nop',{cid:S.ld.cid, day:S.ld.day, text, link, reflection},'Chấm bài thực hành'); toast(r.text, 4500); S.ldDraft = ''; S.lr = null;
+    S.ld = {...(await run('hoc','ngay',{cid:S.ld.cid, day:S.ld.day},'',true)), ans:S.ld.ans, qres:S.ld.qres}; lrPaint(true); }
+  catch(e){ toast(e.message, 5000); b.disabled = false; b.textContent = 'Nộp bài để superHuy chấm'; }
+}
+async function lrDone(){ try{ await run('hoc','xong',{cid:S.ld.cid, day:S.ld.day},'',true); S.ld.status = 'done'; S.lr = null; toast('Đã xong ngày '+S.ld.day+' 🔥'); notifyH('success'); lrPaint(true); }catch(e){ toast(e.message); } }
+async function lrReview(cid){
+  try{ const r = await run('hoc','on_tap',{cid},'',true); S.lv = {cid, items:r.items, ans:{}};
+    if(!r.items.length) return toast('Không có câu nào đến hạn ôn');
+    const paint = () => sheet(`<h2>Ôn tập giãn cách</h2><p class="lead">Câu anh từng làm sai. Trả lời đúng thì lần ôn sau giãn ra (1 → 3 → 7 → 14 ngày).</p>
+      <div class="card pad">${S.lv.items.map((q,i)=>`<div class="lq"><div class="meta" style="margin:0">Ngày ${q.day}</div><div class="lqq">${i+1}. ${esc(q.q)}</div>${q.options.map((o,k)=>`<label class="lqo"><input type="radio" name="rv${q.id}" onchange="S.lv.ans['${q.id}']=${k}"><span>${esc(o)}</span></label>`).join('')}</div>`).join('')}</div>
+      <button class="btn pri full" style="margin-top:12px" onclick="lrReviewGo()">Nộp ôn tập</button>`);
+    paint();
+  }catch(e){ toast(e.message); }
+}
+async function lrReviewGo(){ try{ const r = await run('hoc','on_tap_nop',{cid:S.lv.cid, answers:JSON.stringify(S.lv.ans)},'',true); closeSheet(); toast(r.text, 4500); S.lr = null; render(); }catch(e){ toast(e.message); } }
 function habitRow(h, compact){
   const unit = h.schedule?.type==='weekly' ? 'tuần' : 'ngày';
   const sub = [h.time, h.target, h.schedule?.type==='weekly'?`${h.week_count||0}/${h.schedule.times} lần tuần này`:''].filter(Boolean).join(' · ');
