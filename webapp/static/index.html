@@ -171,7 +171,7 @@ nav button.on{ color:var(--jade) }
 .sheet .lead{ color:var(--muted); margin:0 0 16px; font-size:14px }
 .field{ display:block; margin-bottom:14px }
 .field span{ display:block; font-size:13px; font-weight:600; color:var(--muted); margin-bottom:6px }
-.field input[type=text], .field input[type=email], .field input[type=number], .field input[type=password], .field textarea, .field select{
+.field input[type=text], .field input[type=email], .field input[type=url], .field input[type=number], .field input[type=password], .field textarea, .field select{
   width:100%; padding:12px 14px; border-radius:14px; border:0; box-shadow:0 0 0 1px var(--line); background:var(--surface); color:var(--text); font:inherit }
 .field textarea{ min-height:120px; resize:vertical }
 .media{ width:100%; border-radius:16px; display:block; margin-bottom:14px; background:var(--fill) }
@@ -575,6 +575,7 @@ html[data-scheme="dark"] .apps i{ background:color-mix(in srgb,var(--c) 22%,tran
 .lqo{ display:flex; gap:10px; align-items:flex-start; padding:8px 10px; border-radius:10px; margin:4px 0; background:var(--fill); font-size:14.5px }
 .lqo.right{ box-shadow:inset 0 0 0 2px #199e70 } .lqo.wrong{ box-shadow:inset 0 0 0 2px var(--danger) }
 .lgrade{ margin-top:12px } .mdcode{ background:var(--fill); border-radius:12px; padding:10px 12px; overflow-x:auto; font-size:12.5px; line-height:1.5; margin:8px 0 }
+.segscroll{ overflow-x:auto; max-width:100%; -webkit-overflow-scrolling:touch; scrollbar-width:none } .segscroll::-webkit-scrollbar{ display:none } .segscroll button{ white-space:nowrap; flex:none }
 </style>
 </head>
 <body>
@@ -2419,7 +2420,7 @@ function pring(done, due){ const r = 32, c = 2*Math.PI*r, f = due ? done/due : 0
 function vGrowth(){
   const d = S.gr.data, v = S.gr.view;
   const head = `<div class="date">${S.gr.loading?'<span class="spin" style="width:12px;height:12px;display:inline-block;vertical-align:-1px"></span> Đang tải…':'Mục tiêu, thói quen và lịch trình của anh'}</div><h1>Phát triển</h1>
-    <div class="seg" style="margin-bottom:14px">${[['today','Hôm nay'],['learn','Học tập'],['goals','Mục tiêu'],['habits','Thói quen'],['mind','Hiểu anh']].map(([k,l])=>`<button class="${v===k?'on':''}" onclick="S.gr.view='${k}';render()">${l}</button>`).join('')}</div>`;
+    <div class="seg segscroll" style="margin-bottom:14px">${[['today','Hôm nay'],['learn','Học tập'],['goals','Mục tiêu'],['habits','Thói quen'],['mind','Hiểu anh']].map(([k,l])=>`<button class="${v===k?'on':''}" onclick="S.gr.view='${k}';render()">${l}</button>`).join('')}</div>`;
   if(!d) return head + `<div class="card pad"><div class="skel" style="width:60%"></div><div class="skel"></div></div>`;
   setTimeout(()=>tipBind($('#app')), 0);
   return head + ({today:grToday, learn:grLearn, goals:grGoals, habits:grHabits, mind:grMind})[v](d);
