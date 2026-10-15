@@ -39,5 +39,16 @@ echo "learning: $(cd /opt/superhuy/current && SUPERHUY_HOME=$S timeout 60 /opt/s
 echo "videos: $(cd /opt/superhuy/current && SUPERHUY_HOME=$S timeout 60 /opt/superhuy/venv/bin/python -c 'from core import store; import os; print([(r["id"], (r.get("meta") or {}).get("engine"), (r.get("meta") or {}).get("voice_engine"), len((r.get("meta") or {}).get("versions") or []), os.path.basename(r.get("video") or ""), r.get("created","")[5:16]) for r in store.recent(6, "video")])' 2>&1 | tail -1 | cut -c1-600)"
 echo "video_log: $(grep -h -E 'edge-tts|Dựng|newscast|dung_lai|rerender|reel' $S/data/agent.log 2>/dev/null | tail -8 | cut -c1-220 | tr '\n' '|')"
 echo "jobs_log: $(grep -h -E 'Job noidung|Traceback|Error' $S/data/agent.log 2>/dev/null | tail -6 | cut -c1-220 | tr '\n' '|')"
+echo "tts_test: $(cd /opt/superhuy/current && SUPERHUY_HOME=$S timeout 90 /opt/superhuy/venv/bin/python -c '
+import edge_tts, asyncio, importlib.metadata as m
+print("edge-tts", m.version("edge-tts"))
+async def go():
+    await edge_tts.Communicate("Xin chào, đây là bản tin thử.", "vi-VN-NamMinhNeural").save("/tmp/tts_test.mp3")
+try:
+    asyncio.run(go()); import os; print("ok", os.path.getsize("/tmp/tts_test.mp3"))
+except Exception as e:
+    print("ERR", type(e).__name__, str(e)[:200])
+' 2>&1 | tail -2 | tr '\n' ' ' | cut -c1-400)"
+echo "journal_tts: $(journalctl -u superhuy --since -3h 2>/dev/null | grep -i -E 'edge-tts|tts|silent' | tail -4 | cut -c1-220 | tr '\n' '|')"
 echo "--- QA ---"
 (cd /opt/superhuy/current && SUPERHUY_HOME=$S timeout 400 /opt/superhuy/venv/bin/python deploy/qa_vps.py 2>/dev/null | grep '^qa_')
