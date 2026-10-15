@@ -235,11 +235,13 @@ def wiki_image(entity: str, work: Path) -> str | None:
             return None
         title = hits[0]["title"].replace(" ", "_")
         s = requests.get(f"https://en.wikipedia.org/api/rest_v1/page/summary/{title}", headers=WIKI_UA, timeout=15).json()
-        src = (s.get("originalimage") or {}).get("source") or (s.get("thumbnail") or {}).get("source")
-        if src and not src.lower().endswith(".svg"):
+        src = (s.get("originalimage") or {}).get("source") or ""
+        if not src or src.lower().endswith(".svg"):  # logo dạng SVG -> lấy bản PNG Wikipedia dựng sẵn, phóng to
+            src = re.sub(r"/\d+px-", "/1200px-", (s.get("thumbnail") or {}).get("source") or "")
+        if src:
             return _download_img(src, work / ("wk-" + hashlib.md5(entity.encode()).hexdigest()[:8]), 400)
-    except Exception:
-        pass
+    except Exception as e:
+        log.warning("Không lấy được ảnh Wikipedia cho %s: %s", entity, e)
     return None
 
 
