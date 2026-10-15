@@ -112,6 +112,35 @@ def seed():
                    "status": "active", "review": [], "streak": 0,
                    "days": [{"day": n, "title": t, "module": m, "doc": dp, "kind": k, "focus": "", "status": "todo", **({"lesson": lesson} if n == 1 else {})}
                             for n, t, m, dp, k in T["days"]]})
+    from agents import repo_radar as rr
+    A1 = {"ten_vi": "Bộ nhớ dài hạn cho agent", "la_gi": "Thư viện lưu và truy xuất trí nhớ dài hạn cho agent LLM, chạy được với SQLite.",
+          "diem_noi_bat": ["Gộp trí nhớ trùng lặp tự động", "Truy xuất lai: từ khoá + vector", "Chạy nhẹ trên VPS 1 GB RAM"],
+          "chat_luong": "Cập nhật hằng tuần, 140 người đóng góp, license MIT.",
+          "nhan_dinh": "Hợp với Second Brain của superHuy: thay phần ghi nhớ thủ công bằng gộp trùng tự động, giảm 30-40% token đưa vào prompt.",
+          "phu_hop": 8, "mang": ["Second Brain", "Chat agent"], "ket_luan": "ap_dung",
+          "de_xuat": [{"loai": "nang_cap", "tieu_de": "Gộp trí nhớ trùng lặp trước khi đưa vào prompt", "mo_ta": "Thêm bước gộp trùng ở core/memory.py.",
+                       "loi_ich": ["tiet_kiem", "nhanh"], "cong_suc": "M", "rui_ro": "Gộp nhầm 2 ý khác nhau", "noi_dung": ""},
+                      {"loai": "kien_thuc", "tieu_de": "Mẫu truy xuất lai từ khoá + vector", "mo_ta": "Lưu best practice vào Second Brain.",
+                       "loi_ich": ["nhanh"], "cong_suc": "S", "rui_ro": "Không", "noi_dung": "- Dùng BM25 trước, vector sau"},
+                      {"loai": "quy_tac", "tieu_de": "Nêu nguồn khi dùng trí nhớ", "mo_ta": "", "loi_ich": ["an_toan"], "cong_suc": "S", "rui_ro": "",
+                       "noi_dung": "Khi trả lời dựa trên trí nhớ cũ, nói rõ ghi nhớ từ lúc nào"},
+                      {"loai": "nguon", "tieu_de": "Theo dõi bản phát hành", "mo_ta": "", "loi_ich": ["on_dinh"], "cong_suc": "S", "rui_ro": "", "noi_dung": ""}]}
+    A2 = {**A1, "ten_vi": "Máy dựng video bằng code", "ket_luan": "thu_nghiem", "phu_hop": 6, "nhan_dinh": "Có thể thay một phần ffmpeg cho hiệu ứng chữ, nhưng nặng Node."}
+    rr._write(rr.ITEMS, [
+        {"id": "r1", "full_name": "mem-labs/agent-memory", "url": "https://github.com/mem-labs/agent-memory", "desc": "", "lang": "Python", "stars": 18400,
+         "stars_week": 2300, "license": "MIT", "pushed": "2026-10-14", "via": "Trending tuần", "week": rr._week(), "status": "new", "at": "2026-10-16T06:40:00", "a": A1},
+        {"id": "r2", "full_name": "motion-dev/codevideo", "url": "https://github.com/motion-dev/codevideo", "desc": "", "lang": "TypeScript", "stars": 9200,
+         "stars_week": 900, "license": "Apache-2.0", "via": "Chủ đề video-generation", "week": rr._week(), "status": "new", "at": "2026-10-16T06:40:00", "a": A2},
+        {"id": "r3", "full_name": "ops/healthcheck", "url": "https://github.com/ops/healthcheck", "lang": "Go", "stars": 4000, "week": rr._week(), "status": "applied",
+         "at": "2026-10-15T06:40:00", "a": A2, "applied": {"at": "2026-10-15T08:00:00", "done": ["Lưu best practice: Kiểm tra sức khoẻ dịch vụ"], "tickets": ["t1"]}}])
+    rr._write(rr.TICKETS, [{"id": "t1", "title": "Tự khởi động lại khi bot treo", "desc": "Thêm watchdog systemd.", "repo": "ops/healthcheck",
+                            "url": "https://github.com/ops/healthcheck", "benefits": ["on_dinh"], "effort": "S", "risk": "", "status": "moi", "at": "2026-10-15T08:00:00",
+                            "item": "r3", "plan": {"muc_tieu": "Bot tự hồi phục trong 60 giây", "pham_vi": ["deploy/superhuy.service", "main.py"],
+                                                   "buoc": ["Thêm WatchdogSec=120", "Gửi sd_notify mỗi 30 giây", "Thử treo giả lập"], "phu_thuoc": [],
+                                                   "kiem_thu": ["Chạy QA giao diện", "Treo giả lập trên VPS"], "rui_ro": ["Khởi động lại liên tục"],
+                                                   "lui_lai": "Bỏ WatchdogSec", "chi_phi": "không đáng kể", "uoc_luong": "2 giờ"}}])
+    rr._write(rr.RULES, [{"id": "q1", "text": "Khi trả lời dựa trên trí nhớ cũ, nói rõ ghi nhớ từ lúc nào", "repo": "mem-labs/agent-memory", "at": "2026-10-15T08:00:00", "on": True}])
+    rr._write(rr.WATCH, [{"full_name": "ops/healthcheck", "url": "https://github.com/ops/healthcheck", "at": "2026-10-15T08:00:00", "last": "v2.1.0", "new": "v2.2.0"}])
     from agents import game
     for ev, ref in [("lesson", "lc1-d1"), ("quiz_perfect", "lc1-d1"), ("task", "t1"), ("habit", "h1"), ("practice_great", "lc1-d1")]:
         game.award(ev, ref, "QA")
@@ -216,6 +245,12 @@ def main():
         step("38-game-badge", "gmOpen('badge')", 1200)
         step("39-game-shop", "gmOpen('shop')", 1200)
         step("40-game-bag", "gmOpen('bag')", 1200)
+        step("42-repo", "closeSheet();go('content');S.cview='repo';S.rp=null;render()", 2500)
+        step("43-repo-detail", "rpOpen('r1')", 1500)
+        step("43b-repo-detail-more", "$('#sheet').scrollTop=$('#sheet').scrollHeight", 700)
+        step("44-repo-upgrades", "closeSheet();S.rpView='up';render()", 1200, True)
+        step("45-ticket", "rpTicket('t1')", 1500)
+        step("46-repo-add", "closeSheet();rpAdd()", 800)
         step("41-xp-pop", "closeSheet();xpPop({xp:40,gold:20,note:'Học xong ngày 1',extra:['Nhiệm vụ: Học 1 bài'],level_up:{level:2,title:'Người học việc'}})", 500)
         try:
             dl = page.evaluate("run('noidung','tai_video',{cid:S.st.cid},'',true).then(r=>r.url)")

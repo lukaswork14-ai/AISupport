@@ -50,6 +50,7 @@ def _write(folder: str, title: str, meta: dict, body: str) -> str:
     ensure_vault()
     today = dt.date.today().isoformat()
     path = OBSIDIAN_VAULT / folder / f"{today} {_slug(title)}.md"
+    path.parent.mkdir(parents=True, exist_ok=True)
     n = 2
     while path.exists():
         path = path.with_name(f"{today} {_slug(title)} ({n}).md")
@@ -60,6 +61,7 @@ def _write(folder: str, title: str, meta: dict, body: str) -> str:
           f"tags: {tags}", "status: inbox" if folder.startswith("00") else "status: saved", "---", ""]
     path.write_text("\n".join(fm) + body.strip() + "\n", encoding="utf-8")
     daily = OBSIDIAN_VAULT / "05 Daily" / f"{today}.md"
+    daily.parent.mkdir(parents=True, exist_ok=True)
     line = f"- [[{path.stem}]] ({meta.get('topic', '')})\n"
     if daily.exists():
         daily.write_text(daily.read_text(encoding="utf-8") + line, encoding="utf-8")

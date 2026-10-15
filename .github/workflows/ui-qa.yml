@@ -25,6 +25,9 @@ jobs:
       - name: Kiểm thử video bản tin (giọng thật, phông, ảnh, nguồn tin)
         if: always()
         run: python deploy/video_qa.py
+      - name: Kiểm thử bộ săn repo GitHub
+        if: always()
+        run: python deploy/repo_qa.py
       - name: Ghi vào nhánh qa
         if: always()
         run: |

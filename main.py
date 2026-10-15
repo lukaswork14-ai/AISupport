@@ -259,6 +259,23 @@ async def job_strategy_weekly():
                      "Mở app › Nội dung › Chiến lược để xem.")
 
 
+async def job_repo_weekly():
+    """Thứ Hai: săn repo GitHub nổi bật, phân tích, đề xuất áp dụng cho superHuy; kiểm tra bản phát hành repo đang theo dõi."""
+    from agents import repo_radar
+    await asyncio.to_thread(repo_radar.weekly)
+
+
+def _repo_bootstrap():
+    """Lần đầu: săn repo tuần này để tab Repo tham khảo có dữ liệu ngay."""
+    from agents import repo_radar
+    try:
+        if not repo_radar.ITEMS.exists():
+            __import__("time").sleep(90)
+            repo_radar.weekly()
+    except Exception:
+        log.exception("Săn repo lần đầu lỗi")
+
+
 def _strategy_bootstrap():
     """Lần đầu: nạp bối cảnh + săn tin chiến lược + viết bản đầu của 2 tài liệu."""
     from agents import content_hub, strategy
@@ -359,6 +376,7 @@ async def post_init(app: Application):
     scheduler.add_job(job_learning_nightly, CronTrigger(hour=23, minute=20), misfire_grace_time=3 * 3600, coalesce=True)
     scheduler.add_job(job_learning_remind, CronTrigger(hour=20, minute=0), misfire_grace_time=3600, coalesce=True)
     scheduler.add_job(job_strategy_weekly, CronTrigger(day_of_week="mon", hour=6, minute=20), misfire_grace_time=6 * 3600, coalesce=True)
+    scheduler.add_job(job_repo_weekly, CronTrigger(day_of_week="mon", hour=6, minute=40), misfire_grace_time=6 * 3600, coalesce=True)
     scheduler.add_job(job_knowledge_sync, "interval", hours=6, coalesce=True, max_instances=1, misfire_grace_time=3600,
                       next_run_time=dt.datetime.now() + dt.timedelta(minutes=3))
     for h in CONTENT_SCAN_HOURS:
@@ -411,6 +429,7 @@ async def post_init(app: Application):
 
     threading.Thread(target=_strategy_bootstrap, daemon=True, name="strategy-boot").start()
     threading.Thread(target=_learning_bootstrap, daemon=True, name="learning-boot").start()
+    threading.Thread(target=_repo_bootstrap, daemon=True, name="repo-boot").start()
     try:  # phông chữ cho video bản tin (tải 1 lần)
         from agents import newscast
         threading.Thread(target=newscast.ensure_fonts, daemon=True).start()

@@ -542,6 +542,23 @@ html[data-scheme="dark"] .apps i{ background:color-mix(in srgb,var(--c) 22%,tran
 .trk.roimaxx{ background:color-mix(in srgb,#1F7AE0 14%,transparent); color:#1F7AE0 } html[data-scheme="dark"] .trk.roimaxx{ color:#7DB6FF }
 .trk.leversphere{ background:color-mix(in srgb,#199e70 15%,transparent); color:#13805F } html[data-scheme="dark"] .trk.leversphere{ color:#4FD1A5 }
 .itype{ font-size:11.5px; font-weight:700; padding:3px 8px; border-radius:7px; background:var(--fill); color:var(--text) }
+.rpstack{ height:min(470px,58vh); min-height:410px }
+.vd{ font-size:11.5px; font-weight:700; padding:3px 8px; border-radius:7px; background:var(--fill); color:var(--text) }
+.vd.ap_dung{ background:var(--jade-soft); color:var(--jade) } .vd.thu_nghiem{ background:color-mix(in srgb,#1F7AE0 14%,transparent); color:#1F7AE0 }
+html[data-scheme="dark"] .vd.thu_nghiem{ color:#7DB6FF } .vd.bo_qua{ color:var(--muted) }
+.fit{ font-size:11.5px; font-weight:600; color:var(--muted) }
+.rpname{ margin:2px 0 0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+.rpcard .rpsum{ -webkit-line-clamp:4; color:var(--text) }
+.rpprops{ display:flex; flex-direction:column; gap:6px }
+.rpprop{ display:flex; align-items:center; gap:8px; font-size:13.5px; padding:7px 10px; border-radius:10px; background:var(--fill) }
+.rpprop .grow{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap } .rpprop .pk{ font-size:11px; font-weight:700; color:var(--muted); white-space:nowrap }
+.rpprop.nang_cap .pk{ color:var(--amber) }
+.rpopt{ display:flex; gap:12px; align-items:flex-start; padding:12px 14px; border-bottom:1px solid var(--line); cursor:pointer }
+.rpopt:last-child{ border-bottom:0 } .rpopt input{ width:20px; height:20px; margin-top:2px; accent-color:var(--jade); flex:none }
+.bn{ font-size:11px; font-weight:600; padding:2px 7px; border-radius:6px; background:var(--jade-soft); color:var(--jade) }
+.tkst{ font-size:11.5px; font-weight:700; padding:3px 8px; border-radius:7px; background:var(--fill); white-space:nowrap }
+.tkst.moi{ background:var(--amber-soft); color:var(--amber) } .tkst.dang_lam{ background:color-mix(in srgb,#1F7AE0 14%,transparent); color:#1F7AE0 }
+.tkst.xong{ background:var(--jade-soft); color:var(--jade) } .tkst.bo{ color:var(--muted) }
 .relpill{ font-size:11.5px; font-weight:600; color:var(--muted); white-space:nowrap }
 .caobox{ background:var(--fill); border-radius:14px; padding:10px 12px; margin:8px 0 6px; font-size:14px }
 .caobox p{ margin:0; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden }
@@ -649,7 +666,7 @@ const P = {
   image:'<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="9.5" r="1.8"/><path d="m21 16-5-5-9 9"/>',
   film:'<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 4v16M17 4v16M3 9h4M3 15h4M17 9h4M17 15h4"/>',
   play:'<path d="M8 5v14l11-7z"/>', copy:'<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/>',
-  plus:'<path d="M12 5v14M5 12h14"/>', mic:'<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/>', upload:'<path d="M12 15V4M7.5 8.5 12 4l4.5 4.5"/><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/>', video:'<rect x="3" y="6" width="13" height="12" rx="2"/><path d="m16 10.5 5-3v9l-5-3z"/>', pause:'<path d="M8 5v14M16 5v14"/>', check:'<path d="m5 12.5 4.5 4.5L19 7"/>',
+  plus:'<path d="M12 5v14M5 12h14"/>', mic:'<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/>', upload:'<path d="M12 15V4M7.5 8.5 12 4l4.5 4.5"/><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/>', video:'<rect x="3" y="6" width="13" height="12" rx="2"/><path d="m16 10.5 5-3v9l-5-3z"/>', pause:'<path d="M8 5v14M16 5v14"/>', check:'<path d="m5 12.5 4.5 4.5L19 7"/>', code:'<path d="m8 8-4 4 4 4M16 8l4 4-4 4M13.5 5l-3 14"/>', star:'<path d="m12 3.8 2.5 5.1 5.6.8-4 4 1 5.6-5.1-2.7-5 2.7 1-5.6-4.1-4 5.6-.8z"/>',
   x:'<path d="M6 6l12 12M18 6 6 18"/>', lock:'<rect x="5" y="11" width="14" height="10" rx="2.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
   del:'<path d="M21 5H9l-6 7 6 7h12a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1z"/><path d="m12 9 6 6M18 9l-6 6"/>', reply:'<path d="M10 8 4 13l6 5"/><path d="M4 13h10a6 6 0 0 1 6 6"/>', inbox:'<path d="M3 13h5l1.5 3h5L16 13h5"/><path d="M5 5h14l2 8v6a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-6z"/>', layers:'<path d="m12 3 9 5-9 5-9-5z"/><path d="m3 13 9 5 9-5"/>', sprout:'<path d="M12 21v-9"/><path d="M12 12c0-4 3-7 8-7 0 4-3 7-8 7z"/><path d="M12 14c0-3-2.5-5.5-7-5.5 0 3 2.5 5.5 7 5.5z"/>', tasks:'<rect x="4" y="4" width="16" height="16" rx="4"/><path d="m8.5 12 2.5 2.5 4.5-5"/>', wallet:'<path d="M4 7a2 2 0 0 1 2-2h11v4"/><rect x="4" y="9" width="17" height="11" rx="2"/><path d="M16 14.5h2"/>', chart:'<path d="M4 20V10M10 20V4M16 20v-7M21 20H3"/>', back:'<path d="m15 6-6 6 6 6"/>', trash:'<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/>'
 };
@@ -1678,14 +1695,15 @@ const ago = iso => { if(!iso) return ''; const m = Math.max(0, (Date.now()-Date.
 const cq = () => S.data.cq || {new:[], working:[], done:[], cfg:{}, counts:{}};
 function cqQueue(){ const f = S.ctrack||''; return cq().new.filter(n=>!f || n.track===f); }
 function vContent(){
-  const v = ['tao','cl'].includes(S.cview) ? S.cview : 'duyet', q = cq();
+  const v = ['tao','cl','repo'].includes(S.cview) ? S.cview : 'duyet', q = cq();
   const busy = q.working.filter(w=>w.status!=='error').length;
   const head = `<div class="date">${q.new.length} tin chờ duyệt${busy?`, ${busy} bộ đang tạo`:''}</div>
     <div class="row" style="align-items:center;margin-bottom:14px"><h1 class="grow" style="margin:2px 0 0">Nội dung</h1>
       <button class="iconbtn" aria-label="Dán bài hoặc link" onclick="cPaste()">${ico('link',20)}</button>
       <button class="iconbtn" aria-label="Chủ đề và định dạng" onclick="cSettings()">${ico('gear',20)}</button></div>
-    <div class="seg" style="margin-bottom:14px"><button class="${v==='duyet'?'on':''}" onclick="S.cview='duyet';render()">Duyệt tin</button><button class="${v==='cl'?'on':''}" onclick="S.cview='cl';render()">Chiến lược</button><button class="${v==='tao'?'on':''}" onclick="S.cview='tao';render()">Đã tạo ${q.done.length||''}</button></div>`;
+    <div class="seg" style="margin-bottom:14px"><button class="${v==='duyet'?'on':''}" onclick="S.cview='duyet';render()">Duyệt tin</button><button class="${v==='cl'?'on':''}" onclick="S.cview='cl';render()">Chiến lược</button><button class="${v==='repo'?'on':''}" onclick="S.cview='repo';render()">Repo${S.rp?.new?.length?` ${S.rp.new.length}`:''}</button><button class="${v==='tao'?'on':''}" onclick="S.cview='tao';render()">Đã tạo ${q.done.length||''}</button></div>`;
   if(v==='cl') return head + vStrategy();
+  if(v==='repo') return head + vRepo();
   const work = `<div id="cwork" style="margin-top:${v==='duyet'?18:0}px">${cWorkHtml()}</div>`;
   return head + (v==='duyet' ? cSwipeHtml() + work : work + cDoneHtml());
 }
@@ -1742,6 +1760,7 @@ function cSwipe(dir, opts){
   const id = card.dataset.id;
   haptic(dir>0?'medium':'light');
   card.style.transition='transform .28s ease, opacity .28s'; card.style.transform=`translateX(${dir*480}px) rotate(${dir*18}deg)`; card.style.opacity=0;
+  if(card.dataset.kind==='repo') return setTimeout(()=> dir>0 ? rpApply(id) : rpSkip(id), 220);
   setTimeout(()=> dir>0 ? cApprove(id, opts) : cSkip(id), 220);
 }
 function cMove(id, status){
@@ -1886,6 +1905,133 @@ async function cCao(id){
 async function clTask(i){
   const a = (S.clCur?.cao?.hanh_dong||[])[i]; if(!a) return;
   try{ await run('viec','tao',{title:a.viec, notes:`Từ phân tích CAO: ${S.clCur.title}${S.clCur.url?' — '+S.clCur.url:''}`, labels:'Chiến lược'},'Tạo việc'); toast('Đã tạo việc'); S.tk && (S.tk.at = 0); }catch(e){ toast(e.message); }
+}
+/* ---------- Repo tham khảo: repo GitHub nổi bật mỗi tuần -> áp dụng cho superHuy */
+const RPK_ICO = {nguon:'refresh', kien_thuc:'brain', quy_tac:'check', nang_cap:'code'};
+const kfmt = n => n>=1000 ? (n/1000).toFixed(n>=10000?0:1).replace('.0','')+'k' : String(n||0);
+async function rpLoad(){ try{ S.rp = await run('noidung','repo_ds',{},'',true); }catch(e){ S.rp = {new:[],applied:[],tickets:[],rules:[],watch:[],kinds:{},verdict:{},benefits:{},status:{}}; toast(e.message); }
+  if(S.tab==='content' && S.cview==='repo' && !$('#sheet').classList.contains('on')) render(); }
+function vRepo(){
+  const d = S.rp;
+  if(!d){ rpLoad(); return `<div class="card pad"><div class="skel" style="width:60%"></div><div class="skel"></div><div class="skel" style="width:40%"></div></div>`; }
+  const sv = S.rpView||'swipe', open = d.open_tickets||0;
+  const seg = `<div class="chips" style="padding-top:0;margin-bottom:10px"><button class="chip ${sv==='swipe'?'on':''}" onclick="S.rpView='swipe';render()">Tuần này ${d.new.length}</button><button class="chip ${sv==='up'?'on':''}" onclick="S.rpView='up';render()">Nâng cấp${open?` ${open}`:''}</button><button class="chip ${sv==='done'?'on':''}" onclick="S.rpView='done';render()">Đã áp dụng ${d.applied.length}</button></div>`;
+  if(sv==='up') return seg + rpUpHtml();
+  if(sv==='done') return seg + rpDoneHtml();
+  return seg + rpSwipeHtml();
+}
+function rpSwipeHtml(){
+  const d = S.rp, list = d.new;
+  if(!list.length) return `<div class="done"><b>${d.scanning?'superHuy đang săn repo…':'Đã duyệt hết repo tuần này'}</b>Mỗi thứ Hai superHuy săn repo GitHub nổi bật, phân tích và đề xuất cách nâng cấp superHuy. Anh cũng có thể dán link một repo.
+    <div class="row" style="justify-content:center;margin-top:16px"><button class="btn pri" onclick="rpScan()">${ico('refresh')} Săn repo ngay</button><button class="btn" onclick="rpAdd()">${ico('link')} Dán repo</button></div></div>`;
+  const top = list.slice(0,3).reverse();
+  return `<div class="stack rpstack" id="cstack">${top.map((n,i)=>{ const depth = top.length-1-i, a = n.a||{};
+    return `<article class="card mcard ccard rpcard ${depth===1?'back1':depth===2?'back2':''}" data-id="${n.id}" data-kind="repo">
+      ${depth===0?'<span class="stamp yes">Áp dụng</span><span class="stamp no">Bỏ qua</span>':''}
+      <div class="row" style="gap:6px;align-items:center;flex-wrap:wrap"><span class="vd ${a.ket_luan}">${esc(d.verdict[a.ket_luan]||'')}</span><span class="fit">Phù hợp ${a.phu_hop??'?'}/10</span><span class="grow"></span><span class="meta" style="margin:0">${ico('star',13)} ${kfmt(n.stars)}${n.stars_week?` · +${kfmt(n.stars_week)} tuần`:''}</span></div>
+      <div><h3>${esc(a.ten_vi||n.full_name)}</h3><div class="meta rpname">${esc(n.full_name)}${n.lang?` · ${esc(n.lang)}`:''}${n.license?` · ${esc(n.license)}`:''}</div></div>
+      <p class="sum rpsum">${esc(a.nhan_dinh||a.la_gi||n.desc)}</p>
+      <div class="rpprops">${(a.de_xuat||[]).slice(0,3).map(p=>`<div class="rpprop ${p.loai}">${ico(RPK_ICO[p.loai]||'spark',15)}<span class="grow">${esc(p.tieu_de)}</span><span class="pk">${p.loai==='nang_cap'?'Phiếu':'Làm ngay'}</span></div>`).join('')}</div>
+      <div class="row" style="margin-top:auto;align-items:center"><span class="meta grow" style="margin:0">${esc(n.via||'')}</span><button class="btn sm" onpointerdown="event.stopPropagation()" onclick="event.stopPropagation();rpOpen('${n.id}')">${ico('spark',16)} Chi tiết</button><button class="btn sm" onpointerdown="event.stopPropagation()" onclick="event.stopPropagation();openLink('${esc(n.url)}')">${ico('code',16)} GitHub</button></div>
+    </article>`; }).join('')}</div>
+    <div class="swipebar"><button class="round" aria-label="Bỏ qua" onclick="cSwipe(-1)">${ico('x')}</button>
+      <button class="iconbtn" aria-label="Dán repo" onclick="rpAdd()">${ico('link',20)}</button>
+      <button class="round yes" aria-label="Áp dụng cho superHuy" onclick="cSwipe(1)">${ico('check')}</button></div>
+    <p class="muted small" style="text-align:center;margin:10px 0 0">Quẹt phải để áp dụng cho superHuy: việc an toàn làm ngay, việc đụng tới code thành phiếu nâng cấp có kế hoạch và kiểm thử trước khi triển khai.</p>`;
+}
+function rpMove(id, status){
+  const d = S.rp, i = d.new.findIndex(n=>n.id===id); if(i<0) return null;
+  const it = d.new.splice(i,1)[0]; if(status){ it.status = status; d.applied.unshift(it); } return it;
+}
+async function rpSkip(id){
+  rpMove(id); render();
+  try{ await run('noidung','repo_bo',{rid:id},'',true); }catch(e){ toast(e.message); }
+  toastUndo('Đã bỏ qua repo', ()=>run('noidung','repo_hoantac',{rid:id},'',true).then(()=>{ S.rp=null; render(); }));
+}
+async function rpApply(id, picks=''){
+  const it = rpMove(id, 'applied') || S.rp.applied.find(x=>x.id===id); closeSheet(); render();
+  toast(`Đang áp dụng ${it?.a?.ten_vi||'repo'} cho superHuy…`, 3000);
+  try{ const r = await run('noidung','repo_apdung',{rid:id, picks},'',true); notifyH('success'); toast(r.text||'Đã áp dụng', 4000); S.rp = null; rpLoad(); }
+  catch(e){ toast(e.message); S.rp = null; rpLoad(); }
+}
+async function rpOpen(id){
+  let n; try{ n = await run('noidung','repo_xem',{rid:id},'',true); }catch(e){ return toast(e.message); }
+  const a = n.a||{}, d = S.rp||{verdict:{},benefits:{},kinds:{},status:{}}; S.rpCur = n;
+  const props = (a.de_xuat||[]).map((p,i)=>`<label class="rpopt ${p.loai}"><input type="checkbox" ${n.status==='new'?'checked':'disabled'} data-i="${i}">
+    <div class="grow"><div class="row" style="gap:6px;align-items:center;margin-bottom:3px"><span class="itype">${ico(RPK_ICO[p.loai]||'spark',13)} ${esc(d.kinds[p.loai]||p.loai)}</span><span class="meta" style="margin:0">Công sức ${esc(p.cong_suc||'')}</span></div>
+    <b>${esc(p.tieu_de)}</b><div class="meta" style="margin:2px 0 0">${esc(p.mo_ta||'')}</div>
+    ${(p.loi_ich||[]).length?`<div class="row" style="gap:4px;margin-top:6px;flex-wrap:wrap">${p.loi_ich.map(b=>`<span class="bn">${esc(d.benefits[b]||b)}</span>`).join('')}</div>`:''}
+    ${p.rui_ro?`<div class="meta" style="margin:6px 0 0">Rủi ro: ${esc(p.rui_ro)}</div>`:''}</div></label>`).join('');
+  const applied = n.applied ? `<div class="sec"><h2>Đã áp dụng</h2></div><div class="card pad">${(n.applied.done||[]).map(x=>`<div class="mdli"><span>${ico('check',14)}</span><span>${esc(x)}</span></div>`).join('')}
+    ${(n.ticket_rows||[]).map(t=>`<button class="btn sm" style="margin:6px 6px 0 0" onclick="rpTicket('${t.id}')">${ico('code',14)} ${esc(t.title)} · ${esc(d.status[t.status]||t.status)}</button>`).join('')}</div>` : '';
+  sheet(`<div class="row" style="gap:6px;align-items:center;margin-bottom:6px"><span class="vd ${a.ket_luan}">${esc(d.verdict[a.ket_luan]||'')}</span><span class="fit">Phù hợp ${a.phu_hop??'?'}/10</span></div>
+    <h2 style="margin-bottom:2px">${esc(a.ten_vi||n.full_name)}</h2><div class="meta">${esc(n.full_name)} · ${ico('star',13)} ${kfmt(n.stars)}${n.stars_week?` (+${kfmt(n.stars_week)} tuần này)`:''}${n.lang?` · ${esc(n.lang)}`:''}${n.license?` · ${esc(n.license)}`:''}${n.pushed?` · cập nhật ${esc(n.pushed)}`:''}</div>
+    <div class="card pad" style="margin-top:12px"><b>Là gì</b><p class="mdp">${esc(a.la_gi||n.desc||'')}</p>
+      ${(a.diem_noi_bat||[]).length?`<b>Điểm đáng học</b>${a.diem_noi_bat.map(x=>`<div class="mdli"><span>•</span><span>${esc(x)}</span></div>`).join('')}`:''}
+      ${a.chat_luong?`<b style="display:block;margin-top:8px">Độ chín</b><p class="mdp">${esc(a.chat_luong)}</p>`:''}</div>
+    <div class="caobox"><b>Nhận định</b><p style="-webkit-line-clamp:unset">${esc(a.nhan_dinh||'')}</p></div>
+    <div class="sec"><h2>Đề xuất cho superHuy</h2></div><div class="card list rpopts">${props||'<div class="empty">Không có đề xuất.</div>'}</div>
+    <p class="muted small" style="margin:8px 2px 0">Làm ngay: theo dõi bản phát hành, lưu best practice vào Second Brain, thêm quy tắc vận hành. Phiếu nâng cấp: superHuy lập kế hoạch, lập trình viên làm và kiểm thử rồi mới triển khai.</p>
+    ${applied}
+    <div class="row" style="margin-top:12px"><button class="btn grow" onclick="openLink('${esc(n.url)}')">${ico('code',16)} GitHub</button>${n.status==='new'?`<button class="btn pri grow" onclick="rpApplyPicked('${n.id}')">${ico('check',16)} Áp dụng mục đã chọn</button>`:''}</div>`);
+}
+function rpApplyPicked(id){
+  const picks = [...document.querySelectorAll('.rpopts input:checked')].map(x=>x.dataset.i).join(',');
+  if(!picks) return toast('Anh chọn ít nhất 1 đề xuất');
+  rpApply(id, picks);
+}
+function rpUpHtml(){
+  const d = S.rp, st = d.status||{};
+  const groups = [['moi','dang_lam'],['xong','bo']];
+  const tk = d.tickets.length ? groups.map((g,gi)=>{ const rows = d.tickets.filter(t=>g.includes(t.status)); if(!rows.length) return '';
+    return `${gi?'<div class="sec"><h2>Đã xử lý</h2></div>':''}<div class="card list">${rows.map(t=>`<button onclick="rpTicket('${t.id}')"><span class="thumb">${ico('code',20)}</span>
+      <div class="grow" style="min-width:0"><div class="ttl2">${esc(t.title)}</div><div class="meta">${esc(t.repo)} · công sức ${esc(t.effort)} · ${t.steps} bước · ${esc(ago(t.at))}</div></div><span class="tkst ${t.status}">${esc(st[t.status]||t.status)}</span></button>`).join('')}</div>`; }).join('')
+    : `<div class="card empty">Chưa có phiếu nâng cấp. Quẹt phải một repo có đề xuất đụng tới code, superHuy sẽ lập phiếu kèm kế hoạch chi tiết.</div>`;
+  const rules = d.rules.length ? `<div class="card list">${d.rules.map(r=>`<div class="wk"><div class="grow"><div class="ttl2" style="${r.on===false?'opacity:.5':''}">${esc(r.text)}</div><div class="meta">Từ ${esc(r.repo)} · ${esc(ago(r.at))}</div></div>
+      <button class="btn sm" onclick="rpRule('${r.id}','quytac_bat')">${r.on===false?'Bật':'Tắt'}</button><button class="iconbtn" aria-label="Xoá quy tắc" onclick="rpRule('${r.id}','quytac_xoa')">${ico('del',18)}</button></div>`).join('')}</div>`
+    : `<div class="card empty">Chưa có quy tắc nào.</div>`;
+  const watch = d.watch.length ? `<div class="card list">${d.watch.map(w=>`<div class="wk"><span class="thumb">${ico('refresh',18)}</span><div class="grow"><div class="ttl2">${esc(w.full_name)}</div><div class="meta">${w.new?`Bản mới: ${esc(w.new)}`:w.last?`Bản hiện tại: ${esc(w.last)}`:'Chưa có bản phát hành'}</div></div>
+      <button class="btn sm" onclick="openLink('${esc(w.url)}/releases')">Xem</button><button class="iconbtn" aria-label="Bỏ theo dõi" onclick="rpUnwatch('${esc(w.full_name)}')">${ico('x',18)}</button></div>`).join('')}</div>`
+    : `<div class="card empty">Chưa theo dõi repo nào.</div>`;
+  return `<div class="sec" style="margin-top:4px"><h2>Phiếu nâng cấp</h2></div>${tk}
+    <div class="sec"><h2>Quy tắc vận hành đã thêm</h2></div><p class="muted small" style="margin:-4px 2px 8px">superHuy làm theo các quy tắc đang bật khi trò chuyện và xử lý việc.</p>${rules}
+    <div class="sec"><h2>Repo đang theo dõi</h2></div>${watch}`;
+}
+function rpDoneHtml(){
+  const d = S.rp;
+  return d.applied.length ? `<div class="card list">${d.applied.map(n=>`<button onclick="rpOpen('${n.id}')"><span class="thumb">${ico('code',20)}</span><div class="grow" style="min-width:0"><div class="ttl2">${esc(n.a?.ten_vi||n.full_name)}</div>
+    <div class="meta">${esc(n.full_name)} · ${(n.applied?.done||[]).length} việc · ${esc(ago(n.applied?.at))}</div></div><span class="chev">${ico('chev',18)}</span></button>`).join('')}</div>`
+    : `<div class="card empty">Chưa áp dụng repo nào. Quẹt phải ở “Tuần này”.</div>`;
+}
+async function rpTicket(id){
+  let t; try{ t = await run('noidung','phieu_xem',{tid:id},'',true); }catch(e){ return toast(e.message); }
+  const st = (S.rp||{}).status||{moi:'Chờ làm',dang_lam:'Đang làm',xong:'Đã xong',bo:'Bỏ'};
+  sheet(`<div class="meta" style="margin-bottom:4px">Phiếu nâng cấp · ${esc(st[t.status]||t.status)}</div>
+    <div class="mdbody">${mdRender(t.markdown.replace(/^---[\s\S]*?---\n/,''))}</div>
+    <div class="sec"><h2>Trạng thái</h2></div><div class="chips" style="padding-top:0">${Object.entries(st).map(([k,l])=>`<button class="chip ${t.status===k?'on':''}" onclick="rpTicketSet('${t.id}','${k}')">${esc(l)}</button>`).join('')}</div>
+    <div class="row" style="margin-top:12px"><button class="btn grow" onclick="rpCopy()">${ico('pen',16)} Chép kế hoạch</button><button class="btn grow" onclick="openLink('${esc(t.url)}')">${ico('code',16)} Repo gốc</button></div>`);
+  S.rpTk = t;
+}
+async function rpCopy(){ try{ await navigator.clipboard.writeText(S.rpTk?.markdown||''); toast('Đã chép kế hoạch'); }catch(e){ toast('Không chép được trên máy này'); } }
+async function rpTicketSet(id, st){ try{ const r = await run('noidung','phieu_trangthai',{tid:id, status:st},'',true); toast(r.text||'Đã cập nhật'); S.rp = null; rpLoad(); rpTicket(id); }catch(e){ toast(e.message); } }
+async function rpRule(id, act){ try{ await run('noidung',act,{rule_id:id},'',true); S.rp = null; rpLoad(); }catch(e){ toast(e.message); } }
+async function rpUnwatch(n){ try{ await run('noidung','bo_theodoi',{full_name:n},'',true); S.rp = null; rpLoad(); }catch(e){ toast(e.message); } }
+async function rpScan(){
+  toast('superHuy đang săn repo GitHub tuần này và phân tích, khoảng 3-5 phút', 4500);
+  S.rp && (S.rp.scanning = true); render();
+  try{ const r = await run('noidung','repo_quet',{force:true},'Săn repo'); toast(r.text||'Xong', 3500); }catch(e){ toast(e.message); }
+  S.rp = null; rpLoad();
+}
+function rpAdd(){
+  sheet(`<h2>Phân tích một repo</h2><p class="meta">Dán link repo GitHub, superHuy sẽ đọc README, đánh giá và đề xuất cách áp dụng.</p>
+    <input id="rpUrl" type="url" placeholder="https://github.com/chu/repo" style="margin:10px 0">
+    <button class="btn pri" style="width:100%" onclick="rpAddGo()">${ico('spark',16)} Phân tích</button>`);
+  setTimeout(()=>$('#rpUrl')?.focus(), 200);
+}
+async function rpAddGo(){
+  const u = $('#rpUrl').value.trim(); if(!u) return;
+  $('#sheetBody').innerHTML = `<h2>Đang phân tích…</h2><div class="card pad"><div class="spin"></div><p class="meta">superHuy đang đọc ${esc(u)}</p></div>`;
+  try{ const r = await run('noidung','repo_them',{url:u},'Phân tích repo'); S.rp = null; await rpLoad(); rpOpen(r.id); }catch(e){ closeSheet(); toast(e.message); }
 }
 function vStrategy(){
   const d = S.cl;
@@ -2693,7 +2839,7 @@ function gmHeader(){
   const lv = g.level, pct = Math.round(lv.progress*100), qd = g.quests.filter(q=>q.claimed).length;
   return `<button class="gmhead" onclick="gmOpen()"><span class="gmlv"><b>${lv.level}</b><i>cấp</i></span>
     <span class="grow" style="min-width:0"><span class="row" style="align-items:baseline;gap:8px"><b class="gmtitle">${esc(lv.title)}</b><span class="meta" style="margin:0">${g.xp} XP</span>${g.boost_until?'<span class="gmboost">x2 XP</span>':''}</span>
-      <span class="gmbar"><i style="width:${pct}%"></i></span><span class="meta" style="margin:2px 0 0;display:block">Còn ${lv.next-g.xp} XP lên cấp ${lv.level+1} · hôm nay +${g.xp_today} XP · nhiệm vụ ${qd}/${g.quests.length}</span></span>
+      <span class="gmbar"><i style="width:${pct}%"></i></span><span class="meta" style="margin:2px 0 0;display:block">Còn ${lv.next-g.xp} XP lên cấp ${lv.level+1}${g.xp_today?` · hôm nay +${g.xp_today}`:''} · nhiệm vụ ${qd}/${g.quests.length}</span></span>
     <span class="gmgold">🪙 ${g.gold}</span></button>`;
 }
 function gmOpen(tab){
@@ -2718,7 +2864,7 @@ function gmOpen(tab){
   };
   sheet(`<div id="gmSheet"><div class="gmhero"><span class="gmlv big"><b>${lv.level}</b><i>cấp</i></span><div class="grow"><div class="gmtitle" style="font-size:20px">${esc(lv.title)}</div>
       <div class="gmbar" style="margin:6px 0 4px"><i style="width:${Math.round(lv.progress*100)}%"></i></div><div class="meta" style="margin:0">${g.xp} / ${lv.next} XP · 🪙 ${g.gold} vàng${g.boost_until?' · x2 XP đang bật':''}</div></div></div>
-    <div class="seg segscroll" style="margin:12px 0">${[['quest','Nhiệm vụ'],['badge','Huy hiệu'],['bag','Túi đồ'],['shop','Đổi thưởng'],['log','Nhật ký']].map(([k,l])=>`<button class="${t===k?'on':''}" onclick="gmOpen('${k}')">${l}</button>`).join('')}</div>
+    <div class="seg segscroll" style="margin:12px 0">${[['quest','Nhiệm vụ'],['badge','Huy hiệu'],['bag','Túi đồ'],['shop','Thưởng'],['log','Nhật ký']].map(([k,l])=>`<button class="${t===k?'on':''}" onclick="gmOpen('${k}')">${l}</button>`).join('')}</div>
     ${body[t]()}</div>`);
 }
 async function gmUse(id){ try{ const r = await run('game','dung',{item:id},'',true); S.gm = r; toast(r.text, 3500); haptic('heavy'); gmOpen('bag'); }catch(e){ toast(e.message); } }

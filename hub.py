@@ -7,7 +7,7 @@ import os
 import re
 
 import targets as targets_mod
-from agents import (calendar_agent, content_agent, content_hub, strategy, learning, reel_studio, game, gemini_notebook, knowledge_sources, meeting, meeting_share, email_agent, fb_connect, gcal_bridge, imagecard, lark_agent, mailbox, news_agent, publisher,
+from agents import (calendar_agent, content_agent, content_hub, strategy, learning, reel_studio, game, repo_radar, gemini_notebook, knowledge_sources, meeting, meeting_share, email_agent, fb_connect, gcal_bridge, imagecard, lark_agent, mailbox, news_agent, publisher,
                     reel_video, second_brain)
 from config import CARD_HANDLE, DATA_DIR
 from core import digests, notify, store
@@ -565,6 +565,23 @@ register(Agent("noidung", "Nội dung", "🎬", "Săn tin theo chủ đề + cas
            params=[Param("iid", "ID tin", required=True), Param("idx", "Vị trí", "number", default=-1)]),
     Action("gui_video", "Gửi video vào Telegram", content_hub.send_video, hidden=True, params=[Param("cid", "ID video", required=True)]),
     Action("tai_video", "Link tải video", noidung_tai_video, hidden=True, params=[Param("cid", "ID video", required=True)]),
+    Action("repo_ds", "Repo tham khảo", repo_radar.overview, hidden=True, llm=True,
+           desc="Các repo GitHub nổi bật tuần này đã phân tích (nhận định, đề xuất áp dụng cho superHuy), phiếu nâng cấp, quy tắc đã áp dụng."),
+    Action("repo_quet", "Săn repo GitHub tuần này", repo_radar.scan, hidden=True, long=True,
+           params=[Param("force", "Quét lại", "bool", default=True)]),
+    Action("repo_them", "Phân tích 1 repo GitHub", repo_radar.add_repo, hidden=True, long=True, llm=True,
+           desc="Anh dán link repo GitHub để superHuy phân tích và đề xuất áp dụng.", params=[Param("url", "Link repo", required=True)]),
+    Action("repo_xem", "Chi tiết repo", repo_radar.item, hidden=True, params=[Param("rid", "ID", required=True)]),
+    Action("repo_apdung", "Áp dụng repo cho superHuy", repo_radar.apply, hidden=True, long=True,
+           params=[Param("rid", "ID", required=True), Param("picks", "Đề xuất chọn (vd 0,2)")]),
+    Action("repo_bo", "Bỏ qua repo", repo_radar.skip, hidden=True, params=[Param("rid", "ID", required=True)]),
+    Action("repo_hoantac", "Hoàn tác bỏ qua repo", repo_radar.undo, hidden=True, params=[Param("rid", "ID", required=True)]),
+    Action("phieu_xem", "Phiếu nâng cấp", repo_radar.ticket, hidden=True, params=[Param("tid", "ID", required=True)]),
+    Action("phieu_trangthai", "Đổi trạng thái phiếu", repo_radar.set_ticket, hidden=True,
+           params=[Param("tid", "ID", required=True), Param("status", "Trạng thái", required=True)]),
+    Action("quytac_bat", "Bật/tắt quy tắc", repo_radar.toggle_rule, hidden=True, params=[Param("rule_id", "ID", required=True)]),
+    Action("quytac_xoa", "Xoá quy tắc", repo_radar.remove_rule, hidden=True, params=[Param("rule_id", "ID", required=True)]),
+    Action("bo_theodoi", "Bỏ theo dõi repo", repo_radar.unwatch, hidden=True, params=[Param("full_name", "Repo", required=True)]),
 ]))
 
 

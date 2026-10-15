@@ -93,6 +93,13 @@ def _kb_query(history: list[dict]) -> str:
 def _loop(history: list[dict], actions: list[dict]) -> str:
     system = SYSTEM.format(profile=profile.text(), today=dt.datetime.now(TZ).strftime("%A %d/%m/%Y %H:%M"), tz=TIMEZONE,
                            memory=memory.context())
+    try:
+        from agents import repo_radar
+        rc = repo_radar.rules_context()
+        if rc:
+            system += "\n\n" + rc
+    except Exception:
+        pass
     q = _kb_query(history)
     if len(q.strip()) >= 8:
         from core import kb
