@@ -219,6 +219,37 @@ async def job_content_scan(app: Application):
         await send(app, f"📰 {r['added']} tin mới đang chờ anh duyệt ở trang Nội dung (quẹt phải để tạo reels). Tổng chờ duyệt: {r['pending']}.")
 
 
+async def job_strategy_weekly():
+    """Thứ Hai: viết lại 2 tài liệu sống (Roimaxx, Leversphere) từ insight tuần qua."""
+    from agents import strategy
+    await asyncio.to_thread(strategy.weekly)
+    from core import notify
+    notify.send(text="🧭 Đã cập nhật tài liệu chiến lược tuần này: mô hình kinh doanh Roimaxx và lộ trình chuyển đổi Leversphere. "
+                     "Mở app › Nội dung › Chiến lược để xem.")
+
+
+def _strategy_bootstrap():
+    """Lần đầu: nạp bối cảnh + săn tin chiến lược + viết bản đầu của 2 tài liệu."""
+    from agents import content_hub, strategy
+    from core import memory, notify
+    memory.seed_once([
+        ("work", "Roimaxx: định vị ban đầu là one-stop-shop e-commerce enabler, nay anh Huy định hướng thành agentic e-commerce enabler "
+                 "(giúp doanh nghiệp khác triển khai agentic commerce: Agents Factory + agency/consulting chuyển đổi AI)."),
+        ("work", "Leversphere là công ty POD (print on demand); anh Huy là CGO kiêm CAO, đang lập lộ trình chuyển Leversphere sang mô hình agentic e-commerce."),
+    ])
+    if any(strategy.doc(k).get("version") for k in strategy.LENSES):
+        return
+    try:
+        if len(strategy._load()) < 4:
+            for t in strategy.LENSES:
+                content_hub.scan(t)
+        strategy.weekly()
+        notify.send(text="🧭 superHuy đã có bản đầu tiên của 2 tài liệu chiến lược: mô hình kinh doanh agentic commerce cho Roimaxx "
+                         "và lộ trình chuyển đổi agentic cho Leversphere, kèm các phân tích CAO. Mở app › Nội dung › Chiến lược.")
+    except Exception:
+        log.exception("Khởi tạo tài liệu chiến lược lỗi")
+
+
 async def job_knowledge_sync():
     """Nạp lại các nguồn tri thức ngoài Obsidian (Gemini Notebook...) 6 giờ/lần."""
     from agents import knowledge_sources
@@ -293,6 +324,7 @@ async def post_init(app: Application):
     if vault_sync.enabled():
         scheduler.add_job(job_vault_sync, "interval", minutes=10, args=[app], coalesce=True, max_instances=1,
                           misfire_grace_time=600, next_run_time=dt.datetime.now() + dt.timedelta(minutes=1))
+    scheduler.add_job(job_strategy_weekly, CronTrigger(day_of_week="mon", hour=6, minute=20), misfire_grace_time=6 * 3600, coalesce=True)
     scheduler.add_job(job_knowledge_sync, "interval", hours=6, coalesce=True, max_instances=1, misfire_grace_time=3600,
                       next_run_time=dt.datetime.now() + dt.timedelta(minutes=3))
     for h in CONTENT_SCAN_HOURS:
@@ -342,6 +374,13 @@ async def post_init(app: Application):
         meeting.resume_pending()
     except Exception:
         log.exception("Không khôi phục được hàng chờ Meeting Studio")
+
+    threading.Thread(target=_strategy_bootstrap, daemon=True, name="strategy-boot").start()
+    try:  # phông chữ cho video bản tin (tải 1 lần)
+        from agents import newscast
+        threading.Thread(target=newscast.ensure_fonts, daemon=True).start()
+    except Exception:
+        pass
 
     # Second Brain: ghi chú "superHuy hiểu về anh" trong Obsidian (hai chiều) + dựng sẵn chỉ mục tri thức
     try:

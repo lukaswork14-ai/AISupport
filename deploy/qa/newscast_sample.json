@@ -1,0 +1,10 @@
+{"title": "Shopify mở cửa cho AI agent mua hàng", "kicker": "AI COMMERCE", "strap": "Shopify đưa AI agent vào giỏ hàng",
+ "scenes": [
+  {"type": "hook", "voiceover": "Từ hôm nay, khách hàng của bạn có thể không còn là con người.", "on_screen": {"text": "Khách hàng mới của bạn là AI?"}},
+  {"type": "headline", "voiceover": "Shopify vừa công bố cho phép các trợ lý AI như ChatGPT tìm và thanh toán sản phẩm trực tiếp trên hàng triệu cửa hàng.", "on_screen": {"kicker": "Shopify", "title": "AI agent được mua hàng trực tiếp trên Shopify"}, "entity": "Shopify"},
+  {"type": "stat", "voiceover": "Lưu lượng truy cập từ công cụ AI vào các shop đã tăng gấp bảy lần chỉ trong một năm.", "on_screen": {"value": "7 lần", "label": "lưu lượng từ AI", "note": "so với cùng kỳ năm ngoái theo Shopify"}},
+  {"type": "compare", "voiceover": "Trước đây khách phải tự tìm, tự so sánh. Giờ agent làm thay trong vài giây.", "on_screen": {"a_label": "Trước", "a_value": "15 phút tìm kiếm", "b_label": "Với AI agent", "b_value": "30 giây", "note": "thời gian từ nhu cầu tới thanh toán"}},
+  {"type": "timeline", "voiceover": "Chỉ trong mười tám tháng, cuộc đua thương mại agentic đã tăng tốc rõ rệt.", "on_screen": {"items": [{"when": "2024", "what": "Chatbot gợi ý sản phẩm"}, {"when": "2025", "what": "Giao thức thanh toán cho agent"}, {"when": "2026", "what": "Agent mua hàng trực tiếp"}]}},
+  {"type": "analysis", "voiceover": "Theo góc nhìn của mình, seller Việt cần chuẩn hoá dữ liệu sản phẩm ngay, vì agent chỉ chọn shop có dữ liệu rõ ràng.", "on_screen": {"label": "GÓC NHÌN", "points": ["Dữ liệu sản phẩm là mặt tiền mới", "Giá và tồn kho phải chính xác", "Thương hiệu cần hiện diện trong AI"]}},
+  {"type": "cta", "voiceover": "Shop của bạn đã sẵn sàng bán cho AI agent chưa?", "on_screen": {"text": "Shop bạn sẵn sàng bán cho AI chưa?"}}
+ ]}

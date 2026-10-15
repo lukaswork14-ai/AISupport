@@ -7,7 +7,7 @@ import os
 import re
 
 import targets as targets_mod
-from agents import (calendar_agent, content_agent, content_hub, gemini_notebook, knowledge_sources, meeting, meeting_share, email_agent, fb_connect, gcal_bridge, imagecard, lark_agent, mailbox, news_agent, publisher,
+from agents import (calendar_agent, content_agent, content_hub, strategy, gemini_notebook, knowledge_sources, meeting, meeting_share, email_agent, fb_connect, gcal_bridge, imagecard, lark_agent, mailbox, news_agent, publisher,
                     reel_video, second_brain)
 from config import CARD_HANDLE, DATA_DIR
 from core import digests, notify, store
@@ -466,26 +466,41 @@ def noidung_duyet(id: str, style: str = "", reel_len: int = 0, outputs: str = ""
 
 
 def noidung_caidat(topics: str = "", reel_len: int = 0, style: str = "", voice: str = "", outputs: str = "",
-                   fast=None, tin=None, founder=None) -> dict:
+                   fast=None, tin=None, founder=None, roimaxx=None, leversphere=None, music=None) -> dict:
     c = content_hub.cfg()
     tracks = dict(c["tracks"])
+    for k, v in (("roimaxx", roimaxx), ("leversphere", leversphere)):
+        if v is not None:
+            tracks[k] = bool(v) and str(v).lower() not in ("false", "0")
     if tin is not None:
         tracks["tin"] = bool(tin) and str(tin).lower() not in ("false", "0")
     if founder is not None:
         tracks["founder"] = bool(founder) and str(founder).lower() not in ("false", "0")
     c = content_hub.set_cfg(topics=_list_param(topics), reel_len=int(reel_len) if reel_len else None, style=style or None,
                             voice=voice or None, outputs=_list_param(outputs),
-                            fast=None if fast is None else (bool(fast) and str(fast).lower() not in ("false", "0")), tracks=tracks)
+                            fast=None if fast is None else (bool(fast) and str(fast).lower() not in ("false", "0")), tracks=tracks,
+                            music=None if music is None else (bool(music) and str(music).lower() not in ("false", "0")))
     return {"cfg": c, "text": f"Đã lưu: {len(c['topics'])} chủ đề, reels {c['reel_len']} giây, kiểu {content_hub.STYLES[c['style']]}, "
                               f"đầu ra: {', '.join(content_hub.OUTPUTS[o] for o in c['outputs'])}."}
+
+
+def noidung_tai_video(cid: str) -> dict:
+    from core import store as _st
+    from webapp import server as _srv
+    r = _st.get(cid)
+    if not r or not r.get("video"):
+        raise ValueError("Không tìm thấy video")
+    name = re.sub(r"[^\w\-]+", "-", (r.get("title") or "video").replace("Reels: ", ""), flags=re.UNICODE).strip("-")[:60] or "video"
+    return {"url": _srv.sign_download(r["video"], f"{name}.mp4"), "file_name": f"{name}.mp4"}
 
 
 register(Agent("noidung", "Nội dung", "🎬", "Săn tin theo chủ đề + case founder AI, quẹt duyệt, tự tạo reels Facebook và bài đăng group/fanpage", order=35, actions=[
     Action("tongquan", "Hàng chờ nội dung", noidung_tongquan, icon="🗂", llm=True,
            desc="Xem hàng chờ duyệt tin (id, tuyến, tiêu đề), tin đang tạo và bộ nội dung đã tạo."),
     Action("quet", "Quét tin mới", content_hub.scan, icon="🔎", llm=True, long=True,
-           desc="Săn tin mới cho trang Nội dung. track: tin (theo chủ đề) | founder (case founder/startup AI thành công) | bỏ trống = cả hai.",
-           params=[Param("track", "Tuyến", "select", options=["", "tin", "founder"], default="")]),
+           desc="Săn tin mới cho trang Nội dung. track: tin (theo chủ đề) | founder (case founder/startup AI) | roimaxx (agentic commerce, "
+                "mô hình kinh doanh enabler, kèm phân tích CAO) | leversphere (chuyển đổi agentic cho công ty POD, kèm phân tích CAO) | bỏ trống = mọi tuyến.",
+           params=[Param("track", "Tuyến", "select", options=["", "tin", "founder", "roimaxx", "leversphere"], default="")]),
     Action("them", "Dán bài hoặc link", content_hub.add_manual, icon="📎", llm=True, long=True,
            desc="Thêm 1 bài anh gửi (dán chữ hoặc link) vào hàng chờ; make_now=true để tạo reels + bài đăng ngay.",
            params=[Param("text", "Nội dung bài", "textarea"), Param("url", "Link"), Param("make_now", "Tạo ngay", "bool", default=False)]),
@@ -500,10 +515,31 @@ register(Agent("noidung", "Nội dung", "🎬", "Săn tin theo chủ đề + cas
     Action("bo", "Xem bộ nội dung", content_hub.pack_view, hidden=True, params=[Param("iid", "ID tin", required=True)]),
     Action("caidat", "Chủ đề & định dạng", noidung_caidat, icon="🎛", llm=True,
            desc="Đổi chủ đề săn tin (topics, cách nhau dấu phẩy, thay toàn bộ danh sách), bật/tắt tuyến (tin, founder), "
-                "định dạng mặc định: reel_len 15|30|45|60, style auto|founder|tin|bai_hoc, voice HoaiMy|NamMinh, outputs reel,group,page, fast (nhịp nhanh).",
+                "định dạng mặc định: reel_len 30|45|60|90, style auto|founder|tin|bai_hoc, voice HoaiMy|NamMinh, outputs reel,group,page, fast (nhịp nhanh).",
            params=[Param("topics", "Chủ đề", "textarea"), Param("reel_len", "Độ dài reels", "number"), Param("style", "Kiểu"),
                    Param("voice", "Giọng đọc"), Param("outputs", "Đầu ra"), Param("fast", "Nhịp nhanh", "bool"),
-                   Param("tin", "Tuyến tin theo chủ đề", "bool"), Param("founder", "Tuyến founder", "bool")]),
+                   Param("tin", "Tuyến tin theo chủ đề", "bool"), Param("founder", "Tuyến founder", "bool"),
+                   Param("roimaxx", "Tuyến agentic commerce (Roimaxx)", "bool"), Param("leversphere", "Tuyến chuyển đổi (Leversphere)", "bool"),
+                   Param("music", "Nhạc nền video", "bool")]),
+    Action("phan_tich", "Phân tích CAO 1 tin", content_hub.analyze_item, hidden=True, long=True, llm=True,
+           desc="Phân tích chuyên sâu (vai CAO) 1 tin trong hàng chờ theo 2 lăng kính Roimaxx và Leversphere.",
+           params=[Param("iid", "ID tin", required=True)]),
+    Action("chien_luoc", "Chiến lược agentic commerce", strategy.overview, hidden=True, llm=True,
+           desc="Tổng quan tình báo chiến lược: 2 tài liệu sống (Roimaxx mô hình kinh doanh agentic commerce enabler; Leversphere lộ trình "
+                "chuyển đổi agentic e-commerce) + các insight đã phân tích gần đây."),
+    Action("insight", "Xem 1 insight", strategy.insight, hidden=True, params=[Param("iid", "ID", required=True)]),
+    Action("tai_lieu", "Xem tài liệu chiến lược", strategy.doc, hidden=True, llm=True,
+           desc="Đọc toàn văn tài liệu chiến lược: lens = roimaxx (mô hình kinh doanh agentic commerce enabler) | leversphere (lộ trình chuyển đổi).",
+           params=[Param("lens", "Lăng kính", required=True)]),
+    Action("cap_nhat_tai_lieu", "Cập nhật tài liệu chiến lược", strategy.build, hidden=True, long=True, llm=True,
+           desc="Viết lại tài liệu chiến lược từ insight mới nhất + Second Brain. lens = roimaxx | leversphere.",
+           params=[Param("lens", "Lăng kính", required=True)]),
+    Action("dung_lai", "Dựng lại video", content_hub.rerender, hidden=True, long=True,
+           params=[Param("cid", "ID video", required=True), Param("voice", "Giọng"), Param("fast", "Nhịp nhanh", "bool"),
+                   Param("music", "Nhạc nền", "bool"), Param("reel_len", "Độ dài", "number"), Param("rewrite", "Viết lại kịch bản", "bool"),
+                   Param("angle", "Chỉ đạo thêm", "textarea")]),
+    Action("gui_video", "Gửi video vào Telegram", content_hub.send_video, hidden=True, params=[Param("cid", "ID video", required=True)]),
+    Action("tai_video", "Link tải video", noidung_tai_video, hidden=True, params=[Param("cid", "ID video", required=True)]),
 ]))
 
 

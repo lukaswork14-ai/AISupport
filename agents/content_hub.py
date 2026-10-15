@@ -19,7 +19,7 @@ from urllib.parse import quote_plus, urlparse
 
 import requests
 
-from agents import content_agent, fb_reel, imagecard, news_agent
+from agents import content_agent, fb_reel, imagecard, news_agent, newscast, strategy
 from agents.sources import SOURCES, TOPICS
 from config import CARD_HANDLE, DATA_DIR
 from core import notify, store
@@ -30,16 +30,18 @@ QFILE = DATA_DIR / "content_queue.json"
 CFILE = DATA_DIR / "content_cfg.json"
 _lock = threading.Lock()
 
-TRACKS = {"tin": "Tin theo chủ đề", "founder": "Founder & startup AI", "tay": "Anh gửi"}
+TRACKS = {"tin": "Tin theo chủ đề", "founder": "Founder & startup AI", "roimaxx": "Agentic commerce · Roimaxx",
+          "leversphere": "Chuyển đổi · Leversphere", "tay": "Anh gửi"}
+AUTO_TRACKS = ["tin", "founder", "roimaxx", "leversphere"]
 STYLES = {"auto": "Tự chọn theo tin", "founder": "Kể chuyện founder", "tin": "Tin nóng: chuyện gì, vì sao, làm gì",
           "bai_hoc": "3 bài học rút ra"}
-LENGTHS = {15: 3, 30: 5, 45: 6, 60: 7}  # độ dài reels -> số cảnh
+LENGTHS = {15: 3, 30: 5, 45: 6, 60: 7, 90: 9}  # độ dài reels -> số cảnh
 OUTPUTS = {"reel": "Video reels", "group": "Bài đăng group", "page": "Bài fanpage"}
 DEFAULT_CFG = {
     "topics": [t.strip() for t in TOPICS.split(";") if t.strip()],
-    "tracks": {"tin": True, "founder": True},
-    "reel_len": 30, "style": "auto", "voice": "NamMinh", "fast": True,
-    "outputs": ["reel", "group", "page"], "per_scan": {"tin": 8, "founder": 5},
+    "tracks": {"tin": True, "founder": True, "roimaxx": True, "leversphere": True},
+    "reel_len": 60, "style": "auto", "voice": "NamMinh", "fast": True, "music": True,
+    "outputs": ["reel", "group", "page"], "per_scan": {"tin": 8, "founder": 5, "roimaxx": 5, "leversphere": 5},
 }
 
 
@@ -72,6 +74,7 @@ def _read(path, default):
 def cfg() -> dict:
     c = {**DEFAULT_CFG, **_read(CFILE, {})}
     c["tracks"] = {**DEFAULT_CFG["tracks"], **(c.get("tracks") or {})}
+    c["per_scan"] = {**DEFAULT_CFG["per_scan"], **(c.get("per_scan") or {})}
     return c
 
 
@@ -165,6 +168,7 @@ CRITERIA = {
     "founder": "Case FOUNDER hoặc STARTUP AI THÀNH CÔNG có câu chuyện: hành trình của người sáng lập (xuất thân, bước ngoặt), con số ấn tượng "
                "(gọi vốn, định giá, doanh thu/ARR, người dùng, tốc độ tăng trưởng), bài học cho founder muốn xây công ty AI-native. "
                "Ưu tiên bài có tên người + con số + câu chuyện; điểm thấp cho tin gọi vốn khô khan không có nhân vật.",
+    **{k: strategy.CRITERIA.format(goal=v["goal"]) for k, v in strategy.LENSES.items()},
 }
 
 
@@ -194,7 +198,7 @@ def _select(track: str, cands: list[dict], n: int, topics: list[str]) -> list[di
         if not src:
             continue
         out.append({"id": uuid.uuid4().hex[:8], "track": track, "status": "new", "at": _now(),
-                    "topic": str(p.get("topic") or ("Founder" if track == "founder" else "Tin"))[:24],
+                    "topic": str(p.get("topic") or {"founder": "Founder", "roimaxx": "Agentic", "leversphere": "Leversphere"}.get(track, "Tin"))[:24],
                     "headline_vi": fix_vi(p.get("headline_vi") or src["title"]), "summary_vi": fix_vi(p.get("summary_vi", "")),
                     "why_hot": fix_vi(p.get("why_hot", "")), "score": int(p.get("score") or 0),
                     "title_en": src["title"], "url": src["url"], "source": src["source"], "published": src.get("published", ""),
@@ -202,17 +206,49 @@ def _select(track: str, cands: list[dict], n: int, topics: list[str]) -> list[di
     return out
 
 
+def _sources_for(track: str, c: dict):
+    if track == "tin":
+        return _topic_sources(c["topics"]), 36
+    if track == "founder":
+        return FOUNDER_SOURCES, 120
+    return strategy.LENSES[track]["sources"], 24 * 8
+
+
+def _analyze_items(items: list[dict]):
+    """Phân tích CAO cho tin chiến lược (chạy song song 3 luồng), lưu kho insight + Obsidian."""
+    def one(it):
+        try:
+            if "news.google.com" in it.get("url", ""):
+                real = resolve_gnews(it["url"])
+                if real:
+                    it["url"] = real
+            body = _page_text(it.get("url", "")) or it.get("raw", "")
+            cao = strategy.analyze(it, body)
+            if cao:
+                it["cao"] = cao
+                it["insight"] = strategy.add_insight(it, cao)["id"]
+                if cao.get("tom_tat"):
+                    it["summary_vi"] = cao["tom_tat"]
+        except Exception:
+            log.exception("Phân tích CAO lỗi")
+    with ThreadPoolExecutor(max_workers=3) as ex:
+        list(ex.map(one, items))
+
+
 def scan(track: str = "") -> dict:
-    """Quét tin mới cho 1 hoặc cả 2 tuyến, thêm vào hàng chờ duyệt."""
+    """Quét tin mới cho 1 tuyến hoặc mọi tuyến đang bật, thêm vào hàng chờ duyệt. Tin chiến lược có kèm phân tích CAO."""
     c = cfg()
-    tracks = [track] if track in ("tin", "founder") else [t for t in ("tin", "founder") if c["tracks"].get(t)]
-    known = {i["url"] for i in _load() if i.get("url")} | set(_read(news_agent.SEEN_FILE, {}))
+    tracks = [track] if track in AUTO_TRACKS else [t for t in AUTO_TRACKS if c["tracks"].get(t)]
+    known = {i["url"] for i in _load() if i.get("url")} | set(_read(news_agent.SEEN_FILE, {})) | {r.get("url") for r in strategy._load()}
     added, failed = [], []
     for t in tracks:
-        srcs = _topic_sources(c["topics"]) if t == "tin" else FOUNDER_SOURCES
-        cands, f = _collect(srcs, 36 if t == "tin" else 120, known)
+        srcs, hours = _sources_for(t, c)
+        cands, f = _collect(srcs, hours, known)
         failed += f
-        added += _select(t, cands, int(c["per_scan"].get(t, 6)), c["topics"])
+        got = _select(t, cands, int(c["per_scan"].get(t, 5)), c["topics"])
+        if t in strategy.LENSES:
+            _analyze_items(got)
+        added += got
     with _lock:
         items = _load()
         items += added
@@ -224,6 +260,23 @@ def scan(track: str = "") -> dict:
     if failed:
         txt += f" ({len(failed)} nguồn không đọc được, đã bỏ qua.)"
     return {"text": txt, "added": len(added), "pending": n_new}
+
+
+def analyze_item(iid: str) -> dict:
+    """Phân tích CAO theo yêu cầu cho 1 tin bất kỳ trong hàng chờ."""
+    it = find(iid)
+    if not it:
+        raise ValueError("Không tìm thấy tin")
+    if it.get("cao"):
+        return {"cao": it["cao"], "insight": it.get("insight"), "text": "Đã có phân tích"}
+    one = dict(it)
+    if one.get("track") not in strategy.LENSES:
+        one["track"] = "roimaxx"
+    _analyze_items([one])
+    if not one.get("cao"):
+        raise RuntimeError("superHuy chưa phân tích được tin này, thử lại sau.")
+    _patch(iid, cao=one["cao"], insight=one.get("insight"), url=one.get("url", it.get("url", "")))
+    return {"cao": one["cao"], "insight": one.get("insight"), "text": "Đã phân tích"}
 
 
 # ------------------------------------------------------------------ anh tự gửi bài / link
@@ -505,13 +558,27 @@ def make_pack(iid: str, style: str = "", reel_len: int = 0, outputs: list[str] |
                                 meta={**meta, "variant": "page", "reel_data": reel, "reel": content_agent.format_reel({"reel": reel})})
         made.append("page")
     if "reel" in outputs:
-        label = "Founder AI" if it["track"] == "founder" else (it.get("topic") or "Tin nóng")
-        path, engine = fb_reel.make(reel, it.get("topic", ""), label, CARD_HANDLE, name=f"reel-{pack}",
-                                    voice=c.get("voice"), fast=c.get("fast", True))
+        vmeta, path, poster = {}, None, None
+        try:  # bản tin chiều sâu (đồ hoạ dữ liệu, B-roll, phụ đề theo giọng đọc, nhạc nền)
+            _patch(iid, step="Viết kịch bản bản tin")
+            sc = newscast.write_script(it, body, sec if sec in newscast.SCENES_BY_LEN else 60, content_agent.get_style(), angle)
+            r = newscast.make(sc, it, name=f"reel-{pack}", voice=c.get("voice") or "NamMinh", fast=c.get("fast", True),
+                              brand=CARD_HANDLE, music=c.get("music", True), progress=lambda m: _patch(iid, step=m))
+            path, poster = r["video"], r.get("poster")
+            vmeta = {"engine": "newscast", "voice_engine": r["engine"], "newscast": sc, "chapters": r["chapters"],
+                     "duration": r["duration"], "reel": newscast.script_text(sc)}
+            reel["caption"] = sc.get("caption") or reel.get("caption")
+            if sc.get("hashtags"):
+                tags = " ".join(h if h.startswith("#") else "#" + h for h in sc["hashtags"][:5])
+        except Exception:
+            log.exception("Dựng bản tin lỗi, chuyển sang reels chữ")
+            label = "Founder AI" if it["track"] == "founder" else (it.get("topic") or "Tin nóng")
+            path, engine = fb_reel.make(reel, it.get("topic", ""), label, CARD_HANDLE, name=f"reel-{pack}",
+                                        voice=c.get("voice"), fast=c.get("fast", True))
+            vmeta = {"engine": "reel-chu", "voice_engine": engine, "reel": content_agent.format_reel({"reel": reel})}
         cap = (reel.get("caption") or title).strip() + ("\n\n" + tags if tags and tags not in (reel.get("caption") or "") else "")
-        ids["reel"] = store.add("video", "Reels: " + title, cap, video=path, image=img,
-                                meta={**meta, "variant": "reel", "voice_engine": engine, "reel_data": reel,
-                                      "reel": content_agent.format_reel({"reel": reel}), "len": sec})
+        ids["reel"] = store.add("video", "Reels: " + title, cap, video=path, image=poster or img,
+                                meta={**meta, "variant": "reel", "reel_data": reel, "len": sec, "versions": [], **vmeta})
         made.append("reel")
         video = path
     return {"pack": {"id": pack, "ids": ids, "image": img, "angle": p.get("angle", ""), "style": st, "len": sec}, "made": made, "video": video}
@@ -527,3 +594,38 @@ def pack_view(iid: str) -> dict:
         if r:
             out["parts"][k] = r
     return out
+
+
+# ------------------------------------------------------------------ video: tạo lại, tải về, gửi Telegram
+def rerender(cid: str, voice: str = "", fast=None, music=None, reel_len: int = 0, rewrite: bool = False, angle: str = "") -> dict:
+    """Dựng lại video bản tin (giữ kịch bản hoặc viết lại), giữ bản cũ trong danh sách phiên bản."""
+    r = store.get(cid)
+    if not r or r.get("kind") != "video":
+        raise ValueError("Không tìm thấy video")
+    m = dict(r.get("meta") or {})
+    c = cfg()
+    it = find(m.get("item", "")) or {"headline_vi": r["title"].replace("Reels: ", ""), "source": m.get("source", ""),
+                                      "url": m.get("url", ""), "topic": m.get("topic", ""), "track": m.get("track", "tin")}
+    sc = m.get("newscast")
+    sec = int(reel_len or m.get("len") or c["reel_len"])
+    if rewrite or not sc or (reel_len and sc.get("len") != sec):
+        body = it.get("body") or _page_text(it.get("url", "")) or it.get("raw", "") or it.get("summary_vi", "")
+        sc = newscast.write_script(it, body, sec if sec in newscast.SCENES_BY_LEN else 60, content_agent.get_style(), angle)
+    out = newscast.make(sc, it, name=f"reel-{cid}", voice=voice or c.get("voice") or "NamMinh",
+                        fast=c.get("fast", True) if fast is None else bool(fast), brand=CARD_HANDLE,
+                        music=c.get("music", True) if music is None else bool(music))
+    vers = (m.get("versions") or []) + [{"video": r.get("video"), "image": r.get("image"), "at": r.get("created"),
+                                        "duration": m.get("duration")}]
+    m.update(newscast=sc, chapters=out["chapters"], duration=out["duration"], voice_engine=out["engine"], engine="newscast",
+             reel=newscast.script_text(sc), versions=vers[-5:], len=sec)
+    store.update(cid, video=out["video"], image=out.get("poster") or r.get("image"), meta=m)
+    return {"text": f"Đã dựng lại video ({round(out['duration'])} giây).", "video": out["video"], "id": cid}
+
+
+def send_video(cid: str) -> dict:
+    """Gửi video vào chat Telegram để anh lưu về máy (giữ nguyên chất lượng)."""
+    r = store.get(cid)
+    if not r or not r.get("video"):
+        raise ValueError("Không tìm thấy video")
+    notify.send(video=r["video"], caption=(r.get("text") or r["title"])[:1000])
+    return {"text": "Đã gửi video vào Telegram. Mở chat với bot, bấm giữ video để lưu về máy."}

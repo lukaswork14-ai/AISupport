@@ -539,6 +539,24 @@ html[data-scheme="dark"] .apps i{ background:color-mix(in srgb,var(--c) 22%,tran
 .savebtn{ align-self:flex-start; display:inline-flex; gap:6px; align-items:center; font-size:12.5px; font-weight:600; color:var(--jade); padding:4px 2px; margin:-4px 0 6px }
 .savebtn[disabled]{ color:var(--muted) }
 .gemcode{ font:700 26px/1 ui-monospace,SFMono-Regular,Menlo,monospace; letter-spacing:.12em; padding:12px 14px; border-radius:12px; background:var(--fill) }
+.trk.roimaxx{ background:color-mix(in srgb,#1F7AE0 14%,transparent); color:#1F7AE0 } html[data-scheme="dark"] .trk.roimaxx{ color:#7DB6FF }
+.trk.leversphere{ background:color-mix(in srgb,#199e70 15%,transparent); color:#13805F } html[data-scheme="dark"] .trk.leversphere{ color:#4FD1A5 }
+.itype{ font-size:11.5px; font-weight:700; padding:3px 8px; border-radius:7px; background:var(--fill); color:var(--text) }
+.relpill{ font-size:11.5px; font-weight:600; color:var(--muted); white-space:nowrap }
+.caobox{ background:var(--fill); border-radius:14px; padding:10px 12px; margin:8px 0 6px; font-size:14px }
+.caobox p{ margin:0; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden }
+.cldocs{ display:grid; gap:12px; grid-template-columns:1fr; margin-bottom:8px }
+@media (min-width:640px){ .cldocs{ grid-template-columns:1fr 1fr } }
+.cldoc{ display:flex; flex-direction:column; gap:8px } .cldoc h3{ margin:4px 0 0; font-size:17px; line-height:1.3 } .cldoc p{ margin:0; color:var(--muted); font-size:14px }
+.clamp3{ display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden }
+.mdbody{ font-size:15px; line-height:1.6 } .mdh{ margin:18px 0 6px; line-height:1.3 } .mdp{ margin:6px 0 } .mdli{ display:flex; gap:8px; margin:4px 0 } .mdli>span:first-child{ color:var(--muted); min-width:14px }
+.mdq{ border-left:3px solid var(--jade); padding:6px 10px; margin:8px 0; background:var(--fill); border-radius:0 10px 10px 0 }
+.mdtable{ overflow-x:auto; margin:10px 0; -webkit-overflow-scrolling:touch } .mdtable table{ border-collapse:collapse; font-size:13.5px; min-width:100% }
+.mdtable th,.mdtable td{ border-bottom:1px solid var(--line); padding:8px 10px; text-align:left; vertical-align:top } .mdtable th{ font-weight:700; background:var(--fill) }
+.vwrap{ position:relative } .vchap{ display:flex; gap:8px; overflow-x:auto; padding:2px 0 10px; -webkit-overflow-scrolling:touch }
+.vchap button{ flex:none; max-width:220px; text-align:left; padding:8px 11px; border-radius:12px; background:var(--surface); box-shadow:0 0 0 1px var(--line); font-size:13px; line-height:1.3 }
+.vchap button span{ display:block; font-size:11.5px; font-weight:700; color:var(--jade); margin-bottom:2px }
+.vacts{ display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px }
 </style>
 </head>
 <body>
@@ -1605,27 +1623,29 @@ function vStudio(embed){
 }
 
 /* ---------- Nội dung: săn tin + duyệt quẹt + bộ nội dung (reels, group, fanpage) */
-const TRK = {tin:'Theo chủ đề', founder:'Founder & startup AI', tay:'Anh gửi'};
+const TRK = {tin:'Theo chủ đề', founder:'Founder & startup AI', roimaxx:'Agentic · Roimaxx', leversphere:'Chuyển đổi · Leversphere', tay:'Anh gửi'};
+const ITYPE = {tin:'Tin', case_study:'Case study', best_practice:'Best practice', tinh_nang:'Tính năng mới', y_tuong:'Ý tưởng', bao_cao:'Báo cáo'};
 const CSTYLE = {auto:'Tự chọn', founder:'Kể chuyện founder', tin:'Tin nóng', bai_hoc:'3 bài học'};
 const COUT = {reel:'Video reels', group:'Bài group', page:'Bài fanpage'};
 const ago = iso => { if(!iso) return ''; const m = Math.max(0, (Date.now()-Date.parse(iso))/60000|0); return m<1?'vừa xong':m<60?`${m} phút trước`:m<1440?`${m/60|0} giờ trước`:`${m/1440|0} ngày trước`; };
 const cq = () => S.data.cq || {new:[], working:[], done:[], cfg:{}, counts:{}};
 function cqQueue(){ const f = S.ctrack||''; return cq().new.filter(n=>!f || n.track===f); }
 function vContent(){
-  const v = S.cview==='tao' ? 'tao' : 'duyet', q = cq();
+  const v = ['tao','cl'].includes(S.cview) ? S.cview : 'duyet', q = cq();
   const busy = q.working.filter(w=>w.status!=='error').length;
   const head = `<div class="date">${q.new.length} tin chờ duyệt${busy?`, ${busy} bộ đang tạo`:''}</div>
     <div class="row" style="align-items:center;margin-bottom:14px"><h1 class="grow" style="margin:2px 0 0">Nội dung</h1>
       <button class="iconbtn" aria-label="Dán bài hoặc link" onclick="cPaste()">${ico('link',20)}</button>
       <button class="iconbtn" aria-label="Chủ đề và định dạng" onclick="cSettings()">${ico('gear',20)}</button></div>
-    <div class="seg" style="margin-bottom:14px"><button class="${v==='duyet'?'on':''}" onclick="S.cview='duyet';render()">Duyệt tin</button><button class="${v==='tao'?'on':''}" onclick="S.cview='tao';render()">Đã tạo ${q.done.length||''}</button></div>`;
+    <div class="seg" style="margin-bottom:14px"><button class="${v==='duyet'?'on':''}" onclick="S.cview='duyet';render()">Duyệt tin</button><button class="${v==='cl'?'on':''}" onclick="S.cview='cl';render()">Chiến lược</button><button class="${v==='tao'?'on':''}" onclick="S.cview='tao';render()">Đã tạo ${q.done.length||''}</button></div>`;
+  if(v==='cl') return head + vStrategy();
   const work = `<div id="cwork" style="margin-top:${v==='duyet'?18:0}px">${cWorkHtml()}</div>`;
   return head + (v==='duyet' ? cSwipeHtml() + work : work + cDoneHtml());
 }
 function cWorkHtml(){
   const w = cq().working; if(!w.length) return '';
   return `<div class="card list" style="margin-bottom:14px">${w.map(i=>`<div class="wk">${i.status==='error'?`<span class="thumb" style="color:var(--danger)">${ico('x',20)}</span>`:'<div class="spin"></div>'}
-    <div class="grow"><div class="ttl2">${esc(i.headline_vi)}</div><div class="meta">${i.status==='error'?esc('Lỗi: '+(i.err||'')):i.status==='working'?'Đang viết kịch bản, dựng video và bài đăng…':'Đang xếp hàng'}</div></div>
+    <div class="grow"><div class="ttl2">${esc(i.headline_vi)}</div><div class="meta">${i.status==='error'?esc('Lỗi: '+(i.err||'')):i.status==='working'?esc(i.step||'Đang viết kịch bản, dựng video và bài đăng…'):'Đang xếp hàng'}</div></div>
     ${i.status==='error'?`<button class="btn sm" onclick="cApprove('${i.id}')">Thử lại</button>`:''}</div>`).join('')}</div>`;
 }
 function cSwipeHtml(){
@@ -1640,8 +1660,9 @@ function cSwipeHtml(){
       <div class="row" style="gap:6px;align-items:center"><span class="trk ${n.track}">${esc(TRK[n.track]||n.track)}</span><span class="topic">${esc(n.topic)}</span><span class="grow"></span><span class="meta" style="margin:0">${esc(ago(n.published||n.at))}</span></div>
       <h3>${esc(n.headline_vi)}</h3>
       <p class="sum">${esc(n.summary_vi)}</p>
-      ${n.why_hot?`<div class="aisug">${ico('spark',15)}<span>${esc(n.why_hot)}</span></div>`:''}
-      <div class="row" style="margin-top:auto;align-items:center"><span class="meta grow" style="margin:0">${esc(src(n.source))}</span>${n.url?`<button class="btn sm" onpointerdown="event.stopPropagation()" onclick="event.stopPropagation();openLink('${esc(n.url)}')">${ico('link',16)} Bài gốc</button>`:''}</div>
+      ${n.cao?`<div class="caobox"><div class="row" style="gap:6px;align-items:center;margin-bottom:4px"><b>Góc nhìn CAO</b><span class="itype">${esc(ITYPE[n.cao.loai]||'Tin')}</span><span class="grow"></span>${rel(n.cao)}</div><p>${esc((n.cao.phan_tich||[])[0]||n.cao.dieu_moi||'')}</p></div>`
+        : n.why_hot?`<div class="aisug">${ico('spark',15)}<span>${esc(n.why_hot)}</span></div>`:''}
+      <div class="row" style="margin-top:auto;align-items:center"><span class="meta grow" style="margin:0">${esc(src(n.source))}</span><button class="btn sm" onpointerdown="event.stopPropagation()" onclick="event.stopPropagation();cCao('${n.id}')">${ico('spark',16)} ${n.cao?'Phân tích':'Phân tích CAO'}</button>${n.url?`<button class="btn sm" onpointerdown="event.stopPropagation()" onclick="event.stopPropagation();openLink('${esc(n.url)}')">${ico('link',16)} Bài gốc</button>`:''}</div>
     </article>`; }).join('')}</div>
     <div class="swipebar"><button class="round" aria-label="Bỏ qua" onclick="cSwipe(-1)">${ico('x')}</button>
       <button class="iconbtn" aria-label="Tuỳ chỉnh rồi tạo" onclick="cCustom()">${ico('pen',20)}</button>
@@ -1719,10 +1740,10 @@ async function cScan(){
 function cCustom(){
   const card = document.querySelector('.ccard:not(.back1):not(.back2)'); if(!card) return;
   const n = cq().new.find(x=>x.id===card.dataset.id), c = cq().cfg||{};
-  S.copt = {style: c.style||'auto', reel_len: c.reel_len||30, outputs: [...(c.outputs||['reel','group','page'])]};
+  S.copt = {style: c.style||'auto', reel_len: c.reel_len||60, outputs: [...(c.outputs||['reel','group','page'])]};
   const paint = () => sheet(`<h2>Tạo nội dung từ tin này</h2><p class="lead">${esc(n.headline_vi)}</p>
     <p class="lbl">Kiểu triển khai</p><div class="chips" style="padding-top:0;flex-wrap:wrap;margin-bottom:12px">${Object.entries(CSTYLE).map(([k,l])=>`<button class="chip ${S.copt.style===k?'on':''}" onclick="S.copt.style='${k}';S.cpaint()">${l}</button>`).join('')}</div>
-    <p class="lbl">Độ dài reels</p><div class="seg" style="margin-bottom:12px">${[15,30,45,60].map(x=>`<button class="${S.copt.reel_len===x?'on':''}" onclick="S.copt.reel_len=${x};S.cpaint()">${x} giây</button>`).join('')}</div>
+    <p class="lbl">Độ dài video</p><div class="seg" style="margin-bottom:12px">${[30,45,60,90].map(x=>`<button class="${S.copt.reel_len===x?'on':''}" onclick="S.copt.reel_len=${x};S.cpaint()">${x} giây</button>`).join('')}</div>
     <p class="lbl">Tạo gì</p><div class="chips" style="padding-top:0;flex-wrap:wrap;margin-bottom:12px">${Object.entries(COUT).map(([k,l])=>`<button class="chip ${S.copt.outputs.includes(k)?'on':''}" onclick="S.copt.outputs=S.copt.outputs.includes('${k}')?S.copt.outputs.filter(o=>o!=='${k}'):[...S.copt.outputs,'${k}'];S.cpaint()">${l}</button>`).join('')}</div>
     <label class="field"><span>Chỉ đạo thêm (không bắt buộc)</span><textarea id="cangle" placeholder="Ví dụ: nhấn mạnh bài học cho founder POD muốn chuyển sang AI-native">${esc(S.copt.angle||'')}</textarea></label>
     <button class="btn pri full" onclick="S.copt.angle=$('#cangle').value;if(!S.copt.outputs.length)return toast('Chọn ít nhất một đầu ra');cSwipe(1,{style:S.copt.style,reel_len:S.copt.reel_len,outputs:S.copt.outputs.join(','),angle:S.copt.angle});closeSheet()">${ico('film')} Duyệt và tạo</button>`);
@@ -1743,28 +1764,159 @@ function cPaste(){
     catch(e){ toast(e.message, 5000); $('#pgo').disabled = false; $('#pgo').textContent = 'Gửi cho superHuy'; }
   };
 }
+/* ---------- Chiến lược: phân tích CAO, tài liệu sống Roimaxx / Leversphere */
+const rel = c => { const r = c?.roimaxx?.lien_quan||0, l = c?.leversphere?.lien_quan||0; return `<span class="relpill" title="Mức liên quan">R ${r} · L ${l}</span>`; };
+function caoHtml(c, head){
+  if(!c) return '';
+  const bl = xs => (xs||[]).filter(Boolean).map(x=>`<li>${esc(x)}</li>`).join('');
+  const rx = c.roimaxx||{}, lv = c.leversphere||{};
+  return `${head||''}
+    <div class="row" style="gap:6px;align-items:center;margin:0 0 10px"><span class="itype">${esc(ITYPE[c.loai]||'Tin')}</span><span class="meta" style="margin:0">Độ tin cậy: ${esc(c.do_tin_cay||'')}</span></div>
+    <p class="lead" style="margin:0 0 12px">${esc(c.tom_tat||'')}</p>
+    ${c.dieu_moi?`<div class="mblk opn"><h3>${ico('spark',16)} Điều mới</h3><p style="margin:0">${esc(c.dieu_moi)}</p></div>`:''}
+    <div class="mblk sgt"><h3>${ico('brain',16)} Phân tích CAO</h3><ul>${bl(c.phan_tich)}</ul></div>
+    <div class="mblk dec"><h3>Roimaxx <span class="meta" style="margin:0 0 0 6px">liên quan ${rx.lien_quan??'?'}/10</span></h3><p style="margin:0 0 6px">${esc(rx.y_nghia||'')}</p><ul>${bl(rx.goi_y)}</ul></div>
+    <div class="mblk nxt"><h3>Leversphere <span class="meta" style="margin:0 0 0 6px">liên quan ${lv.lien_quan??'?'}/10</span></h3><p style="margin:0 0 6px">${esc(lv.y_nghia||'')}</p><ul>${bl(lv.ung_dung)}</ul>${lv.kpi?`<div class="meta">KPI: ${esc(lv.kpi)}</div>`:''}</div>
+    ${(c.hanh_dong||[]).length?`<div class="sec" style="margin-top:6px"><h2 style="font-size:17px">Hành động</h2></div><div class="card list">${c.hanh_dong.map((a,i)=>`<div style="align-items:center"><div class="grow"><div style="font-weight:600">${esc(a.viec||'')}</div><div class="meta">${esc([a.ai,a.khi].filter(Boolean).join(' · '))}</div></div><button class="btn sm" onclick="clTask(${i})">${ico('plus',14)} Tạo việc</button></div>`).join('')}</div>`:''}
+    ${(c.rui_ro||[]).length?`<details style="margin:12px 0"><summary>Rủi ro cần lưu ý</summary><ul>${bl(c.rui_ro)}</ul></details>`:''}
+    ${c.cau_hoi?`<div class="note" style="margin:12px 0">${esc(c.cau_hoi)}</div>`:''}`;
+}
+async function cCao(id){
+  const n = cq().new.find(x=>x.id===id) || cq().done.find(x=>x.id===id); if(!n) return;
+  let c = n.cao;
+  if(!c){ sheet(`<h2>Phân tích CAO</h2><div class="card pad"><div class="spin"></div><p class="meta">superHuy đang đọc bài và phân tích theo 2 lăng kính Roimaxx và Leversphere…</p></div>`);
+    try{ const r = await run('noidung','phan_tich',{iid:id},'',true); c = n.cao = r.cao; }catch(e){ closeSheet(); return toast(e.message); } }
+  S.clCur = {cao:c, title:n.headline_vi, url:n.url, item:n.id};
+  sheet(caoHtml(c, `<div class="meta" style="margin-bottom:4px">${esc(TRK[n.track]||'')} · ${esc(src(n.source))}</div><h2 style="margin-bottom:10px">${esc(n.headline_vi)}</h2>`) +
+    `<div class="row" style="margin-top:6px">${n.url?`<button class="btn grow" onclick="openLink('${esc(n.url)}')">${ico('link',16)} Bài gốc</button>`:''}${n.status==='new'?`<button class="btn pri grow" onclick="closeSheet();cApprove('${n.id}')">${ico('film',16)} Làm bản tin video</button>`:''}</div>`);
+}
+async function clTask(i){
+  const a = (S.clCur?.cao?.hanh_dong||[])[i]; if(!a) return;
+  try{ await run('viec','tao',{title:a.viec, notes:`Từ phân tích CAO: ${S.clCur.title}${S.clCur.url?' — '+S.clCur.url:''}`, labels:'Chiến lược'},'Tạo việc'); toast('Đã tạo việc'); S.tk && (S.tk.at = 0); }catch(e){ toast(e.message); }
+}
+function vStrategy(){
+  const d = S.cl;
+  if(!d){ clLoad(); return `<div class="card pad"><div class="skel" style="width:60%"></div><div class="skel"></div><div class="skel" style="width:40%"></div></div>`; }
+  const f = S.clLens||'', list = (d.insights||[]).filter(r=>!f || r.lens===f || ((r.cao?.[f]?.lien_quan)||0)>=7);
+  return `<p class="lead" style="margin:0 0 12px">superHuy săn case study, best practice, tính năng mới và ý tưởng về agentic commerce, phân tích như một CAO, rồi tích luỹ thành 2 tài liệu sống, cập nhật mỗi thứ Hai.</p>
+    <div class="cldocs">${d.docs.map(x=>`<article class="card pad cldoc ${x.lens}"><div class="row" style="align-items:center;gap:8px"><span class="trk ${x.lens}">${esc(d.lenses[x.lens])}</span><span class="grow"></span><span class="meta" style="margin:0">${x.version?`Bản ${x.version} · ${esc(ago(x.updated))}`:'Chưa có'}</span></div>
+      <h3>${esc(x.title)}</h3><p class="clamp3">${esc(x.summary||'superHuy sẽ viết bản đầu tiên từ các phân tích CAO.')}</p>
+      <div class="row" style="margin-top:auto"><button class="btn pri sm grow" onclick="clDoc('${x.lens}')" ${x.version?'':'disabled'}>${ico('brain',15)} Đọc</button><button class="btn sm" onclick="clUpdate('${x.lens}')">${ico('refresh',15)} Cập nhật</button></div></article>`).join('')}</div>
+    <div class="sec"><h2>Phân tích gần đây</h2><button class="link" onclick="clScan()">${ico('refresh',15)} Săn thêm</button></div>
+    <div class="chips" style="padding-top:0;margin-bottom:10px"><button class="chip ${!f?'on':''}" onclick="S.clLens='';render()">Tất cả ${d.counts.all}</button>${Object.entries(d.lenses).map(([k,l])=>`<button class="chip ${f===k?'on':''}" onclick="S.clLens='${k}';render()">${esc(l)}</button>`).join('')}</div>
+    ${list.length?`<div class="card list">${list.map(r=>`<button onclick="clInsight('${r.id}')"><div class="grow" style="min-width:0"><div class="row" style="gap:6px;align-items:center;margin-bottom:3px"><span class="itype">${esc(ITYPE[r.cao?.loai]||'Tin')}</span>${rel(r.cao)}<span class="meta" style="margin:0">${esc(ago(r.at))}</span></div>
+      <div class="ttl2">${esc(r.headline)}</div><div class="meta clamp2">${esc((r.cao?.phan_tich||[])[0]||r.cao?.tom_tat||'')}</div></div><span class="chev">${ico('chev',18)}</span></button>`).join('')}</div>`
+      :`<div class="card empty">Chưa có phân tích nào. Bấm “Săn thêm”, hoặc bật 2 tuyến Agentic commerce và Chuyển đổi trong cài đặt (biểu tượng bánh răng).</div>`}`;
+}
+async function clLoad(){ try{ S.cl = await run('noidung','chien_luoc',{},'',true); }catch(e){ S.cl = {docs:[], insights:[], lenses:{}, counts:{all:0}}; toast(e.message); } if(S.tab==='content' && S.cview==='cl' && !$('#sheet').classList.contains('on')) render(); }
+async function clScan(){
+  toast('superHuy đang săn tin agentic commerce và phân tích CAO, khoảng 2-4 phút', 4000);
+  try{ for(const t of ['roimaxx','leversphere']) await run('noidung','quet',{track:t},'Săn tin chiến lược'); S.cl = null; await cReload(); clLoad(); }catch(e){ toast(e.message); }
+}
+async function clInsight(id){
+  try{ const r = await run('noidung','insight',{iid:id},'',true); S.clCur = {cao:r.cao, title:r.headline, url:r.url};
+    sheet(caoHtml(r.cao, `<div class="meta" style="margin-bottom:4px">${esc(src(r.source))} · ${esc(ago(r.at))}</div><h2 style="margin-bottom:10px">${esc(r.headline)}</h2>`) +
+      `<div class="row" style="margin-top:6px">${r.url?`<button class="btn grow" onclick="openLink('${esc(r.url)}')">${ico('link',16)} Bài gốc</button>`:''}<button class="btn grow" onclick="closeSheet();S.dockOpen=true;dock();$('#dIn').value='Về phân tích “${esc(r.headline).replace(/'/g,'&#39;')}”: ';$('#dIn').focus()">${ico('chat',16)} Hỏi thêm</button></div>`);
+  }catch(e){ toast(e.message); }
+}
+function mdRender(t){
+  const lines = String(t||'').split('\n'), out = []; let tb = [];
+  const flush = () => { if(!tb.length) return; const rows = tb.filter(r=>!/^\s*\|?\s*:?-{2,}/.test(r)).map(r=>r.trim().replace(/^\||\|$/g,'').split('|').map(c=>c.trim()));
+    out.push(`<div class="mdtable"><table>${rows.map((r,i)=>`<tr>${r.map(c=>i?`<td>${inl(c)}</td>`:`<th>${inl(c)}</th>`).join('')}</tr>`).join('')}</table></div>`); tb = []; };
+  const inl = x => esc(x).replace(/\*\*([^*]+)\*\*/g,'<b>$1</b>').replace(/\[\[([^\]|]+)(\|[^\]]+)?\]\]/g,'<b style="color:var(--jade)">$1</b>');
+  for(const l of lines){
+    if(/^\s*\|/.test(l)){ tb.push(l); continue; } flush();
+    let m;
+    if((m=l.match(/^(#{1,4})\s+(.*)/))) out.push(`<h${Math.min(m[1].length+1,4)} class="mdh">${inl(m[2])}</h${Math.min(m[1].length+1,4)}>`);
+    else if((m=l.match(/^\s*[-*+]\s+(\[[ x]\]\s*)?(.*)/))) out.push(`<div class="mdli"><span>${m[1]?(m[1].includes('x')?'☑':'☐'):'•'}</span><span>${inl(m[2])}</span></div>`);
+    else if((m=l.match(/^\s*(\d+)[.)]\s+(.*)/))) out.push(`<div class="mdli"><span>${m[1]}.</span><span>${inl(m[2])}</span></div>`);
+    else if(l.startsWith('>')) out.push(`<div class="mdq">${inl(l.replace(/^>\s?(\[![a-z]+\]\s*)?/,''))}</div>`);
+    else if(l.trim()) out.push(`<p class="mdp">${inl(l)}</p>`);
+  }
+  flush(); return out.join('');
+}
+async function clDoc(lens){
+  try{ const d = await run('noidung','tai_lieu',{lens},'',true); S.clDocCur = d;
+    sheet(`<div class="meta" style="margin-bottom:4px">${esc(d.name)} · Bản ${d.version} · ${esc(ago(d.updated))}</div><h2 style="margin-bottom:10px">${esc(d.title)}</h2>
+      ${d.summary?`<div class="note" style="margin-bottom:12px">${esc(d.summary)}</div>`:''}
+      ${(d.changes||[]).length?`<details style="margin-bottom:12px"><summary>Thay đổi trong bản này</summary><ul>${d.changes.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></details>`:''}
+      <div class="mdbody">${mdRender(d.md)}</div>
+      ${d.obsidian?`<p class="meta" style="margin-top:14px">Đã lưu trong Obsidian: ${esc(d.obsidian)}</p>`:''}
+      <div class="row" style="margin-top:10px"><button class="btn grow" onclick="copyText(S.clDocCur.md)">${ico('copy',16)} Sao chép</button><button class="btn grow" onclick="closeSheet();S.dockOpen=true;dock();$('#dIn').value='Theo tài liệu ${esc(d.title).replace(/'/g,'&#39;')}, ';$('#dIn').focus()">${ico('chat',16)} Hỏi superHuy</button></div>`);
+  }catch(e){ toast(e.message); }
+}
+async function clUpdate(lens){
+  toast('superHuy đang viết lại tài liệu từ các phân tích mới nhất, khoảng 1-2 phút', 4000);
+  try{ const r = await run('noidung','cap_nhat_tai_lieu',{lens},'Cập nhật tài liệu chiến lược'); toast(r.text, 3500); S.cl = null; clLoad(); }catch(e){ toast(e.message); }
+}
+
+/* ---------- Xem trước và lưu video */
+function vPlayer(c){
+  const m = c.meta||{}, ch = m.chapters||[];
+  return `<div class="vwrap"><video id="vplayer" class="media reel" src="${c.video}" controls playsinline preload="metadata" poster="${c.image||''}"></video></div>
+    ${ch.length?`<div class="vchap" role="list">${ch.map((x,i)=>`<button role="listitem" onclick="vSeek(${x.t})"><span>${String(Math.floor(x.t/60)).padStart(2,'0')}:${String(Math.floor(x.t%60)).padStart(2,'0')}</span>${esc(x.label)}</button>`).join('')}</div>`:''}
+    <div class="vacts">
+      <button class="btn pri" onclick="vDownload('${c.id}')">${ico('upload',16)} Lưu về máy</button>
+      <button class="btn" onclick="vSendTg('${c.id}')">${ico('send',16)} Gửi Telegram</button>
+      <button class="btn" onclick="vFull()">${ico('play',16)} Toàn màn hình</button>
+      <button class="btn" onclick="vRedo('${c.id}')">${ico('refresh',16)} Dựng lại</button>
+    </div>
+    <p class="meta" style="margin:0 0 12px">${m.duration?`${Math.round(m.duration)} giây · `:''}${m.engine==='newscast'?'Bản tin đồ hoạ':'Reels chữ'}${m.voice_engine==='silent'?' · chưa có giọng đọc':''}</p>`;
+}
+function vSeek(t){ const v = $('#vplayer'); if(!v) return; v.currentTime = t; v.play().catch(()=>{}); }
+function vFull(){ const v = $('#vplayer'); if(!v) return; (v.requestFullscreen||v.webkitEnterFullscreen||v.webkitRequestFullscreen)?.call(v); v.play().catch(()=>{}); }
+function vPlayVer(u){ const v = $('#vplayer'); if(!v) return; v.src = u; v.play().catch(()=>{}); v.scrollIntoView({behavior:'smooth', block:'center'}); }
+async function vDownload(cid){
+  try{ const r = await run('noidung','tai_video',{cid},'',true), url = r.url.startsWith('http') ? r.url : location.origin + r.url;
+    if(tg?.downloadFile && tg.isVersionAtLeast?.('8.0')){ tg.downloadFile({url, file_name:r.file_name}, ok=>{ if(ok) toast('Đang tải video về máy'); }); }
+    else { const a = document.createElement('a'); a.href = url; a.download = r.file_name; document.body.appendChild(a); a.click(); a.remove(); toast('Đang tải video. Nếu không thấy, dùng “Gửi Telegram”.', 3500); }
+  }catch(e){ toast(e.message); }
+}
+async function vSendTg(cid){ try{ const r = await run('noidung','gui_video',{cid},'',true); toast(r.text, 4000); notifyH('success'); }catch(e){ toast(e.message); } }
+function vRedo(cid){
+  const c = cq().cfg||{}, m = S.cpack?.parts?.reel?.meta||{};
+  S.vr = {voice: c.voice||'NamMinh', len: m.len||c.reel_len||60, music: c.music!==false, rewrite:false};
+  const paint = () => { const v = S.vr; sheet(`<h2>Dựng lại video</h2><p class="lead">Bản hiện tại được giữ trong “Phiên bản trước”.</p>
+    <p class="lbl">Giọng đọc</p><div class="seg" style="margin-bottom:12px"><button class="${v.voice==='NamMinh'?'on':''}" onclick="S.vr.voice='NamMinh';S.vrp()">Giọng nam</button><button class="${v.voice==='HoaiMy'?'on':''}" onclick="S.vr.voice='HoaiMy';S.vrp()">Giọng nữ</button></div>
+    <p class="lbl">Độ dài</p><div class="seg" style="margin-bottom:12px">${[30,45,60,90].map(x=>`<button class="${v.len===x?'on':''}" onclick="S.vr.len=${x};S.vrp()">${x} giây</button>`).join('')}</div>
+    <label class="pick"><input type="checkbox" ${v.music?'checked':''} onchange="S.vr.music=this.checked"><div class="grow"><div style="font-weight:600">Nhạc nền bản tin</div></div></label>
+    <label class="pick"><input type="checkbox" ${v.rewrite?'checked':''} onchange="S.vr.rewrite=this.checked"><div class="grow"><div style="font-weight:600">Viết lại kịch bản</div><div class="meta">Bỏ chọn để giữ kịch bản, chỉ dựng lại hình và giọng</div></div></label>
+    <label class="field"><span>Chỉ đạo thêm (khi viết lại)</span><textarea id="vrangle" placeholder="Ví dụ: nhấn mạnh tác động tới seller POD Việt Nam">${esc(v.angle||'')}</textarea></label>
+    <button class="btn pri full" onclick="vRedoGo('${cid}')">${ico('refresh')} Dựng lại</button>`); };
+  S.vrp = () => { const a = $('#vrangle'); if(a) S.vr.angle = a.value; const y = $('#sheet').scrollTop; paint(); $('#sheet').scrollTop = y; }; paint();
+}
+async function vRedoGo(cid){
+  const v = S.vr; v.angle = $('#vrangle')?.value||'';
+  closeSheet(); toast('superHuy đang dựng lại video, khoảng 2-5 phút. Anh cứ dùng app bình thường.', 4500);
+  try{ const r = await run('noidung','dung_lai',{cid, voice:v.voice, music:v.music, reel_len:v.len, rewrite:v.rewrite, angle:v.angle},'Dựng lại video'); toast(r.text, 3500); await refresh(); const it = S.cpack?.item?.id; if(it) cPack(it,'reel'); }
+  catch(e){ toast(e.message, 5000); }
+}
+
 function cSettings(){
   const c = cq().cfg||{};
-  S.cset = {topics:[...(c.topics||[])], tin: c.tracks?.tin!==false, founder: c.tracks?.founder!==false, reel_len: c.reel_len||30, style: c.style||'auto', voice: c.voice||'NamMinh', outputs:[...(c.outputs||['reel','group','page'])], fast: c.fast!==false};
+  S.cset = {topics:[...(c.topics||[])], tin: c.tracks?.tin!==false, founder: c.tracks?.founder!==false, roimaxx: c.tracks?.roimaxx!==false, leversphere: c.tracks?.leversphere!==false, music: c.music!==false, reel_len: c.reel_len||60, style: c.style||'auto', voice: c.voice||'NamMinh', outputs:[...(c.outputs||['reel','group','page'])], fast: c.fast!==false};
   const paint = () => { const s = S.cset; sheet(`<h2>Chủ đề và định dạng</h2>
     <p class="lbl">Tuyến săn tin</p>
     <label class="pick"><input type="checkbox" ${s.tin?'checked':''} onchange="S.cset.tin=this.checked"><div class="grow"><div style="font-weight:600">Tin theo chủ đề</div><div class="meta">Tin nóng theo các chủ đề bên dưới</div></div></label>
     <label class="pick"><input type="checkbox" ${s.founder?'checked':''} onchange="S.cset.founder=this.checked"><div class="grow"><div style="font-weight:600">Founder & startup AI</div><div class="meta">Case thành công: hành trình founder, gọi vốn, định giá, tăng trưởng</div></div></label>
+    <label class="pick"><input type="checkbox" ${s.roimaxx?'checked':''} onchange="S.cset.roimaxx=this.checked"><div class="grow"><div style="font-weight:600">Agentic commerce · Roimaxx</div><div class="meta">Mô hình kinh doanh enabler, agents factory, agency chuyển đổi AI, giao thức mới — kèm phân tích CAO</div></div></label>
+    <label class="pick"><input type="checkbox" ${s.leversphere?'checked':''} onchange="S.cset.leversphere=this.checked"><div class="grow"><div style="font-weight:600">Chuyển đổi · Leversphere</div><div class="meta">Case study, best practice, công cụ AI cho công ty POD — kèm phân tích CAO</div></div></label>
     <p class="lbl" style="margin-top:12px">Chủ đề (${s.topics.length})</p>
     <div class="chips" style="padding-top:0;flex-wrap:wrap;margin-bottom:8px">${s.topics.map((t,i)=>`<button class="chip rm" onclick="S.cset.topics.splice(${i},1);S.cspaint()" aria-label="Bỏ chủ đề ${esc(t)}">${esc(t)} ${ico('x',14)}</button>`).join('')}</div>
     <div class="row" style="margin-bottom:14px"><input id="tnew" class="grow" placeholder="Thêm chủ đề, ví dụ: AI agent cho ecommerce" style="padding:11px 13px;border-radius:12px;border:0;background:var(--fill);color:var(--text);font:inherit">
       <button class="btn" onclick="const v=$('#tnew').value.trim();if(v){S.cset.topics.push(v);S.cspaint()}">${ico('plus')} Thêm</button></div>
     <p class="lbl">Mặc định khi quẹt phải</p>
-    <div class="seg" style="margin-bottom:10px">${[15,30,45,60].map(x=>`<button class="${s.reel_len===x?'on':''}" onclick="S.cset.reel_len=${x};S.cspaint()">${x} giây</button>`).join('')}</div>
+    <div class="seg" style="margin-bottom:10px">${[30,45,60,90].map(x=>`<button class="${s.reel_len===x?'on':''}" onclick="S.cset.reel_len=${x};S.cspaint()">${x} giây</button>`).join('')}</div>
     <div class="chips" style="padding-top:0;flex-wrap:wrap;margin-bottom:10px">${Object.entries(CSTYLE).map(([k,l])=>`<button class="chip ${s.style===k?'on':''}" onclick="S.cset.style='${k}';S.cspaint()">${l}</button>`).join('')}</div>
     <div class="chips" style="padding-top:0;flex-wrap:wrap;margin-bottom:10px">${Object.entries(COUT).map(([k,l])=>`<button class="chip ${s.outputs.includes(k)?'on':''}" onclick="S.cset.outputs=S.cset.outputs.includes('${k}')?S.cset.outputs.filter(o=>o!=='${k}'):[...S.cset.outputs,'${k}'];S.cspaint()">${l}</button>`).join('')}</div>
     <div class="seg" style="margin-bottom:10px"><button class="${s.voice==='NamMinh'?'on':''}" onclick="S.cset.voice='NamMinh';S.cspaint()">Giọng nam</button><button class="${s.voice==='HoaiMy'?'on':''}" onclick="S.cset.voice='HoaiMy';S.cspaint()">Giọng nữ</button></div>
     <label class="pick"><input type="checkbox" ${s.fast?'checked':''} onchange="S.cset.fast=this.checked"><div class="grow"><div style="font-weight:600">Nhịp nhanh kiểu reels</div><div class="meta">Đọc nhanh hơn, cắt khoảng lặng giữa cảnh để giữ người xem</div></div></label>
-    <div class="note" style="margin-top:8px">Mỗi reels được viết theo chuẩn Facebook: dọc 9:16, hook trong 3 giây đầu, chữ trên màn hình cho người xem không bật tiếng, kết bằng câu hỏi thật thay vì xin like, link nguồn để ở comment đầu.</div>
+    <label class="pick"><input type="checkbox" ${s.music?'checked':''} onchange="S.cset.music=this.checked"><div class="grow"><div style="font-weight:600">Nhạc nền bản tin</div><div class="meta">Nhạc nhịp tin tức tự né khi có giọng đọc</div></div></label>
+    <div class="note" style="margin-top:8px">Video được dựng như một bản tin: hook 3 giây đầu, đồ hoạ dữ liệu (con số, so sánh, dòng thời gian, trích dẫn), ảnh minh hoạ thật, phụ đề sáng theo giọng đọc, góc nhìn chuyên gia và câu hỏi cuối. Link nguồn để ở comment đầu.</div>
     <button class="btn pri full" id="csave">Lưu</button>`);
     $('#csave').onclick = async ()=>{ const s = S.cset;
       if(!s.outputs.length) return toast('Chọn ít nhất một đầu ra');
-      try{ const r = await run('noidung','caidat',{topics:s.topics.join(','), tin:s.tin, founder:s.founder, reel_len:s.reel_len, style:s.style, voice:s.voice, outputs:s.outputs.join(','), fast:s.fast},'',true);
+      try{ const r = await run('noidung','caidat',{topics:s.topics.join(','), tin:s.tin, founder:s.founder, roimaxx:s.roimaxx, leversphere:s.leversphere, music:s.music, reel_len:s.reel_len, style:s.style, voice:s.voice, outputs:s.outputs.join(','), fast:s.fast},'',true);
         S.data.cq.cfg = r.cfg; closeSheet(); toast('Đã lưu chủ đề và định dạng'); }catch(e){ toast(e.message); } };
   };
   S.cspaint = () => { const t = $('#tnew')?.value||''; const y = $('#sheet').scrollTop; paint(); $('#sheet').scrollTop = y; if($('#tnew')) $('#tnew').value = t.trim()&&S.cset.topics.includes(t.trim())?'':t; }; paint();
@@ -1777,13 +1929,13 @@ async function cPack(iid, part){
   const c = parts[part], m = c.meta||{};
   sheet(`<div class="meta" style="margin-bottom:4px">${esc(TRK[d.item.track]||'')} · ${esc(CSTYLE[m.style]||'')}</div><h2 style="margin-bottom:12px">${esc(d.item.headline_vi)}</h2>
     <div class="seg" style="margin-bottom:14px">${keys.map(k=>`<button class="${k===part?'on':''}" onclick="cPack('${iid}','${k}')">${COUT[k]}</button>`).join('')}</div>
-    ${c.video?`<video class="media reel" src="${c.video}" controls playsinline poster="${c.image||''}"></video>`:''}
+    ${c.video?vPlayer(c):''}
     ${part!=='reel'&&c.image?`<img class="media" src="${c.image}" alt="">`:''}
     <label class="field"><span>${part==='reel'?'Caption đăng kèm':'Nội dung bài'}, sửa trực tiếp</span><textarea id="ctext" style="min-height:${part==='reel'?120:240}px">${esc(c.text)}</textarea></label>
     <div class="row" style="margin:-4px 0 12px"><button class="btn" onclick="saveEdit('${c.id}')">${ico('check')} Lưu sửa</button><button class="btn" onclick="copyText($('#ctext').value)">${ico('copy')} Sao chép</button></div>
     ${m.first_comment?`<p class="lbl">Comment đầu tiên (chứa link nguồn, để bài không bị giảm phân phối)</p><div class="card out" style="margin-bottom:8px">${esc(m.first_comment)}</div><button class="btn" style="margin-bottom:12px" onclick="copyText(S.cpack.parts['${part}'].meta.first_comment)">${ico('copy')} Sao chép comment</button>`:''}
     ${m.reel?`<details style="margin-bottom:12px"><summary>Kịch bản reels</summary><div class="card out">${esc(m.reel)}</div></details>`:''}
-    ${part==='reel'&&c.video?`<button class="btn full" style="margin-bottom:8px" onclick="openLink(location.origin+'${c.video}')">${ico('arrow')} Mở video để tải về</button>`:''}
+    ${part==='reel'&&(m.versions||[]).length?`<details style="margin-bottom:12px"><summary>Phiên bản trước (${m.versions.length})</summary>${m.versions.slice().reverse().map(v=>`<div class="row" style="align-items:center;margin:8px 0"><span class="grow meta" style="margin:0">${esc((v.at||'').slice(11,16)+' '+(v.at||'').slice(8,10)+'/'+(v.at||'').slice(5,7))}${v.duration?' · '+Math.round(v.duration)+' giây':''}</span>${v.video?`<button class="btn sm" onclick="vPlayVer('${v.video}')">${ico('play',14)} Xem</button>`:''}</div>`).join('')}</details>`:''}
     <button class="btn pri full" onclick="openPublish('${c.id}')">${ico('send')} Đăng lên…</button>`);
 }
 

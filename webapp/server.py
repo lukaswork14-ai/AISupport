@@ -91,6 +91,33 @@ def check_pre(pre: str) -> bool:
         return False
 
 
+# ------------------------------------------------------------------ tải file (link ký, hết hạn 30 phút, không cần phiên)
+def sign_download(path: str, file_name: str, ttl: int = 1800) -> str:
+    rel = str(Path(path).resolve().relative_to(DATA_DIR.resolve()))
+    exp = int(time.time()) + ttl
+    sig = hmac.new(_SECRET, f"dl|{rel}|{exp}|{file_name}".encode(), hashlib.sha256).hexdigest()[:40]
+    base = ""
+    try:
+        from agents import lark_oauth
+        base = lark_oauth.base_url()
+    except Exception:
+        pass
+    return f"{base}/dl?f={quote(rel)}&e={exp}&n={quote(file_name)}&s={sig}"
+
+
+def check_download(rel: str, exp: str, name: str, sig: str) -> Path | None:
+    try:
+        if int(exp) < time.time():
+            return None
+    except Exception:
+        return None
+    good = hmac.new(_SECRET, f"dl|{rel}|{exp}|{name}".encode(), hashlib.sha256).hexdigest()[:40]
+    if not hmac.compare_digest(good, sig or ""):
+        return None
+    p = (DATA_DIR / rel).resolve()
+    return p if DATA_DIR.resolve() in p.parents and p.is_file() else None
+
+
 # ------------------------------------------------------------------ tiện ích
 def media_url(path: str | None, tok: str) -> str | None:
     if not path:
@@ -212,6 +239,11 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(200, {"ok": True})
         if u.path == "/lark/callback":  # Lark chuyển về sau khi chủ nhân bấm Cho phép
             return self._lark_callback(q)
+        if u.path == "/dl":  # tải file bằng link ký (Telegram downloadFile / trình duyệt)
+            p = check_download(q.get("f", ""), q.get("e", ""), q.get("n", ""), q.get("s", ""))
+            if not p:
+                return self._json(403, {"error": "Link tải đã hết hạn, mở lại app để lấy link mới."})
+            return self._file(p, cache=False, download=q.get("n") or p.name)
         if u.path.startswith("/s/"):  # trang chia sẻ biên bản họp (công khai qua liên kết bí mật)
             return self._share(u.path)
         tok = self._tok(q)
@@ -432,7 +464,7 @@ class Handler(BaseHTTPRequestHandler):
                 log.exception("bootstrap extra lỗi")
         return out
 
-    def _file(self, path: Path, cache: bool):
+    def _file(self, path: Path, cache: bool, download: str = ""):
         if not path.is_file():
             return self._json(404, {"error": "not found"})
         size = path.stat().st_size
@@ -451,6 +483,8 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Accept-Ranges", "bytes")
         self.send_header("Content-Length", str(end - start + 1))
         self.send_header("Cache-Control", "private, max-age=86400" if cache else "no-cache")
+        if download:
+            self.send_header("Content-Disposition", f"attachment; filename=\"video.mp4\"; filename*=UTF-8''{quote(download)}")
         self.end_headers()
         with open(path, "rb") as f:
             f.seek(start)

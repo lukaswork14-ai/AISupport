@@ -50,6 +50,42 @@ def seed():
     meeting.save(m)
     from core import memory
     memory.add("Anh Huy chạy bộ mỗi sáng", "routine")
+    # Nội dung: tin chiến lược có phân tích CAO + tài liệu sống + 1 video bản tin
+    cao = {"loai": "case_study", "tom_tat": "Shopify mở cho AI agent thanh toán trực tiếp trên hàng triệu cửa hàng.",
+           "dieu_moi": "Agent mua hàng thay người dùng, không cần vào web shop.",
+           "phan_tich": ["Dữ liệu sản phẩm trở thành mặt tiền mới", "Biên lợi nhuận dịch chuyển sang ai sở hữu agent", "Cần sẵn sàng giao thức thanh toán"],
+           "roimaxx": {"lien_quan": 9, "y_nghia": "Cơ hội gói dịch vụ 'sẵn sàng agentic'", "goi_y": ["Gói audit dữ liệu sản phẩm", "Phí theo đơn từ agent"]},
+           "leversphere": {"lien_quan": 8, "y_nghia": "POD cần feed sản phẩm chuẩn", "ung_dung": ["Chuẩn hoá thuộc tính áo in"], "kpi": "% đơn từ AI agent"},
+           "hanh_dong": [{"viec": "Audit feed sản phẩm Leversphere", "ai": "anh Huy", "khi": "7 ngày"}],
+           "rui_ro": ["Phụ thuộc nền tảng"], "do_tin_cay": "cao — thông báo chính thức", "cau_hoi": "Ai sở hữu khách hàng khi agent mua hàng?"}
+    import json as _j, subprocess as _sp, datetime as _dt
+    from agents import content_hub, strategy
+    strategy.DIR.mkdir(parents=True, exist_ok=True)
+    strategy.INS.write_text(_j.dumps([{"id": "ins1", "item": "c1", "lens": "roimaxx", "at": _dt.datetime.now().isoformat(timespec="seconds"),
+                                         "headline": "Shopify cho AI agent thanh toán trực tiếp", "url": "https://example.com", "source": "TechCrunch", "cao": cao}],
+                                       ensure_ascii=False), encoding="utf-8")
+    (strategy.DIR / "leversphere.json").write_text(_j.dumps({"version": 1, "updated": _dt.datetime.now().isoformat(timespec="seconds"),
+        "summary": "Ưu tiên 30 ngày: chuẩn hoá dữ liệu sản phẩm và agent CSKH.", "changes": ["Bản đầu"],
+        "md": "## 0. Tóm tắt điều hành\nMục tiêu 6 tháng: 30% quy trình chạy bằng agent.\n## 4. Kế hoạch 30 ngày\n| Tuần | Việc | Người | Đầu ra |\n|---|---|---|---|\n| 1 | Audit dữ liệu | Huy | Báo cáo |\n| 2 | Agent CSKH | Team CS | Bản thử |\n## 9. Việc tuần này\n- [ ] Họp kick-off\n- [ ] Chọn 3 quy trình"},
+        ensure_ascii=False), encoding="utf-8")
+    content_hub._save([{"id": "c1", "track": "roimaxx", "status": "new", "at": _dt.datetime.now().isoformat(timespec="seconds"), "topic": "Agentic",
+                        "headline_vi": "Shopify cho AI agent thanh toán trực tiếp", "summary_vi": cao["tom_tat"], "why_hot": "", "score": 9,
+                        "title_en": "", "url": "https://example.com", "source": "TechCrunch", "cao": cao, "insight": "ins1"}])
+    vdir = H / "data/videos"
+    vdir.mkdir(parents=True, exist_ok=True)
+    vid = vdir / "qa.mp4"
+    _sp.run(["ffmpeg", "-loglevel", "error", "-y", "-f", "lavfi", "-i", "testsrc2=s=540x960:d=4", "-f", "lavfi", "-i", "sine=d=4",
+             "-shortest", "-pix_fmt", "yuv420p", str(vid)])
+    from core import store
+    cid = store.add("video", "Reels: Shopify cho AI agent thanh toán", "Caption thử", video=str(vid), image=None,
+                    meta={"item": "c2", "variant": "reel", "engine": "newscast", "duration": 4, "len": 60,
+                          "chapters": [{"t": 0, "type": "hook", "label": "Khách hàng mới là AI?"}, {"t": 2, "type": "stat", "label": "7 lần"}],
+                          "reel": "1. [hook] ...", "versions": [{"video": str(vid), "at": "2026-10-15T09:00:00", "duration": 4}]})
+    items = content_hub._load()
+    items.append({"id": "c2", "track": "tin", "status": "done", "at": _dt.datetime.now().isoformat(timespec="seconds"), "done_at": _dt.datetime.now().isoformat(timespec="seconds"),
+                  "topic": "AI", "headline_vi": "Shopify cho AI agent thanh toán", "summary_vi": "", "url": "", "source": "TechCrunch",
+                  "pack": {"id": "p1", "ids": {"reel": cid}, "image": None}})
+    content_hub._save(items)
 
 
 def init_data() -> str:
@@ -130,6 +166,21 @@ def main():
         step("18-brain-gemini-code", "brGemConnect()", 1500)
         step("19-brain-note", "brOpen('01 Projects/AI Agent Factory/Chiến lược định giá.md')", 1500)
         step("20-dock", "closeSheet();go('home');S.dockOpen=true;dock()", 1000)
+        step("24-content-swipe", "S.dockOpen=false;dock();go('content');S.cview='duyet';render()", 1800)
+        step("25-cao-sheet", "cCao('c1')", 1500)
+        step("26-strategy", "closeSheet();S.cview='cl';S.cl=null;render()", 2500, True)
+        step("27-strategy-doc", "clDoc('leversphere')", 1800)
+        step("28-insight", "closeSheet();clInsight('ins1')", 1500)
+        step("29-pack-video", "closeSheet();S.cview='tao';render();setTimeout(()=>cPack('c2','reel'),300)", 2500)
+        step("30-video-redo", "vRedo(S.cpack.parts.reel.id)", 1200)
+        try:
+            dl = page.evaluate("run('noidung','tai_video',{cid:S.cpack.parts.reel.id},'',true).then(r=>r.url)")
+            import urllib.request
+            u = dl if dl.startswith("http") else "http://127.0.0.1:8787" + dl
+            with urllib.request.urlopen(u) as rr:
+                report.append(f"download ok: HTTP {rr.status}, {rr.headers.get('Content-Disposition', '')[:60]}, {len(rr.read())} bytes")
+        except Exception as e:
+            errs.append(f"[download] {e}")
         if url:
             sp = ctx.new_page()
             sp.goto(url)
