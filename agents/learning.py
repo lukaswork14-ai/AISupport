@@ -331,8 +331,14 @@ def quiz_submit(cid: str, day: int, answers: str) -> dict:
     d["quiz_score"] = max(score, d.get("quiz_score") or 0)
     d["quiz_at"] = dt.datetime.now().isoformat(timespec="seconds")
     _refresh_status(c, d)
+    g = d.pop("_game", None)
     _put(c)
-    return {"score": score, "right": right, "total": len(qs), "detail": detail,
+    from agents import game
+    if score >= 6:
+        g = game.award("quiz_pass", f"{cid}:{day}", f"Quiz ngày {day}: {right}/{len(qs)}") or g
+    if qs and right == len(qs):
+        g = game.award("quiz_perfect", f"{cid}:{day}", f"Quiz tuyệt đối ngày {day}") or g
+    return {"score": score, "right": right, "total": len(qs), "detail": detail, "game": g,
             "text": f"Đúng {right}/{len(qs)} câu" + (" — xuất sắc!" if right == len(qs) else ". Câu sai đã vào bộ ôn tập.")}
 
 
@@ -367,7 +373,9 @@ def review_submit(cid: str, answers: str) -> dict:
     c["review"] = keep
     _put(c)
     n = sum(1 for k in ans if k in qmap)
-    return {"right": right, "total": n, "text": f"Ôn tập: đúng {right}/{n}. Câu nhớ chắc sẽ giãn lịch ôn, câu sai quay lại ngày mai."}
+    from agents import game
+    gm = game.award("review", f"{cid}:{_today()}", f"Ôn tập: đúng {right}/{n}") if n else None
+    return {"right": right, "total": n, "game": gm, "text": f"Ôn tập: đúng {right}/{n}. Câu nhớ chắc sẽ giãn lịch ôn, câu sai quay lại ngày mai."}
 
 
 # ------------------------------------------------------------------ nộp bài thực hành + chấm
@@ -408,12 +416,18 @@ def submit(cid: str, day: int, text: str = "", link: str = "", reflection: str =
     d.setdefault("submissions", []).append(sub)
     d["best"] = max(float(g.get("score") or 0), float(d.get("best") or 0))
     _refresh_status(c, d)
+    gm = d.pop("_game", None)
     _put(c)
+    from agents import game
+    if g.get("pass") or float(g.get("score") or 0) >= 7:
+        gm = game.award("practice_pass", f"{cid}:{day}", f"Bài thực hành ngày {day}: {g.get('score')}/10") or gm
+    if float(g.get("score") or 0) >= 9:
+        gm = game.award("practice_great", f"{cid}:{day}", f"Bài thực hành xuất sắc ngày {day}") or gm
     try:
         sub["note"] = _note(c, d, sub)
     except Exception:
         log.exception("Không ghi bài nộp vào Obsidian")
-    return {**g, "text": f"Điểm {g.get('score')}/10 — {'đạt' if g.get('pass') else 'chưa đạt, sửa theo nhận xét rồi nộp lại'}."}
+    return {**g, "game": gm, "text": f"Điểm {g.get('score')}/10 — {'đạt' if g.get('pass') else 'chưa đạt, sửa theo nhận xét rồi nộp lại'}."}
 
 
 def _note(c, d, sub) -> str:
@@ -441,6 +455,7 @@ def _refresh_status(c: dict, d: dict):
         d["status"] = "done" if quiz_ok and work_ok else "learning"
         if d["status"] == "done" and not d.get("done_at"):
             d["done_at"] = dt.datetime.now().isoformat(timespec="seconds")
+            _game_day_done(c, d)
     # chuỗi ngày học liên tiếp (tính tới hôm nay hoặc hôm qua)
     days = {x["done_at"][:10] for x in c["days"] if x.get("done_at")}
     cur = _today()
@@ -453,15 +468,29 @@ def _refresh_status(c: dict, d: dict):
     c["streak"] = streak
 
 
+def _game_day_done(c: dict, d: dict):
+    try:
+        from agents import game
+        d["_game"] = game.award("lesson", f"{c['id']}:{d['day']}", f"Học xong: Ngày {d['day']} · {d['title'][:40]}")
+        if all(x.get("status") == "done" or x is d for x in c["days"]):
+            game.note_course_done()
+    except Exception:
+        log.exception("Cộng điểm học lỗi")
+
+
 def mark_done(cid: str, day: int) -> dict:
     """Đánh dấu xong ngày học (khi anh đã học và làm thực hành ngoài app)."""
     c = _get(cid)
     d = next(x for x in c["days"] if x["day"] == int(day))
+    first = not d.get("done_at")
     d["status"] = "done"
-    d["done_at"] = dt.datetime.now().isoformat(timespec="seconds")
+    d["done_at"] = d.get("done_at") or dt.datetime.now().isoformat(timespec="seconds")
+    if first:
+        _game_day_done(c, d)
+    g = d.pop("_game", None)
     _refresh_status(c, {**d, "lesson": None})
     _put(c)
-    return {"text": f"Đã xong ngày {day}"}
+    return {"text": f"Đã xong ngày {day}", "game": g}
 
 
 # ------------------------------------------------------------------ xem

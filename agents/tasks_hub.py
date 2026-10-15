@@ -407,7 +407,11 @@ def set_done(tid: str, done: bool = True) -> dict:
                 t["done_at"] = _now().isoformat() if done else ""
         _wj(LOCAL_FILE, tasks)
     _invalidate()
-    return {"text": "Đã hoàn thành ✓" if done else "Đã mở lại việc"}
+    res = None
+    if done:
+        from agents import game
+        res = game.award("task", tid, "Hoàn thành việc")
+    return {"text": "Đã hoàn thành ✓" if done else "Đã mở lại việc", "game": res}
 
 
 def set_status(tid: str, status: str) -> dict:

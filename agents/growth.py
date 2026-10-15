@@ -96,6 +96,11 @@ def streak(h: dict, done: set, day: dt.date | None = None) -> int:
             n += 1
             ws -= dt.timedelta(days=7)
         return n  # đơn vị: tuần
+    try:  # ngày được Khiên chuỗi bảo vệ (game hoá) tính như đã làm
+        from agents import game
+        done = set(done) | game.shielded(h.get("id", ""))
+    except Exception:
+        pass
     n, cur = 0, day
     if cur.isoformat() not in done:
         cur -= dt.timedelta(days=1)  # hôm nay chưa làm thì không làm đứt chuỗi
@@ -189,8 +194,13 @@ def checkin(habit_id: str, done: bool = True, date: str = "") -> dict:
         _save(d)
     st = streak(h, set(d["checkins"][habit_id]))
     unit = "tuần" if (h.get("schedule") or {}).get("type") == "weekly" else "ngày"
+    g = None
+    if done:
+        from agents import game
+        g = game.award("habit", f"{habit_id}:{day}", f"Thói quen: {h['title']}")
+        game.note_streak(st)
     return {"text": (f"✓ {h['title']}" + (f" · chuỗi {st} {unit} 🔥" if st >= 2 else "")) if done else f"Đã bỏ đánh dấu {h['title']}",
-            "streak": st}
+            "streak": st, "game": g}
 
 
 def find_habit(q: str) -> dict | None:
@@ -259,8 +269,13 @@ def toggle_milestone(goal_id: str, index: int) -> dict:
         d = _load()
         g = next(x for x in d["goals"] if x["id"] == goal_id)
         g["milestones"][index]["done"] = not g["milestones"][index].get("done")
+        now_done = g["milestones"][index]["done"]
         _save(d)
-    return {"text": "Đã cập nhật cột mốc"}
+    res = None
+    if now_done:
+        from agents import game
+        res = game.award("milestone", f"{goal_id}:{index}", f"Cột mốc: {g['milestones'][index].get('title', '')}")
+    return {"text": "Đã cập nhật cột mốc", "game": res}
 
 
 def log_metric(goal_id: str, value, date: str = "", note: str = "") -> dict:
@@ -276,7 +291,9 @@ def log_metric(goal_id: str, value, date: str = "", note: str = "") -> dict:
         d["logs"][goal_id] = sorted(logs, key=lambda x: x["date"])
         _save(d)
     m = g.get("metric") or {}
-    return {"text": f"Đã ghi {m.get('name', 'chỉ số')}: {v:g} {m.get('unit', '')}".strip()}
+    from agents import game
+    res = game.award("metric", f"{goal_id}:{day}", f"Ghi chỉ số: {m.get('name', '')}")
+    return {"text": f"Đã ghi {m.get('name', 'chỉ số')}: {v:g} {m.get('unit', '')}".strip(), "game": res}
 
 
 def find_goal(q: str) -> dict | None:

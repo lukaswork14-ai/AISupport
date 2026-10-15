@@ -112,6 +112,9 @@ def seed():
                    "status": "active", "review": [], "streak": 0,
                    "days": [{"day": n, "title": t, "module": m, "doc": dp, "kind": k, "focus": "", "status": "todo", **({"lesson": lesson} if n == 1 else {})}
                             for n, t, m, dp, k in T["days"]]})
+    from agents import game
+    for ev, ref in [("lesson", "lc1-d1"), ("quiz_perfect", "lc1-d1"), ("task", "t1"), ("habit", "h1"), ("practice_great", "lc1-d1")]:
+        game.award(ev, ref, "QA")
 
 
 def init_data() -> str:
@@ -208,6 +211,12 @@ def main():
         step("33-learn-quiz", "S.ld.ans={q1:0,q2:0};lrQuiz()", 1800)
         step("34-learn-practice", "$('#sheet').scrollTop=$('#sheet').scrollHeight", 800)
         step("35-learn-course", "lrCourse('lc1')", 1800)
+        step("36-game-head", "closeSheet();go('growth');S.gr.view='today';render()", 2000)
+        step("37-game-quest", "gmOpen('quest')", 1800)
+        step("38-game-badge", "gmOpen('badge')", 1200)
+        step("39-game-shop", "gmOpen('shop')", 1200)
+        step("40-game-bag", "gmOpen('bag')", 1200)
+        step("41-xp-pop", "closeSheet();xpPop({xp:40,gold:20,note:'Học xong ngày 1',extra:['Nhiệm vụ: Học 1 bài'],level_up:{level:2,title:'Người học việc'}})", 500)
         try:
             dl = page.evaluate("run('noidung','tai_video',{cid:S.st.cid},'',true).then(r=>r.url)")
             import urllib.request

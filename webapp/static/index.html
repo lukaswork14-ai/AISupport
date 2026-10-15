@@ -585,6 +585,23 @@ html[data-scheme="dark"] .apps i{ background:color-mix(in srgb,var(--c) 22%,tran
 .stbar{ display:grid; grid-template-columns:1.25fr 1fr 1fr; gap:8px; margin:0 0 12px } .stbar .btn{ justify-content:center; white-space:nowrap }
 .chip[disabled]{ opacity:.5 }
 .pbar i{ display:block; height:100%; background:var(--jade); border-radius:3px; transition:width .6s ease }
+.gmhead{ display:flex; align-items:center; gap:12px; width:100%; text-align:left; padding:12px 14px; border-radius:18px; margin:4px 0 12px;
+  background:linear-gradient(135deg, color-mix(in srgb,#7B5CF0 16%,var(--surface)), color-mix(in srgb,#C13F96 12%,var(--surface))); box-shadow:0 0 0 1px var(--line) }
+.gmlv{ flex:none; width:52px; height:52px; border-radius:16px; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#fff; background:var(--aura, var(--jade)); box-shadow:0 6px 16px color-mix(in srgb,#7B5CF0 35%,transparent) }
+.gmlv b{ font-size:22px; line-height:1 } .gmlv i{ font-style:normal; font-size:10px; opacity:.85 } .gmlv.big{ width:64px; height:64px } .gmlv.big b{ font-size:28px }
+.gmtitle{ font-weight:800; letter-spacing:-.01em } .gmbar{ display:block; height:8px; border-radius:6px; background:color-mix(in srgb,var(--text) 10%,transparent); overflow:hidden; margin-top:6px }
+.gmbar i{ display:block; height:100%; border-radius:6px; background:linear-gradient(90deg,#FFB020,#FF7A1A) } .gmgold{ flex:none; font-weight:800; font-size:15px }
+.gmboost{ font-size:11px; font-weight:800; color:#fff; background:#E5484D; padding:2px 6px; border-radius:6px }
+.gmhero{ display:flex; gap:14px; align-items:center } .gmq{ width:40px; height:40px; flex:none; border-radius:12px; display:grid; place-items:center; font-weight:800; font-size:13px; background:var(--fill) }
+.gmq.on{ background:var(--jade); color:var(--jade-ink) } .gmitem{ width:40px; height:40px; flex:none; display:grid; place-items:center; font-size:24px }
+.gmbadges{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px } .gmbadge{ display:flex; flex-direction:column; align-items:center; text-align:center; gap:4px; padding:12px 6px; border-radius:16px; background:var(--surface); box-shadow:0 0 0 1px var(--line); filter:grayscale(1); opacity:.55 }
+.gmbadge.on{ filter:none; opacity:1; box-shadow:0 0 0 2px color-mix(in srgb,#FFB020 70%,transparent) } .gmbadge span{ font-size:30px } .gmbadge b{ font-size:13px } .gmbadge em{ font-style:normal; font-size:11px; color:var(--muted) }
+.gminp{ padding:11px 13px; border-radius:12px; border:0; background:var(--fill); color:var(--text); font:inherit; min-width:0 }
+.xppop{ position:fixed; left:50%; top:18%; transform:translateX(-50%); z-index:99; display:flex; flex-direction:column; align-items:center; gap:3px; padding:14px 20px; border-radius:20px;
+  background:linear-gradient(135deg,#7B5CF0,#C13F96); color:#fff; box-shadow:0 18px 50px rgba(80,30,120,.35); animation:xpin .45s cubic-bezier(.2,1.4,.4,1); text-align:center; max-width:86vw; transition:opacity .5s, transform .5s }
+.xppop b{ font-size:26px; letter-spacing:-.02em } .xppop span{ font-size:13px; opacity:.9 } .xppop em{ font-style:normal; font-size:13px; font-weight:600 } .xppop strong{ font-size:15px; margin-top:4px }
+.xppop.out{ opacity:0; transform:translate(-50%,-20px) } @keyframes xpin{ from{ transform:translate(-50%,20px) scale(.8); opacity:0 } to{ transform:translate(-50%,0) scale(1); opacity:1 } }
+@media (prefers-reduced-motion: reduce){ .xppop{ animation:none; transition:none } }
 </style>
 </head>
 <body>
@@ -653,7 +670,9 @@ async function api(path, body){
 async function run(agent, action, params={}, label='', quiet=false){
   if(!quiet) haptic();
   const j = await api('/api/run', {agent, action, params});
-  return j.job ? waitJob(j.job, label||action, agent, quiet) : j.result;
+  const r = j.job ? await waitJob(j.job, label||action, agent, quiet) : j.result;
+  if(r && r.game) xpPop(r.game);
+  return r;
 }
 function waitJob(id, label, agent, quiet=false){
   if(!quiet){ S.jobs[id] = label; if(agent){ S.busy[agent]=(S.busy[agent]||0)+1; } paintBusy(); }
@@ -2550,6 +2569,7 @@ function vGrowth(){
     <div class="seg segscroll" style="margin-bottom:14px">${[['today','Hôm nay'],['learn','Học tập'],['goals','Mục tiêu'],['habits','Thói quen'],['mind','Hiểu anh']].map(([k,l])=>`<button class="${v===k?'on':''}" onclick="S.gr.view='${k}';render()">${l}</button>`).join('')}</div>`;
   if(!d) return head + `<div class="card pad"><div class="skel" style="width:60%"></div><div class="skel"></div></div>`;
   setTimeout(()=>tipBind($('#app')), 0);
+  if(v!=='learn' || true){ const gh = gmHeader(); if(gh) return head.replace('<div class="seg segscroll"', gh + '<div class="seg segscroll"') + ({today:grToday, learn:grLearn, goals:grGoals, habits:grHabits, mind:grMind})[v](d); }
   return head + ({today:grToday, learn:grLearn, goals:grGoals, habits:grHabits, mind:grMind})[v](d);
 }
 
@@ -2657,6 +2677,55 @@ async function lrReview(cid){
   }catch(e){ toast(e.message); }
 }
 async function lrReviewGo(){ try{ const r = await run('hoc','on_tap_nop',{cid:S.lv.cid, answers:JSON.stringify(S.lv.ans)},'',true); closeSheet(); toast(r.text, 4500); S.lr = null; render(); }catch(e){ toast(e.message); } }
+
+/* ---------- Hành trình game hoá: XP, cấp độ, vàng, nhiệm vụ, huy hiệu, vật phẩm, phần thưởng */
+function xpPop(g){
+  if(!g || !g.xp) return; S.gm = null;
+  const el = document.createElement('div'); el.className = 'xppop';
+  el.innerHTML = `<b>+${g.xp} XP</b><span>+${g.gold} vàng · ${esc(g.note||'')}</span>${(g.extra||[]).map(x=>`<em>${esc(x)}</em>`).join('')}${g.level_up?`<strong>⬆️ Lên cấp ${g.level_up.level}: ${esc(g.level_up.title)}!</strong>`:''}${(g.badges||[]).length?`<strong>🏅 Huy hiệu mới!</strong>`:''}`;
+  document.body.appendChild(el); haptic(g.level_up?'heavy':'medium'); if(g.level_up) notifyH('success');
+  setTimeout(()=>el.classList.add('out'), g.level_up||(g.extra||[]).length ? 3600 : 2000); setTimeout(()=>el.remove(), 4400);
+  if(S.tab==='growth') setTimeout(()=>gmLoad(), 400);
+}
+async function gmLoad(){ try{ S.gm = await run('game','hoso',{},'',true); if(S.tab==='growth' && !$('#sheet').classList.contains('on')) render(); else if($('#gmSheet')) gmOpen(S.gmTab); }catch(e){} }
+function gmHeader(){
+  const g = S.gm; if(!g){ if(!S.gmLoading){ S.gmLoading = true; gmLoad().finally(()=>S.gmLoading=false); } return ''; }
+  const lv = g.level, pct = Math.round(lv.progress*100), qd = g.quests.filter(q=>q.claimed).length;
+  return `<button class="gmhead" onclick="gmOpen()"><span class="gmlv"><b>${lv.level}</b><i>cấp</i></span>
+    <span class="grow" style="min-width:0"><span class="row" style="align-items:baseline;gap:8px"><b class="gmtitle">${esc(lv.title)}</b><span class="meta" style="margin:0">${g.xp} XP</span>${g.boost_until?'<span class="gmboost">x2 XP</span>':''}</span>
+      <span class="gmbar"><i style="width:${pct}%"></i></span><span class="meta" style="margin:2px 0 0;display:block">Còn ${lv.next-g.xp} XP lên cấp ${lv.level+1} · hôm nay +${g.xp_today} XP · nhiệm vụ ${qd}/${g.quests.length}</span></span>
+    <span class="gmgold">🪙 ${g.gold}</span></button>`;
+}
+function gmOpen(tab){
+  const g = S.gm; if(!g) return gmLoad();
+  S.gmTab = tab || S.gmTab || 'quest';
+  const lv = g.level, t = S.gmTab;
+  const body = {
+    quest: () => `<div class="card list">${g.quests.map(q=>`<div style="align-items:center"><span class="gmq ${q.claimed?'on':''}">${q.claimed?'✓':`${q.done}/${q.n}`}</span><div class="grow"><div style="font-weight:600">${esc(q.t)}</div><div class="meta">+${q.xp} XP</div></div></div>`).join('')}</div>
+      <p class="meta" style="margin:8px 0 14px">Xong cả 3 nhiệm vụ: +50 XP và 1 rương 🎁</p>
+      <div class="card pad"><b>Thử thách tuần ${g.weekly.done?'✓':''}</b><div class="meta" style="margin:4px 0 8px">${esc(g.weekly.text)} · thưởng 150 XP + Bình x2 XP</div>
+      ${Object.entries(g.weekly.goal).map(([k,n])=>`<div class="row" style="align-items:center;gap:8px;margin:4px 0"><span style="width:110px" class="meta">${{lesson:'Ngày học',habit:'Check-in',task:'Việc xong'}[k]}</span><span class="gmbar grow"><i style="width:${Math.round(100*g.weekly.progress[k]/n)}%"></i></span><span class="meta" style="margin:0">${g.weekly.progress[k]}/${n}</span></div>`).join('')}</div>
+      <p class="lbl" style="margin-top:14px">Cách nhận XP</p><div class="card list">${Object.entries(g.xp_table).map(([k,v])=>`<div><span class="grow">${esc(v[1])}</span><b>+${v[0]}</b></div>`).join('')}</div>`,
+    badge: () => `<div class="gmbadges">${g.badges.map(b=>`<div class="gmbadge ${b.at?'on':''}"><span>${b.icon}</span><b>${esc(b.name)}</b><em>${b.at?'Đạt '+b.at.split('-').reverse().join('/'):esc(b.desc)}</em></div>`).join('')}</div>`,
+    bag: () => `<div class="card list">${g.items.map(it=>`<div style="align-items:center"><span class="gmitem">${it.icon}</span><div class="grow"><div style="font-weight:600">${esc(it.name)} <span class="meta" style="margin:0">×${it.qty}</span></div><div class="meta">${esc(it.desc)}</div></div>
+      ${it.qty&&['potion','chest'].includes(it.id)?`<button class="btn sm pri" onclick="gmUse('${it.id}')">${it.id==='chest'?'Mở':'Dùng'}</button>`:''}${it.price?`<button class="btn sm" onclick="gmBuy('${it.id}')">🪙 ${it.price}</button>`:''}</div>`).join('')}</div>
+      <p class="meta" style="margin:8px 0 0">Lên cấp nhận rương; mỗi 3 cấp thêm 1 Khiên chuỗi. Khiên tự giữ chuỗi thói quen khi anh lỡ 1 ngày.</p>`,
+    shop: () => `<p class="lead" style="margin:0 0 10px">Đổi vàng lấy phần thưởng thật anh tự đặt cho mình.</p><div class="card list">${g.rewards.map(r=>`<div style="align-items:center"><span class="gmitem">${r.icon}</span><div class="grow"><div style="font-weight:600">${esc(r.name)}</div><div class="meta">🪙 ${r.price}${g.gold<r.price?` · còn thiếu ${r.price-g.gold}`:''}</div></div>
+      <button class="btn sm ${g.gold>=r.price?'pri':''}" ${g.gold>=r.price?'':'disabled'} onclick="gmRedeem('${r.id}')">Đổi</button><button class="iconbtn sm" aria-label="Xoá" onclick="gmDelReward('${r.id}')">${ico('x',15)}</button></div>`).join('')}</div>
+      <div class="row" style="margin-top:10px;gap:8px"><input id="gmRn" class="grow gminp" placeholder="Phần thưởng mới, vd: Ăn tối nhà hàng yêu thích"><input id="gmRp" class="gminp" style="width:90px" type="number" placeholder="Vàng"><button class="btn" onclick="gmAddReward()">${ico('plus',15)}</button></div>
+      ${(g.redeemed||[]).length?`<p class="lbl" style="margin-top:14px">Đã đổi gần đây</p><div class="card list">${g.redeemed.slice().reverse().map(r=>`<div><span class="grow">${r.icon} ${esc(r.name)}</span><span class="meta" style="margin:0">${esc(ago(r.at))}</span></div>`).join('')}</div>`:''}`,
+    log: () => `<div class="card list">${g.log.map(x=>`<div><div class="grow"><div>${esc(x.note)}</div><div class="meta">${esc(ago(x.at))}${x.boost?' · x2':''}</div></div>${x.xp?`<b style="color:var(--jade)">+${x.xp}</b>`:x.gold<0?`<b>${x.gold} 🪙</b>`:''}</div>`).join('')||'<div class="empty">Chưa có hoạt động.</div>'}</div>`,
+  };
+  sheet(`<div id="gmSheet"><div class="gmhero"><span class="gmlv big"><b>${lv.level}</b><i>cấp</i></span><div class="grow"><div class="gmtitle" style="font-size:20px">${esc(lv.title)}</div>
+      <div class="gmbar" style="margin:6px 0 4px"><i style="width:${Math.round(lv.progress*100)}%"></i></div><div class="meta" style="margin:0">${g.xp} / ${lv.next} XP · 🪙 ${g.gold} vàng${g.boost_until?' · x2 XP đang bật':''}</div></div></div>
+    <div class="seg segscroll" style="margin:12px 0">${[['quest','Nhiệm vụ'],['badge','Huy hiệu'],['bag','Túi đồ'],['shop','Đổi thưởng'],['log','Nhật ký']].map(([k,l])=>`<button class="${t===k?'on':''}" onclick="gmOpen('${k}')">${l}</button>`).join('')}</div>
+    ${body[t]()}</div>`);
+}
+async function gmUse(id){ try{ const r = await run('game','dung',{item:id},'',true); S.gm = r; toast(r.text, 3500); haptic('heavy'); gmOpen('bag'); }catch(e){ toast(e.message); } }
+async function gmBuy(id){ try{ const r = await run('game','mua',{item:id},'',true); S.gm = r; toast(r.text); gmOpen('bag'); }catch(e){ toast(e.message); } }
+async function gmRedeem(id){ try{ const r = await run('game','doi_thuong',{rid:id},'',true); S.gm = r; toast(r.text, 4000); notifyH('success'); gmOpen('shop'); }catch(e){ toast(e.message, 3500); } }
+async function gmDelReward(id){ try{ S.gm = await run('game','xoa_thuong',{rid:id},'',true); gmOpen('shop'); }catch(e){ toast(e.message); } }
+async function gmAddReward(){ const n = $('#gmRn').value.trim(), p = +$('#gmRp').value; if(!n || !p) return toast('Nhập tên và số vàng'); try{ S.gm = await run('game','them_thuong',{name:n, price:p},'',true); gmOpen('shop'); }catch(e){ toast(e.message); } }
 function habitRow(h, compact){
   const unit = h.schedule?.type==='weekly' ? 'tuần' : 'ngày';
   const sub = [h.time, h.target, h.schedule?.type==='weekly'?`${h.week_count||0}/${h.schedule.times} lần tuần này`:''].filter(Boolean).join(' · ');

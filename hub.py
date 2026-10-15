@@ -7,7 +7,7 @@ import os
 import re
 
 import targets as targets_mod
-from agents import (calendar_agent, content_agent, content_hub, strategy, learning, reel_studio, gemini_notebook, knowledge_sources, meeting, meeting_share, email_agent, fb_connect, gcal_bridge, imagecard, lark_agent, mailbox, news_agent, publisher,
+from agents import (calendar_agent, content_agent, content_hub, strategy, learning, reel_studio, game, gemini_notebook, knowledge_sources, meeting, meeting_share, email_agent, fb_connect, gcal_bridge, imagecard, lark_agent, mailbox, news_agent, publisher,
                     reel_video, second_brain)
 from config import CARD_HANDLE, DATA_DIR
 from core import digests, notify, store
@@ -565,6 +565,20 @@ register(Agent("noidung", "Nội dung", "🎬", "Săn tin theo chủ đề + cas
            params=[Param("iid", "ID tin", required=True), Param("idx", "Vị trí", "number", default=-1)]),
     Action("gui_video", "Gửi video vào Telegram", content_hub.send_video, hidden=True, params=[Param("cid", "ID video", required=True)]),
     Action("tai_video", "Link tải video", noidung_tai_video, hidden=True, params=[Param("cid", "ID video", required=True)]),
+]))
+
+
+# ================================================================ Game hoá (trong Phát triển)
+register(Agent("game", "Hành trình", "🎮", "Điểm XP, cấp độ, vàng, nhiệm vụ ngày, huy hiệu, vật phẩm và phần thưởng thật", order=57, actions=[
+    Action("hoso", "Hồ sơ game", game.profile, hidden=True, llm=True,
+           desc="Điểm XP, cấp độ, vàng, nhiệm vụ hôm nay, thử thách tuần, huy hiệu, vật phẩm, phần thưởng của anh."),
+    Action("dung", "Dùng vật phẩm", game.use_item, hidden=True, params=[Param("item", "Vật phẩm", required=True)]),
+    Action("mua", "Mua vật phẩm", game.buy, hidden=True, params=[Param("item", "Vật phẩm", required=True)]),
+    Action("them_thuong", "Thêm phần thưởng", game.add_reward, hidden=True, llm=True,
+           desc="Thêm 1 phần thưởng thật anh muốn tự thưởng khi đủ vàng (vd 'massage', 1200 vàng).",
+           params=[Param("name", "Tên", required=True), Param("price", "Giá (vàng)", "number", required=True), Param("icon", "Biểu tượng", default="🎁")]),
+    Action("xoa_thuong", "Xoá phần thưởng", game.remove_reward, hidden=True, params=[Param("rid", "ID", required=True)]),
+    Action("doi_thuong", "Đổi phần thưởng", game.redeem, hidden=True, params=[Param("rid", "ID", required=True)]),
 ]))
 
 

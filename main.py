@@ -219,6 +219,11 @@ async def job_content_scan(app: Application):
         await send(app, f"📰 {r['added']} tin mới đang chờ anh duyệt ở trang Nội dung (quẹt phải để tạo reels). Tổng chờ duyệt: {r['pending']}.")
 
 
+async def job_game_shield():
+    from agents import game
+    await asyncio.to_thread(game.shield_job)
+
+
 async def job_learning_nightly():
     from agents import learning
     await asyncio.to_thread(learning.nightly)
@@ -350,6 +355,7 @@ async def post_init(app: Application):
     if vault_sync.enabled():
         scheduler.add_job(job_vault_sync, "interval", minutes=10, args=[app], coalesce=True, max_instances=1,
                           misfire_grace_time=600, next_run_time=dt.datetime.now() + dt.timedelta(minutes=1))
+    scheduler.add_job(job_game_shield, CronTrigger(hour=0, minute=15), misfire_grace_time=6 * 3600, coalesce=True)
     scheduler.add_job(job_learning_nightly, CronTrigger(hour=23, minute=20), misfire_grace_time=3 * 3600, coalesce=True)
     scheduler.add_job(job_learning_remind, CronTrigger(hour=20, minute=0), misfire_grace_time=3600, coalesce=True)
     scheduler.add_job(job_strategy_weekly, CronTrigger(day_of_week="mon", hour=6, minute=20), misfire_grace_time=6 * 3600, coalesce=True)
