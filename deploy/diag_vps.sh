@@ -58,7 +58,7 @@ echo "disk: $(df -h /opt /tmp 2>/dev/null | tail -2 | tr -s ' ' | tr '\n' '|')  
 echo "videos_dir: $(du -sh $S/data/videos 2>/dev/null | cut -f1) / $(ls $S/data/videos 2>/dev/null | wc -l) files"
 echo "oom: $(journalctl -k --since -12h 2>/dev/null | grep -i -E 'oom|killed process' | tail -3 | cut -c1-200 | tr '\n' '|')"
 echo "--- render test ---"
-(cd /opt/superhuy/current && SUPERHUY_HOME=$S RT_FROM=0 timeout 500 /opt/superhuy/venv/bin/python deploy/render_test.py 2>&1 | tail -40 | cut -c1-400)
+(cd /opt/superhuy/current && SUPERHUY_HOME=$S RT_FROM=7 timeout 300 /opt/superhuy/venv/bin/python deploy/render_test.py 2>&1 | tail -40 | cut -c1-400)
 echo "--- end render test ---"
 echo "--- journal render errors ---"
 journalctl -u superhuy --since -6h 2>/dev/null | grep -i -E -A12 'reel_studio|newscast|Traceback|Error' | grep -v -i -E 'token|key=|secret' | tail -80 | cut -c1-260
