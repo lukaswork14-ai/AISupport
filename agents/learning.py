@@ -80,6 +80,91 @@ TEMPLATES = {
             (30, "Tổng kết, đánh giá năng lực và kế hoạch 90 ngày tiếp theo", "", "", "review"),
         ],
     },
+    "ra-quyet-dinh-30": {
+        "title": "Ra quyết định đỉnh cao 30 ngày: mô hình tư duy cho CEO",
+        "topic": "Mô hình tư duy và quy trình ra quyết định của nhà lãnh đạo (mental models, tư duy xác suất, thiên kiến, quyết định nhóm)",
+        "goal": ("Sau 30 ngày: có bộ 20+ mô hình tư duy dùng thành phản xạ, một quy trình quyết định cá nhân (checklist + nhật ký quyết định) "
+                 "và một hệ thống quyết định cho đội ngũ Leversphere/Sellnity (ai quyết, quyết thế nào, đo chất lượng quyết định ra sao)."),
+        "level": "Nhà quản lý cấp cao",
+        "sources": [{"title": "Farnam Street — The Great Mental Models", "url": "https://fs.blog/mental-models/", "kind": "ref"},
+                    {"title": "Annie Duke — Thinking in Bets (FS Knowledge Project)", "url": "https://fs.blog/knowledge-project/annie-duke/", "kind": "ref"},
+                    {"title": "Kahneman, Sibony, Sunstein — Noise: A Flaw in Human Judgment", "url": W + "Noise:_A_Flaw_in_Human_Judgment", "kind": "ref"}],
+        "days": [
+            (1, "Quyết định tốt khác kết quả tốt: tư duy đặt cược", "", "", "learn", "Phân biệt chất lượng quyết định với may rủi (resulting), quyết định là đặt cược trong bất định.", W + "Decision_theory"),
+            (2, "Bản đồ không phải lãnh thổ và vòng tròn năng lực", "", "", "learn", "Biết mô hình nào sai ở đâu; biết mình giỏi gì và không giỏi gì.", W + "Map%E2%80%93territory_relation"),
+            (3, "Tư duy nguyên lý gốc (first principles)", "", "", "learn", "Bóc vấn đề về sự thật nền tảng rồi xây lại lời giải.", W + "First_principle"),
+            (4, "Tư duy bậc hai: và rồi sao nữa?", "", "", "learn", "Lường hệ quả của hệ quả, theo thời gian và các bên liên quan.", W + "Unintended_consequences"),
+            (5, "Đảo ngược (inversion) và pre-mortem", "", "", "learn", "Hỏi điều gì làm dự án thất bại để tránh nó trước khi bắt đầu.", W + "Pre-mortem"),
+            (6, "Thực hành: pre-mortem một quyết định lớn của Leversphere", "", "", "practice", "Chạy pre-mortem + tư duy bậc hai cho một quyết định đang treo.", ""),
+            (7, "Ôn tập tuần 1 + nhật ký quyết định", "", "", "review", "Lập nhật ký quyết định (bối cảnh, lựa chọn, kỳ vọng, độ tin cậy).", ""),
+            (8, "Tư duy xác suất và giá trị kỳ vọng", "", "", "learn", "Ước lượng xác suất, tính giá trị kỳ vọng, phân phối kết quả chứ không chỉ 1 kịch bản.", W + "Expected_value"),
+            (9, "Cập nhật niềm tin kiểu Bayes và tỷ lệ nền", "", "", "learn", "Bắt đầu từ tỷ lệ nền (outside view), cập nhật khi có bằng chứng mới.", W + "Base_rate_fallacy"),
+            (10, "Thiên kiến nhận thức hay gặp của nhà lãnh đạo", "", "", "learn", "Xác nhận, neo, quá tự tin, chi phí chìm, sống sót... và cách khử.", W + "List_of_cognitive_biases"),
+            (11, "Nhiễu (noise) và vệ sinh quyết định", "", "", "learn", "Giảm sai lệch ngẫu nhiên giữa người và giữa các lần: thang đo, đánh giá độc lập, gộp ý kiến.", W + "Noise:_A_Flaw_in_Human_Judgment"),
+            (12, "Chi phí cơ hội, chi phí chìm và biên an toàn", "", "", "learn", "So mọi lựa chọn với phương án tốt nhất kế tiếp; chừa biên an toàn cho sai số.", W + "Opportunity_cost"),
+            (13, "Thực hành: chấm điểm 3 cơ hội kinh doanh bằng giá trị kỳ vọng", "", "", "practice", "Ước lượng xác suất, lợi ích, rủi ro cho 3 cơ hội của Sellnity.", ""),
+            (14, "Ôn tập tuần 2: bộ công cụ xác suất", "", "", "review", "", ""),
+            (15, "Cửa một chiều và cửa hai chiều: tốc độ quyết định", "", "", "learn", "Quyết định đảo ngược được thì nhanh, không đảo ngược được thì kỹ; quyết với 70% thông tin.", ""),
+            (16, "Cynefin: chọn cách quyết theo loại tình huống", "", "", "learn", "Rõ ràng, phức tạp, phức hợp, hỗn loạn: mỗi loại một cách hành động.", W + "Cynefin_framework"),
+            (17, "Vòng OODA: quyết nhanh hơn đối thủ", "", "", "learn", "Quan sát, định hướng, quyết định, hành động — ứng dụng cho cạnh tranh thương mại điện tử.", W + "OODA_loop"),
+            (18, "Ma trận quyết định và phân tích đa tiêu chí", "", "", "learn", "Đặt tiêu chí và trọng số trước khi nhìn phương án.", W + "Decision_matrix"),
+            (19, "Lý thuyết trò chơi cho đàm phán và cạnh tranh", "", "", "learn", "Đối thủ, nhà cung cấp, nền tảng: dự đoán nước đi của họ.", W + "Game_theory"),
+            (20, "Thực hành: quyết định giá/kênh cho một dòng sản phẩm POD", "", "", "practice", "Dùng Cynefin + ma trận quyết định + lý thuyết trò chơi.", ""),
+            (21, "Ôn tập tuần 3", "", "", "review", "", ""),
+            (22, "Tư duy hệ thống: vòng phản hồi và điểm đòn bẩy", "", "", "learn", "Nhìn doanh nghiệp như hệ thống: vòng tăng cường, vòng cân bằng, độ trễ.", W + "Systems_thinking"),
+            (23, "Ra quyết định nhóm: tránh tư duy bầy đàn, dùng red team", "", "", "learn", "Ý kiến độc lập trước, tranh luận sau; người phản biện chính thức.", W + "Groupthink"),
+            (24, "Phân quyền quyết định: ai đề xuất, ai quyết (RAPID/RACI)", "", "", "learn", "Thiết kế quyền quyết định rõ ràng cho đội ngũ.", W + "Responsibility_assignment_matrix"),
+            (25, "AI làm cố vấn quyết định: dùng agent để phản biện và mô phỏng", "", "", "learn", "Dùng superHuy/Claude để tìm điểm mù, đóng vai đối thủ, mô phỏng kịch bản.", ""),
+            (26, "Dự án: bộ checklist quyết định cá nhân", "", "", "project", "Viết checklist 10 câu hỏi trước mọi quyết định lớn.", ""),
+            (27, "Dự án: hệ thống quyết định cho Leversphere", "", "", "project", "Quy trình, quyền quyết định, nhịp họp, nhật ký quyết định của đội.", ""),
+            (28, "Dự án: hậu kiểm 5 quyết định cũ (quality vs outcome)", "", "", "project", "Chấm lại chất lượng quyết định cũ, rút bài học.", ""),
+            (29, "Dự án: áp dụng cho một quyết định chiến lược đang mở", "", "", "project", "Chạy trọn quy trình cho một quyết định thật (Roimaxx/Leversphere/Sellnity).", ""),
+            (30, "Tổng kết: bộ mô hình tư duy của anh + kế hoạch 90 ngày", "", "", "review", "", ""),
+        ],
+    },
+    "agentic-commerce-30": {
+        "title": "Agentic e-commerce 30 ngày: từ giao thức đến mô hình kinh doanh",
+        "topic": "Agentic commerce: AI agent mua sắm thay người tiêu dùng, giao thức (ACP, AP2, UCP, MCP), thanh toán cho agent, tối ưu sản phẩm cho agent, vận hành bằng agent",
+        "goal": ("Sau 30 ngày: hiểu sâu hệ sinh thái agentic commerce, đưa được catalog POD của Leversphere/Sellnity lên kênh mua sắm qua agent, "
+                 "có lộ trình chuyển đổi agentic cho Leversphere và bản thiết kế gói dịch vụ 'agentic e-commerce enabler' cho Roimaxx."),
+        "level": "Lãnh đạo doanh nghiệp thương mại điện tử",
+        "sources": [{"title": "McKinsey — The automation curve in agentic commerce", "url": "https://www.mckinsey.com/capabilities/tech-and-ai/our-insights/the-automation-curve-in-agentic-commerce", "kind": "ref"},
+                    {"title": "Agentic Commerce Protocol (Stripe + OpenAI)", "url": "https://www.agenticcommerce.dev/", "kind": "ref"},
+                    {"title": "Agent Payments Protocol (AP2)", "url": "https://ap2-protocol.org/", "kind": "ref"},
+                    {"title": "Universal Commerce Protocol (UCP)", "url": "https://www.ucp.dev/", "kind": "ref"}],
+        "days": [
+            (1, "Agentic commerce là gì và vì sao thay đổi luật chơi", "", "", "learn", "Từ tìm kiếm - so sánh - mua sang uỷ quyền cho agent; các cấp độ tự động hoá.", "https://www.mckinsey.com/capabilities/tech-and-ai/our-insights/the-automation-curve-in-agentic-commerce"),
+            (2, "Bản đồ hệ sinh thái: agent, nền tảng, người bán, thanh toán", "", "", "learn", "ChatGPT, Gemini, Perplexity, Amazon, Shopify, Stripe, Visa, Mastercard: ai giữ vai trò gì.", "https://docs.stripe.com/agentic-commerce"),
+            (3, "AI agent hoạt động thế nào: công cụ, bộ nhớ, lập kế hoạch", "", "", "learn", "Nền tảng kỹ thuật đủ để ra quyết định kinh doanh.", W + "Intelligent_agent"),
+            (4, "Model Context Protocol (MCP): cổng nối agent với hệ thống", "", "", "learn", "MCP server cho catalog, đơn hàng, tồn kho.", "https://modelcontextprotocol.io/introduction"),
+            (5, "Agentic Commerce Protocol (ACP): checkout trong ChatGPT", "", "", "learn", "Luồng checkout, người bán vẫn là merchant of record, token thanh toán uỷ quyền.", "https://docs.stripe.com/agentic-commerce/protocols/acp"),
+            (6, "Thực hành: chuẩn bị product feed cho agent của 20 SKU POD", "", "", "practice", "Thuộc tính, biến thể, ảnh, chính sách vận chuyển/đổi trả máy đọc được.", ""),
+            (7, "Ôn tập tuần 1", "", "", "review", "", ""),
+            (8, "AP2: thanh toán do agent thực hiện và mandate", "", "", "learn", "Intent mandate, cart mandate, trách nhiệm khi agent mua sai.", "https://ap2-protocol.org/"),
+            (9, "Universal Commerce Protocol (UCP) và giỏ hàng xuyên kênh", "", "", "learn", "Chuẩn hoá khám phá - giỏ - thanh toán giữa agent và người bán.", "https://www.ucp.dev/"),
+            (10, "Thanh toán cho agent: Visa, Mastercard, ví, chống gian lận", "", "", "learn", "Token mạng thẻ, xác thực, rủi ro chargeback trong mua hàng do agent.", ""),
+            (11, "Agent engine optimization: để agent chọn sản phẩm của mình", "", "", "learn", "Dữ liệu có cấu trúc, đánh giá, giá minh bạch, nội dung trả lời câu hỏi.", ""),
+            (12, "POD trong thế giới agent: cá nhân hoá theo yêu cầu", "", "", "learn", "Agent đặt thiết kế riêng, mockup tức thì, thời gian giao hàng.", ""),
+            (13, "Thực hành: chấm điểm mức sẵn sàng cho agent của Leversphere", "", "", "practice", "Checklist dữ liệu, giao thức, thanh toán, vận hành.", ""),
+            (14, "Ôn tập tuần 2", "", "", "review", "", ""),
+            (15, "Vận hành bằng agent: nghiên cứu xu hướng và thiết kế", "", "", "learn", "Agent săn trend, tạo brief, kiểm tra bản quyền/nhãn hiệu.", ""),
+            (16, "Vận hành bằng agent: listing, SEO và quảng cáo", "", "", "learn", "Agent viết listing, thử nghiệm A/B, tối ưu ngân sách quảng cáo.", ""),
+            (17, "Vận hành bằng agent: chăm sóc khách hàng và hậu mãi", "", "", "learn", "Agent xử lý hỏi đáp, đổi trả, theo dõi đơn; khi nào chuyển người.", ""),
+            (18, "Vận hành bằng agent: fulfillment, nhà in, tồn kho", "", "", "learn", "Điều phối nhà in, cảnh báo trễ, đối soát.", ""),
+            (19, "Đo lường: KPI cho kênh agent và cho đội agent nội bộ", "", "", "learn", "Tỷ lệ agent chọn, chuyển đổi, chi phí mỗi đơn, thời gian xử lý.", ""),
+            (20, "Thực hành: thiết kế 3 agent vận hành cho Sellnity", "", "", "practice", "Nhiệm vụ, công cụ, dữ liệu, giới hạn quyền, chỉ số.", ""),
+            (21, "Ôn tập tuần 3", "", "", "review", "", ""),
+            (22, "Rủi ro, pháp lý, niềm tin: trách nhiệm khi agent mua/bán", "", "", "learn", "Bảo vệ người tiêu dùng, dữ liệu, gian lận, bản quyền thiết kế.", ""),
+            (23, "Mô hình kinh doanh enabler: Agents Factory + tư vấn", "", "", "learn", "Gói dịch vụ, định giá theo kết quả, cách giao hàng cho khách doanh nghiệp.", ""),
+            (24, "Case study: người đi đầu và bài học", "", "", "learn", "Shopify, Amazon, Walmart, các thương hiệu DTC trên kênh agent.", ""),
+            (25, "Dự án: lộ trình chuyển đổi agentic của Leversphere (90 ngày)", "", "", "project", "Mục tiêu, giai đoạn, nguồn lực, KPI.", ""),
+            (26, "Dự án: đưa catalog thử nghiệm lên một kênh mua qua agent", "", "", "project", "Chọn kênh, chuẩn bị feed, kiểm thử luồng mua.", ""),
+            (27, "Dự án: gói dịch vụ 'agentic e-commerce enabler' của Roimaxx", "", "", "project", "Gói, giá, quy trình giao hàng, chân dung khách hàng.", ""),
+            (28, "Dự án: kịch bản bán hàng và demo cho khách của Roimaxx", "", "", "project", "Demo chạy thật trên dữ liệu POD.", ""),
+            (29, "Dự án: kế hoạch đội ngũ và năng lực", "", "", "project", "Vai trò mới, đào tạo, tuyển dụng, đối tác.", ""),
+            (30, "Tổng kết và kế hoạch 90 ngày", "", "", "review", "", ""),
+        ],
+    },
 }
 KIND_VI = {"learn": "Học", "practice": "Thực hành", "review": "Ôn tập", "project": "Dự án"}
 
@@ -163,7 +248,14 @@ def _source_for(c: dict, d: dict) -> tuple[str, list[dict]]:
         res.append({"type": "doc", "title": "Tài liệu chính thức Claude Code", "url": DOCS.format(p=d["doc"])})
         if not text:
             text = _fetch_text(DOCS.format(p=d["doc"]) + ".md")
+    if d.get("ref"):
+        t = _fetch_text(d["ref"])
+        host = re.sub(r"^https?://(www\.)?", "", d["ref"]).split("/")[0]
+        res.append({"type": "doc", "title": f"Tư liệu: {host}", "url": d["ref"]})
+        text = text or t
     for s in c.get("sources") or []:
+        if s.get("kind") == "ref" and s.get("url") and len(res) < 4:
+            res.append({"type": "doc", "title": s.get("title") or s["url"], "url": s["url"]})
         if s.get("kind") == "url" and s.get("url") and not text:
             text = _fetch_text(s["url"])
             res.append({"type": "doc", "title": s.get("title") or s["url"], "url": s["url"]})
@@ -193,7 +285,8 @@ def create_course(topic: str, goal: str = "", days: int = 30, level: str = "", s
         T = TEMPLATES[template]
         c = {"id": uuid.uuid4().hex[:8], "template": template, "title": T["title"], "topic": T["topic"], "goal": T["goal"],
              "level": level or T["level"], "sources": T["sources"], "outcomes": [],
-             "days": [{"day": n, "title": t, "module": m, "doc": dp, "kind": k, "focus": "", "status": "todo"} for n, t, m, dp, k in T["days"]]}
+             "days": [{"day": x[0], "title": x[1], "module": x[2], "doc": x[3], "kind": x[4], "focus": x[5] if len(x) > 5 else "",
+                       "ref": x[6] if len(x) > 6 else "", "status": "todo"} for x in T["days"]]}
     else:
         if not (topic or "").strip():
             raise ValueError("Anh nhập chủ đề khoá học")

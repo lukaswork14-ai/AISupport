@@ -248,6 +248,20 @@ def _learning_bootstrap():
                              "Bài ngày 1 (kèm audio, quiz, bài thực hành) đã sẵn trong app › Phát triển › Học tập.")
     except Exception:
         log.exception("Tạo khoá học đầu tiên lỗi")
+    # Khoá anh yêu cầu thêm (tạo 1 lần): ra quyết định + agentic e-commerce
+    try:
+        have = {c.get("template") for c in learning._load()}
+        made = []
+        for t in ("ra-quyet-dinh-30", "agentic-commerce-30"):
+            if t not in have:
+                __import__("time").sleep(20)
+                made.append(learning.create_course("", template=t)["title"])
+        if made:
+            from core import notify
+            notify.send(text="📚 Đã thêm khoá học mới: " + "; ".join(f"“{m}”" for m in made) +
+                             ". Bài ngày 1 đang được soạn (kèm audio, quiz, thực hành cho Leversphere/Sellnity). Mở app › Phát triển › Học tập.")
+    except Exception:
+        log.exception("Tạo khoá học mới lỗi")
 
 
 async def job_strategy_weekly():

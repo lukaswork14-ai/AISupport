@@ -18,7 +18,7 @@ sc = m.get("newscast")
 print("render_test_cid:", rec["id"], "has_script:", bool(sc), "scenes:", len((sc or {}).get("scenes") or []), "settings:", m.get("settings"))
 if not sc:
     print("render_test: video này chưa có kịch bản bản tin (bản cũ) -> dựng lại cần viết kịch bản mới"); sys.exit()
-sc = {**sc, "scenes": sc["scenes"][:3]}  # 3 cảnh cho nhanh
+sc = {**sc, "scenes": sc["scenes"][int(os.environ.get("RT_FROM", "0")):]}
 it = rs._item_for(m, rec["title"])
 t0 = time.time()
 try:
