@@ -542,7 +542,9 @@ html[data-scheme="dark"] .apps i{ background:color-mix(in srgb,var(--c) 22%,tran
 .trk.roimaxx{ background:color-mix(in srgb,#1F7AE0 14%,transparent); color:#1F7AE0 } html[data-scheme="dark"] .trk.roimaxx{ color:#7DB6FF }
 .trk.leversphere{ background:color-mix(in srgb,#199e70 15%,transparent); color:#13805F } html[data-scheme="dark"] .trk.leversphere{ color:#4FD1A5 }
 .itype{ font-size:11.5px; font-weight:700; padding:3px 8px; border-radius:7px; background:var(--fill); color:var(--text) }
-.rpstack{ height:min(470px,58vh); min-height:410px }
+.rpstack{ height:min(440px,54vh); min-height:390px }
+.stars{ display:inline-flex; align-items:center; gap:3px; white-space:nowrap }
+.itype{ display:inline-flex; align-items:center; gap:4px }
 .vd{ font-size:11.5px; font-weight:700; padding:3px 8px; border-radius:7px; background:var(--fill); color:var(--text) }
 .vd.ap_dung{ background:var(--jade-soft); color:var(--jade) } .vd.thu_nghiem{ background:color-mix(in srgb,#1F7AE0 14%,transparent); color:#1F7AE0 }
 html[data-scheme="dark"] .vd.thu_nghiem{ color:#7DB6FF } .vd.bo_qua{ color:var(--muted) }
@@ -1928,7 +1930,7 @@ function rpSwipeHtml(){
   return `<div class="stack rpstack" id="cstack">${top.map((n,i)=>{ const depth = top.length-1-i, a = n.a||{};
     return `<article class="card mcard ccard rpcard ${depth===1?'back1':depth===2?'back2':''}" data-id="${n.id}" data-kind="repo">
       ${depth===0?'<span class="stamp yes">Áp dụng</span><span class="stamp no">Bỏ qua</span>':''}
-      <div class="row" style="gap:6px;align-items:center;flex-wrap:wrap"><span class="vd ${a.ket_luan}">${esc(d.verdict[a.ket_luan]||'')}</span><span class="fit">Phù hợp ${a.phu_hop??'?'}/10</span><span class="grow"></span><span class="meta" style="margin:0">${ico('star',13)} ${kfmt(n.stars)}${n.stars_week?` · +${kfmt(n.stars_week)} tuần`:''}</span></div>
+      <div class="row" style="gap:6px;align-items:center;flex-wrap:wrap"><span class="vd ${a.ket_luan}">${esc(d.verdict[a.ket_luan]||'')}</span><span class="fit">Phù hợp ${a.phu_hop??'?'}/10</span><span class="grow"></span><span class="meta stars" style="margin:0">${ico('star',13)}${kfmt(n.stars)}${n.stars_week?` · +${kfmt(n.stars_week)} tuần`:''}</span></div>
       <div><h3>${esc(a.ten_vi||n.full_name)}</h3><div class="meta rpname">${esc(n.full_name)}${n.lang?` · ${esc(n.lang)}`:''}${n.license?` · ${esc(n.license)}`:''}</div></div>
       <p class="sum rpsum">${esc(a.nhan_dinh||a.la_gi||n.desc)}</p>
       <div class="rpprops">${(a.de_xuat||[]).slice(0,3).map(p=>`<div class="rpprop ${p.loai}">${ico(RPK_ICO[p.loai]||'spark',15)}<span class="grow">${esc(p.tieu_de)}</span><span class="pk">${p.loai==='nang_cap'?'Phiếu':'Làm ngay'}</span></div>`).join('')}</div>
@@ -1965,7 +1967,7 @@ async function rpOpen(id){
   const applied = n.applied ? `<div class="sec"><h2>Đã áp dụng</h2></div><div class="card pad">${(n.applied.done||[]).map(x=>`<div class="mdli"><span>${ico('check',14)}</span><span>${esc(x)}</span></div>`).join('')}
     ${(n.ticket_rows||[]).map(t=>`<button class="btn sm" style="margin:6px 6px 0 0" onclick="rpTicket('${t.id}')">${ico('code',14)} ${esc(t.title)} · ${esc(d.status[t.status]||t.status)}</button>`).join('')}</div>` : '';
   sheet(`<div class="row" style="gap:6px;align-items:center;margin-bottom:6px"><span class="vd ${a.ket_luan}">${esc(d.verdict[a.ket_luan]||'')}</span><span class="fit">Phù hợp ${a.phu_hop??'?'}/10</span></div>
-    <h2 style="margin-bottom:2px">${esc(a.ten_vi||n.full_name)}</h2><div class="meta">${esc(n.full_name)} · ${ico('star',13)} ${kfmt(n.stars)}${n.stars_week?` (+${kfmt(n.stars_week)} tuần này)`:''}${n.lang?` · ${esc(n.lang)}`:''}${n.license?` · ${esc(n.license)}`:''}${n.pushed?` · cập nhật ${esc(n.pushed)}`:''}</div>
+    <h2 style="margin-bottom:2px">${esc(a.ten_vi||n.full_name)}</h2><div class="meta">${esc(n.full_name)} · ${kfmt(n.stars)} sao${n.stars_week?` (+${kfmt(n.stars_week)} tuần này)`:''}${n.lang?` · ${esc(n.lang)}`:''}${n.license?` · ${esc(n.license)}`:''}${n.pushed?` · cập nhật ${esc(n.pushed)}`:''}</div>
     <div class="card pad" style="margin-top:12px"><b>Là gì</b><p class="mdp">${esc(a.la_gi||n.desc||'')}</p>
       ${(a.diem_noi_bat||[]).length?`<b>Điểm đáng học</b>${a.diem_noi_bat.map(x=>`<div class="mdli"><span>•</span><span>${esc(x)}</span></div>`).join('')}`:''}
       ${a.chat_luong?`<b style="display:block;margin-top:8px">Độ chín</b><p class="mdp">${esc(a.chat_luong)}</p>`:''}</div>
@@ -2007,7 +2009,7 @@ async function rpTicket(id){
   let t; try{ t = await run('noidung','phieu_xem',{tid:id},'',true); }catch(e){ return toast(e.message); }
   const st = (S.rp||{}).status||{moi:'Chờ làm',dang_lam:'Đang làm',xong:'Đã xong',bo:'Bỏ'};
   sheet(`<div class="meta" style="margin-bottom:4px">Phiếu nâng cấp · ${esc(st[t.status]||t.status)}</div>
-    <div class="mdbody">${mdRender(t.markdown.replace(/^---[\s\S]*?---\n/,''))}</div>
+    <div class="mdbody">${mdRender(t.markdown.replace(/^---[\s\S]*?---\n/,'').replace(/\[([^\]]+)\]\([^)]+\)/g,'$1'))}</div>
     <div class="sec"><h2>Trạng thái</h2></div><div class="chips" style="padding-top:0">${Object.entries(st).map(([k,l])=>`<button class="chip ${t.status===k?'on':''}" onclick="rpTicketSet('${t.id}','${k}')">${esc(l)}</button>`).join('')}</div>
     <div class="row" style="margin-top:12px"><button class="btn grow" onclick="rpCopy()">${ico('pen',16)} Chép kế hoạch</button><button class="btn grow" onclick="openLink('${esc(t.url)}')">${ico('code',16)} Repo gốc</button></div>`);
   S.rpTk = t;
@@ -2024,7 +2026,7 @@ async function rpScan(){
 }
 function rpAdd(){
   sheet(`<h2>Phân tích một repo</h2><p class="meta">Dán link repo GitHub, superHuy sẽ đọc README, đánh giá và đề xuất cách áp dụng.</p>
-    <input id="rpUrl" type="url" placeholder="https://github.com/chu/repo" style="margin:10px 0">
+    <label class="field" style="margin-top:12px"><span>Link repo</span><input id="rpUrl" type="url" inputmode="url" placeholder="https://github.com/chu/repo"></label>
     <button class="btn pri" style="width:100%" onclick="rpAddGo()">${ico('spark',16)} Phân tích</button>`);
   setTimeout(()=>$('#rpUrl')?.focus(), 200);
 }
