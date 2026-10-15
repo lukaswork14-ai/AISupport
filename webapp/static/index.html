@@ -576,13 +576,13 @@ html[data-scheme="dark"] .apps i{ background:color-mix(in srgb,var(--c) 22%,tran
 .lqo.right{ box-shadow:inset 0 0 0 2px #199e70 } .lqo.wrong{ box-shadow:inset 0 0 0 2px var(--danger) }
 .lgrade{ margin-top:12px } .mdcode{ background:var(--fill); border-radius:12px; padding:10px 12px; overflow-x:auto; font-size:12.5px; line-height:1.5; margin:8px 0 }
 .segscroll{ overflow-x:auto; max-width:100%; -webkit-overflow-scrolling:touch; scrollbar-width:none } .segscroll::-webkit-scrollbar{ display:none } .segscroll button{ white-space:nowrap; flex:none }
-.stwrap video.media.reel{ max-height:52vh }
+.stwrap video.media.reel{ max-height:46vh }
 .stvers{ display:flex; gap:8px; overflow-x:auto; padding:2px 0 10px; -webkit-overflow-scrolling:touch }
 .stvers button{ flex:none; text-align:left; padding:8px 11px; border-radius:12px; background:var(--surface); box-shadow:0 0 0 1px var(--line); display:flex; flex-direction:column; gap:1px; min-width:120px; font-size:13px }
 .stvers button.on{ box-shadow:0 0 0 2px var(--jade) } .stvers button span{ color:var(--muted); font-size:12px } .stvers button em{ font-style:normal; color:var(--muted); font-size:11.5px; max-width:150px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
 .stprog{ margin-bottom:12px } .stprog .pbar.big{ margin-top:10px } .stprog.err{ box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--danger) 40%,transparent) }
 .stquick{ margin-bottom:6px } .stscene{ margin-bottom:10px }
-.stbar{ position:sticky; bottom:-1px; display:grid; grid-template-columns:1.2fr 1fr 1fr; gap:8px; padding:10px 0 4px; background:var(--surface); margin-top:12px }
+.stbar{ display:grid; grid-template-columns:1.25fr 1fr 1fr; gap:8px; margin:0 0 12px } .stbar .btn{ justify-content:center; white-space:nowrap }
 .chip[disabled]{ opacity:.5 }
 .pbar i{ display:block; height:100%; background:var(--jade); border-radius:3px; transition:width .6s ease }
 </style>
@@ -1951,12 +1951,12 @@ function stPaint(keep){
     ${d.versions.length?`<div class="stvers">${d.versions.slice().reverse().map((v,i)=>`<button class="${(st.preview||d.current)===v.id?'on':''}" onclick="stPreview('${v.id}')"><b>Bản ${d.versions.length-i}${v.id===d.current?' ★':''}</b><span>${fmtS(v.duration)} · ${esc(o.voices[v.settings?.voice]?.split(' ')[0]||'')}${v.voice_engine==='silent'?' · không tiếng':''}</span><em>${esc((v.note||'').slice(0,34))}</em></button>`).join('')}</div>`:''}
     ${pv&&pv.id!==d.current?`<button class="btn pri full" style="margin-bottom:10px" onclick="stChoose('${pv.id}')">${ico('check',16)} Dùng bản này làm bản chính</button>`:''}
     ${(show.chapters||[]).length?`<div class="vchap">${show.chapters.map(x=>`<button onclick="vSeek(${x.t})"><span>${fmtS(x.t)}</span>${esc(x.label)}</button>`).join('')}</div>`:''}
+    <div class="stbar"><button class="btn pri sm" onclick="vDownload('${d.id}')">${ico('upload',15)} Lưu về máy</button><button class="btn sm" onclick="vSendTg('${d.id}')">${ico('send',15)} Telegram</button><button class="btn sm" onclick="openPublish('${d.id}')">${ico('send',15)} Đăng</button></div>
     <div id="stProg">${stProgHtml(r)}</div>
     <div class="stquick"><form class="rptform" onsubmit="event.preventDefault();stQuick($('#stQ').value)"><input id="stQ" placeholder="Muốn sửa gì? Ví dụ: giọng nam, hook mạnh hơn, bỏ nhạc…" autocomplete="off" ${busy?'disabled':''}><button class="send" aria-label="Chỉnh" ${busy?'disabled':''}>${ico('arrow',18)}</button></form>
       <div class="chips" style="padding-top:8px">${ST_QUICK.map(q=>`<button class="chip" ${busy?'disabled':''} onclick="stQuick('${q}')">${q}</button>`).join('')}</div></div>
     <div class="seg" style="margin:6px 0 12px">${[['edit','Cài đặt'],['script','Kịch bản'],['cap','Caption'],['recipe','Công thức']].map(([k,l])=>`<button class="${st.tab===k?'on':''}" onclick="S.st.tab='${k}';stPaint(true)">${l}</button>`).join('')}</div>
-    <div id="stTab">${stTabHtml()}</div>
-    <div class="stbar"><button class="btn pri" onclick="vDownload('${d.id}')">${ico('upload',16)} Lưu về máy</button><button class="btn" onclick="vSendTg('${d.id}')">${ico('send',16)} Gửi Telegram</button><button class="btn" onclick="openPublish('${d.id}')">${ico('send',16)} Đăng…</button></div>`);
+    <div id="stTab">${stTabHtml()}</div>`);
   if(keep) $('#sheet').scrollTop = y;
 }
 function stProgHtml(r){
