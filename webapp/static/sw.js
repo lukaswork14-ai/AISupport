@@ -1,5 +1,5 @@
 /* superHuy service worker: mở app nhanh (vỏ app được lưu sẵn), không bao giờ lưu dữ liệu riêng tư (API, media). */
-const SHELL = 'superhuy-shell-v1';
+const SHELL = 'superhuy-shell-v2';
 const ASSETS = ['/app', '/manifest.webmanifest', '/icons/icon-192.png', '/icons/icon-180.png'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(SHELL).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', e => {

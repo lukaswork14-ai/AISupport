@@ -10,6 +10,7 @@ import logging
 import mimetypes
 mimetypes.add_type("application/manifest+json", ".webmanifest")
 mimetypes.add_type("text/javascript", ".js")
+mimetypes.add_type("application/x-apple-aspen-config", ".mobileconfig")
 import secrets
 import threading
 import time
@@ -96,7 +97,8 @@ def check_pre(pre: str) -> bool:
 # ------------------------------------------------------------------ app iPhone (PWA)
 APP_FILES = {"/manifest.webmanifest": "manifest.webmanifest", "/sw.js": "sw.js", "/icons/icon-180.png": "icons/icon-180.png",
              "/icons/icon-192.png": "icons/icon-192.png", "/icons/icon-512.png": "icons/icon-512.png",
-             "/icons/icon-maskable-512.png": "icons/icon-maskable-512.png", "/apple-touch-icon.png": "icons/icon-180.png"}
+             "/icons/icon-maskable-512.png": "icons/icon-maskable-512.png", "/apple-touch-icon.png": "icons/icon-180.png",
+             "/install": "install/index.html", "/install/": "install/index.html", "/install/superHuy.mobileconfig": "install/superHuy.mobileconfig"}
 _HELLO: dict[str, list[float]] = {}
 
 
