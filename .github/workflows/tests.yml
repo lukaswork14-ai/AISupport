@@ -1,0 +1,41 @@
+# Cổng chất lượng cho mọi PR: test cách ly khách superYou, chặn lộ khoá, biên dịch.
+# Không triển khai gì; chỉ báo xanh/đỏ để anh Huy duyệt PR.
+name: Kiểm tra PR
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    name: Test (Python 3.12)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Cài thư viện
+        run: pip install -r requirements.txt pytest
+      - name: Biên dịch toàn bộ mã
+        run: python -m compileall -q .
+      - name: Test cách ly khách + an toàn
+        run: python -m pytest -q tests
+
+  secrets:
+    name: Quét khoá bí mật (gitleaks)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Cài gitleaks
+        run: |
+          curl -sSfL https://github.com/gitleaks/gitleaks/releases/download/v8.21.2/gitleaks_8.21.2_linux_x64.tar.gz | tar -xz gitleaks
+          ./gitleaks version
+      - name: Quét các commit của PR
+        run: ./gitleaks git --no-banner --redact --log-opts="origin/${{ github.base_ref || 'main' }}..HEAD" .

@@ -30,6 +30,11 @@ EMAIL_DIGEST_HOURS = os.getenv("EMAIL_DIGEST_HOURS", "21")
 
 DATA_DIR = HOME_DIR / "data"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
+
+# superYou: instance của khách (tenant, xem deploy/tenant_vps.sh). Trên instance khách, KHÔNG gieo dữ liệu/khoá học/chiến lược
+# viết riêng cho anh Huy (Roimaxx, Leversphere, Sellnity). Nhận diện bằng SUPERYOU_TENANT=1 hoặc thư mục /superyou-tenants/.
+IS_TENANT = (os.getenv("SUPERYOU_TENANT", "").strip().lower() in ("1", "true", "yes")
+             or "/superyou-tenants/" in HOME_DIR.as_posix())
 GOOGLE_CREDENTIALS_FILE = HOME_DIR / "credentials.json"   # tải từ Google Cloud
 GOOGLE_TOKEN_FILE = DATA_DIR / "google_token.json"        # tự sinh sau khi cấp quyền
 STATE_FILE = DATA_DIR / "state.json"

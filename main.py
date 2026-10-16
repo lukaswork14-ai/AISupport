@@ -22,7 +22,7 @@ from agents import calendar_agent, email_agent, news_agent
 from core import bot_guard, digests, notify, qc, store
 from webapp import server as webapp_server
 from webapp.tunnel import Tunnel
-from config import (EMAIL_DIGEST_HOURS, LARK_DIGEST_HOURS, NEWS_HOUR, OWNER_CHAT_ID, REMINDER_HOUR,
+from config import (EMAIL_DIGEST_HOURS, IS_TENANT, LARK_DIGEST_HOURS, NEWS_HOUR, OWNER_CHAT_ID, REMINDER_HOUR,
                     TELEGRAM_TOKEN, TIMEZONE, require_config)
 
 logging.basicConfig(format="%(asctime)s %(levelname)s %(name)s: %(message)s", level=logging.INFO)
@@ -404,8 +404,9 @@ async def post_init(app: Application):
     scheduler.add_job(job_game_shield, CronTrigger(hour=0, minute=15), misfire_grace_time=6 * 3600, coalesce=True)
     scheduler.add_job(job_learning_nightly, CronTrigger(hour=23, minute=20), misfire_grace_time=3 * 3600, coalesce=True)
     scheduler.add_job(job_learning_remind, CronTrigger(hour=20, minute=0), misfire_grace_time=3600, coalesce=True)
-    scheduler.add_job(job_strategy_weekly, CronTrigger(day_of_week="mon", hour=6, minute=20), misfire_grace_time=6 * 3600, coalesce=True)
-    scheduler.add_job(job_repo_weekly, CronTrigger(day_of_week="mon", hour=6, minute=40), misfire_grace_time=6 * 3600, coalesce=True)
+    if not IS_TENANT:  # chiến lược Roimaxx/Leversphere và Repo radar là của riêng anh Huy
+        scheduler.add_job(job_strategy_weekly, CronTrigger(day_of_week="mon", hour=6, minute=20), misfire_grace_time=6 * 3600, coalesce=True)
+        scheduler.add_job(job_repo_weekly, CronTrigger(day_of_week="mon", hour=6, minute=40), misfire_grace_time=6 * 3600, coalesce=True)
     scheduler.add_job(job_knowledge_sync, "interval", hours=6, coalesce=True, max_instances=1, misfire_grace_time=3600,
                       next_run_time=dt.datetime.now() + dt.timedelta(minutes=3))
     for h in CONTENT_SCAN_HOURS:
@@ -456,9 +457,12 @@ async def post_init(app: Application):
     except Exception:
         log.exception("Không khôi phục được hàng chờ Meeting Studio")
 
-    threading.Thread(target=_strategy_bootstrap, daemon=True, name="strategy-boot").start()
-    threading.Thread(target=_learning_bootstrap, daemon=True, name="learning-boot").start()
-    threading.Thread(target=_repo_bootstrap, daemon=True, name="repo-boot").start()
+    if IS_TENANT:
+        log.info("Instance khách superYou: bỏ qua gieo chiến lược, khoá học và Repo radar riêng của anh Huy")
+    else:
+        threading.Thread(target=_strategy_bootstrap, daemon=True, name="strategy-boot").start()
+        threading.Thread(target=_learning_bootstrap, daemon=True, name="learning-boot").start()
+        threading.Thread(target=_repo_bootstrap, daemon=True, name="repo-boot").start()
     try:  # phông chữ cho video bản tin (tải 1 lần)
         from agents import newscast
         threading.Thread(target=newscast.ensure_fonts, daemon=True).start()

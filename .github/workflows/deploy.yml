@@ -56,7 +56,9 @@ jobs:
           PY
           node --check /tmp/app.js
       - name: Kiểm tra script triển khai
-        run: bash -n deploy/setup_vps.sh && bash -n deploy/release.sh && bash -n deploy/import_data.sh
+        run: bash -n deploy/setup_vps.sh && bash -n deploy/release.sh && bash -n deploy/import_data.sh && bash -n deploy/tenant_vps.sh
+      - name: Test cách ly khách superYou + chặn lộ khoá
+        run: pip install pytest && python -m pytest -q tests
 
   deploy:
     name: Triển khai lên VPS
