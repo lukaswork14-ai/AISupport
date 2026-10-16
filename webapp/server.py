@@ -100,7 +100,8 @@ APP_FILES = {"/manifest.webmanifest": "manifest.webmanifest", "/sw.js": "sw.js",
              "/icons/icon-maskable-512.png": "icons/icon-maskable-512.png", "/apple-touch-icon.png": "icons/huy-180.png",
              "/apple-touch-icon-precomposed.png": "icons/huy-180.png", "/favicon.ico": "icons/huy-128.png",
              **{f"/icons/huy-{n}.png": f"icons/huy-{n}.png" for n in ("128", "180", "192", "512", "maskable-512")},
-             "/install": "install/index.html", "/install/": "install/index.html", "/install/superHuy.mobileconfig": "install/superHuy.mobileconfig"}
+             "/install": "install/index.html", "/install/": "install/index.html", "/install/superHuy.mobileconfig": "install/superHuy.mobileconfig",
+             "/landing": "landing/index.html", "/landing/": "landing/index.html"}
 _HELLO: dict[str, list[float]] = {}
 
 
@@ -110,6 +111,25 @@ def _hello_ok(ip: str) -> bool:
     xs.append(now)
     _HELLO[ip] = xs[-40:]
     return len(xs) <= 30
+
+
+_EMAIL_RE = re.compile(r"^[^@\s<>]{1,64}@[^@\s<>]{1,190}\.[A-Za-z]{2,24}$")
+
+
+def _waitlist_add(email: str, src: str) -> bool:
+    """Ghi email đăng ký chờ từ landing page; báo chủ nhân qua Telegram khi có người mới."""
+    f = DATA_DIR / "waitlist.json"
+    with _WL_LOCK:
+        rows = json.loads(f.read_text()) if f.exists() else []
+        if any(r.get("email") == email for r in rows):
+            return False
+        rows.append({"email": email, "src": src, "at": time.strftime("%Y-%m-%dT%H:%M:%S")})
+        f.write_text(json.dumps(rows[-5000:], ensure_ascii=False, indent=1))
+    security.alert_once(f"wl:{email}", f"🎉 Landing page có người đăng ký chờ mới: {email} (tổng {len(rows)}).", every=10**9)
+    return True
+
+
+_WL_LOCK = threading.Lock()
 
 
 def _note_device(dev: str, ua: str):
@@ -361,6 +381,19 @@ class Handler(BaseHTTPRequestHandler):
                 qc.client_error({k: str(data.get(k, ""))[:300] for k in ("msg", "src", "line")})
             except Exception:
                 pass
+            return self._json(200, {"ok": True})
+        if u.path == "/api/waitlist":  # form đăng ký chờ trên landing page (công khai, có giới hạn tần suất)
+            ip = self.headers.get("X-Real-IP") or self.client_address[0]
+            if not _hello_ok("wl:" + ip):
+                return self._json(429, {"error": "Anh thử lại sau ít phút nhé."})
+            email = str(data.get("email", "")).strip().lower()[:254]
+            if not _EMAIL_RE.match(email):
+                return self._json(400, {"error": "Email chưa đúng, anh kiểm tra lại nhé."})
+            try:
+                _waitlist_add(email, str(data.get("src", ""))[:120])
+            except Exception:
+                log.exception("Ghi danh sách chờ lỗi")
+                return self._json(500, {"error": "Chưa ghi được, anh thử lại sau nhé."})
             return self._json(200, {"ok": True})
         if u.path == "/api/auth":
             user = check_init_data(data.get("initData", ""))
