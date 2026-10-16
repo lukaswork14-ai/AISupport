@@ -1,0 +1,59 @@
+# Kiểm tra bảo mật (bấm Run workflow): repo có công khai không, app có chặn truy cập trái phép không, VPS có cứng không.
+# Chỉ in đạt/không đạt, không in bí mật.
+name: Kiểm tra bảo mật
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - name: Repo có công khai không (nhìn như người lạ, không đăng nhập)
+        run: |
+          for r in AISupport superhuy-vault; do
+            c=$(curl -s -o /dev/null -w '%{http_code}' "https://github.com/lukaswork14-ai/$r")
+            [ "$c" = "404" ] && echo "PASS repo $r: người lạ KHÔNG xem được" || echo "FAIL repo $r: người lạ xem được (HTTP $c)"
+          done
+      - name: App có chặn truy cập trái phép không
+        if: vars.APP_URL != ''
+        run: |
+          U="${{ vars.APP_URL }}"
+          t(){ c=$(curl -s -o /dev/null -w '%{http_code}' -m 15 "$@"); echo "$c"; }
+          [ "$(t "$U/api/bootstrap")" = "401" ] && echo "PASS /api/bootstrap không phiên -> 401" || echo "FAIL /api/bootstrap không bị chặn"
+          [ "$(t "$U/media?f=.env")" = "401" ] && echo "PASS /media không phiên -> 401" || echo "FAIL /media không bị chặn"
+          [ "$(t "$U/dl?f=../shared/.env&e=9999999999&n=x&s=bad")" = "403" ] && echo "PASS /dl chữ ký sai -> 403" || echo "FAIL /dl"
+          [ "$(t -X POST -H 'Content-Type: application/json' -d '{"agent":"caidat","action":"doipin"}' "$U/api/run")" = "401" ] && echo "PASS /api/run không phiên -> 401" || echo "FAIL /api/run"
+          [ "$(t -X POST -H 'Content-Type: application/json' -d '{"initData":"user=%7B%22id%22%3A1%7D&hash=00"}' "$U/api/auth")" = "403" ] && echo "PASS initData giả -> 403" || echo "FAIL initData giả"
+          [ "$(t -X POST -H 'Content-Type: application/json' -d '{"pre":"1.9999999999.bad","pin":"000000"}' "$U/api/pin")" = "401" ] && echo "PASS vé PIN giả -> 401" || echo "FAIL vé PIN giả"
+          [ "$(t "$U/s/khong-ton-tai")" = "404" ] && echo "PASS trang chia sẻ đoán bừa -> 404" || echo "FAIL /s/"
+          [ "$(t "http://${U#https://}/health")" != "200" ] || echo "INFO http (không mã hoá) vẫn trả 200 — nên chuyển hướng sang https"
+          H=$(curl -sI -m 15 "$U/"); echo "$H" | grep -qi strict-transport-security && echo "PASS có HSTS" || echo "INFO chưa có HSTS"
+      - name: Cổng mở trên VPS (nhìn từ Internet)
+        env:
+          HOST: ${{ secrets.VPS_HOST }}
+        run: |
+          for p in 22 80 443 8787 5432 6379 3306; do
+            if timeout 4 bash -c "</dev/tcp/$HOST/$p" 2>/dev/null; then echo "INFO cổng $p mở"; [ $p = 8787 ] && echo "FAIL cổng app 8787 mở thẳng ra Internet"; fi
+          done
+          ssh -o BatchMode=yes -o PreferredAuthentications=password -o PubkeyAuthentication=no -o StrictHostKeyChecking=no -o ConnectTimeout=8 root@$HOST true 2>&1 | grep -q "password" \
+            && echo "FAIL VPS vẫn mời đăng nhập root bằng mật khẩu" || echo "PASS VPS không cho đăng nhập root bằng mật khẩu"
+      - name: Khoá SSH
+        env:
+          KEY: ${{ secrets.VPS_SSH_KEY }}
+          HOST: ${{ secrets.VPS_HOST }}
+          PORT: ${{ secrets.VPS_PORT || '22' }}
+        run: |
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "$KEY" | tr -d '\r' > ~/.ssh/deploy && chmod 600 ~/.ssh/deploy
+          ssh-keyscan -p "$PORT" -H "$HOST" >> ~/.ssh/known_hosts 2>/dev/null
+      - name: Kiểm tra trên VPS
+        env:
+          HOST: ${{ secrets.VPS_HOST }}
+          USER: ${{ secrets.VPS_USER || 'superhuy' }}
+          PORT: ${{ secrets.VPS_PORT || '22' }}
+        run: ssh -i ~/.ssh/deploy -p "$PORT" "$USER@$HOST" 'bash -s' < deploy/security_vps.sh
