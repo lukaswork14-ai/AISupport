@@ -451,6 +451,25 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(429, {"error": "Thử lại sau ít phút."})
             return self._json(200, {"need_pin": True, "pre": make_pre(OWNER_CHAT_ID), "pin_len": security.pin_length(),
                                     "wait": security.locked_out(), "user": {"first_name": "Huy"}})
+        if u.path == "/api/passkey/login/options":  # đăng nhập Face ID / vân tay (không cần PIN)
+            from core import passkey
+            ip = self.headers.get("X-Forwarded-For", self.client_address[0]).split(",")[0].strip()
+            if not _hello_ok("pk:" + ip):
+                return self._json(429, {"error": "Thử lại sau ít phút."})
+            try:
+                return self._json(200, passkey.login_options())
+            except ValueError as e:
+                return self._json(400, {"error": str(e)})
+        if u.path == "/api/passkey/login":
+            from core import passkey
+            try:
+                r = passkey.login_verify(data if isinstance(data, dict) else {})
+            except ValueError as e:
+                security.alert_once("pk-fail", "⚠️ Có lượt đăng nhập passkey thất bại trên superYou. Nếu không phải anh, vào Hồ sơ › Bảo mật gỡ thiết bị lạ.")
+                return self._json(401, {"error": str(e)})
+            _note_device(str(data.get("device", ""))[:40], self.headers.get("User-Agent", ""))
+            security.unlock_bot()
+            return self._json(200, {"ok": True, "session": make_session(OWNER_CHAT_ID), "name": r["name"]})
         if u.path == "/api/pin":
             if not check_pre(data.get("pre", "")):
                 return self._json(401, {"error": "Phiên đăng nhập hết hạn, hãy mở lại app.", "expired": True})
@@ -467,6 +486,22 @@ class Handler(BaseHTTPRequestHandler):
         tok = self._tok({})
         if not check_session(tok):
             return self._json(401, {"error": "Phiên hết hạn, hãy mở lại app từ Telegram."})
+        if u.path == "/api/passkey/register/options":  # cần phiên đã mở khoá
+            from core import passkey
+            return self._json(200, passkey.register_options(str(data.get("name", "Huy"))[:60]))
+        if u.path == "/api/passkey/register":
+            from core import passkey
+            try:
+                return self._json(200, passkey.register_verify(data if isinstance(data, dict) else {}, str(data.get("name", ""))[:60]))
+            except ValueError as e:
+                return self._json(400, {"error": str(e)})
+        if u.path == "/api/track":  # sự kiện dùng (A/B, phân tích): không chứa nội dung nhạy cảm
+            try:
+                from core import flags
+                flags.track(str(data.get("ev", ""))[:40], props={k: v for k, v in (data.get("p") or {}).items()} if isinstance(data.get("p"), dict) else None)
+            except Exception:
+                pass
+            return self._json(200, {"ok": True})
         if u.path == "/api/chat":  # trò chuyện với super bot ngay trong app
             text = (data.get("text") or "").strip()[:2000]
             if not text:

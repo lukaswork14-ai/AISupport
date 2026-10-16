@@ -133,6 +133,11 @@ def main():
             step("13-lab-new", "lbNew()", 1000)
             step("14-lab-editor", "lbEdit(S.lb.mine.mine[0].id)", 1500)
             step("15-leads", "closeSheet();go('leads')", 2200, True)
+            step("16-me", "go('me')", 2200, True)
+            step("17-wf-list", "go('wf')", 2200)
+            step("18-wf-coach", "wfCoachSheet()", 900)
+            step("19-wf-builder", "closeSheet();S.wf.cur={id:'',name:'Sáng của tôi',desc:'',steps:[{agent:'lich',action:'ngay',params:{date:'hôm nay'},label:'Lịch hôm nay'},{agent:'lark',action:'tomtat',params:{},label:'Tóm tắt Lark'}],schedule:'morning'};render()", 1500, True)
+            step("19b-wf-save", "wfSave()", 1800)
             # superYou HQ (bảng điều hành riêng)
             hq = ctx.new_page()
             hq.route("https://telegram.org/js/telegram-web-app.js", lambda r: r.fulfill(status=200, content_type="text/javascript", body=ui_qa.TG_STUB % json.dumps(ui_qa.init_data())))
@@ -140,7 +145,7 @@ def main():
             hq.goto("http://127.0.0.1:8787/hq")
             hq.wait_for_timeout(3500)
             hq.screenshot(path=str(OUT / f"{tag}-30-hq-overview.png"), full_page=True)
-            for name, js in (("31-hq-board", "go('board')"), ("32-hq-cfo", "go('cfo')"), ("33-hq-mkt", "go('mkt')")):
+            for name, js in (("31-hq-board", "go('board')"), ("32-hq-cfo", "go('cfo')"), ("33-hq-mkt", "go('mkt')"), ("34-hq-ex", "go('ex')")):
                 try:
                     hq.evaluate(js)
                     hq.wait_for_timeout(2200)

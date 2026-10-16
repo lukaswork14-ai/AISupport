@@ -125,7 +125,17 @@ def bootstrap_extra() -> dict:
     return {"news": nt.get("items", []), "news_date": nt.get("date", ""),
             "contents": store.recent(60), "targets": hub.dich_list()["items"],
             "settings": hub.settings_snapshot(), "today": dt.date.today().isoformat(),
-            "connections": hub.connections_status(), "digests": digests.load(), "cq": _cq()}
+            "connections": hub.connections_status(), "digests": digests.load(), "cq": _cq(), "me": _me()}
+
+
+def _me() -> dict:
+    try:
+        from agents import workspace
+        from core import flags
+        d = workspace._load()
+        return {"profile": d["profile"], "prefs": d["prefs"], "flags": flags.for_user()["flags"], "variants": flags.for_user()["variants"]}
+    except Exception:
+        return {}
 
 
 def _cq() -> dict:
@@ -301,6 +311,24 @@ async def job_cfo_brief():
         log.exception("CFO brief lỗi")
 
 
+async def job_ws_sched(slot: str):
+    """Chạy các workflow riêng đặt lịch (sáng / tối / thứ Hai)."""
+    from agents import workspace
+    try:
+        await asyncio.to_thread(workspace.run_scheduled, slot)
+    except Exception:
+        log.exception("Workflow đặt lịch lỗi")
+
+
+async def job_research_weekly():
+    """Thứ Tư: AI nghiên cứu dữ liệu dùng và sản phẩm tương tự, đưa 3 đề xuất nâng cấp lên bảng để anh duyệt."""
+    from core import flags
+    try:
+        await asyncio.to_thread(flags.research_propose)
+    except Exception:
+        log.exception("Nghiên cứu đề xuất lỗi")
+
+
 async def job_repo_weekly():
     """Thứ Hai: săn repo GitHub nổi bật, phân tích, đề xuất áp dụng cho superHuy; kiểm tra bản phát hành repo đang theo dõi."""
     from agents import repo_radar
@@ -421,6 +449,10 @@ async def post_init(app: Application):
         scheduler.add_job(job_strategy_weekly, CronTrigger(day_of_week="mon", hour=6, minute=20), misfire_grace_time=6 * 3600, coalesce=True)
         scheduler.add_job(job_repo_weekly, CronTrigger(day_of_week="mon", hour=6, minute=40), misfire_grace_time=6 * 3600, coalesce=True)
     scheduler.add_job(job_cfo_brief, CronTrigger(hour=7, minute=30), misfire_grace_time=3 * 3600, coalesce=True)
+    scheduler.add_job(job_ws_sched, CronTrigger(hour=7, minute=15), args=["morning"], misfire_grace_time=3600, coalesce=True)
+    scheduler.add_job(job_ws_sched, CronTrigger(hour=20, minute=30), args=["evening"], misfire_grace_time=3600, coalesce=True)
+    scheduler.add_job(job_ws_sched, CronTrigger(day_of_week="mon", hour=7, minute=0), args=["monday"], misfire_grace_time=3600, coalesce=True)
+    scheduler.add_job(job_research_weekly, CronTrigger(day_of_week="wed", hour=6, minute=50), misfire_grace_time=6 * 3600, coalesce=True)
     scheduler.add_job(job_knowledge_sync, "interval", hours=6, coalesce=True, max_instances=1, misfire_grace_time=3600,
                       next_run_time=dt.datetime.now() + dt.timedelta(minutes=3))
     for h in CONTENT_SCAN_HOURS:

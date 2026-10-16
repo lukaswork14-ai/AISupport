@@ -834,13 +834,28 @@ html.macapp body.standalone{ padding-top:0 }
 .hqdepts{ display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:10px } .hqdept{ text-align:left; display:flex; flex-direction:column; gap:4px; border-left:4px solid var(--c) }
 .bdcard{ margin-bottom:10px; border-left:4px solid var(--c) } .bdcard.wait{ box-shadow:0 0 0 1px var(--line), 0 0 0 3px color-mix(in srgb, var(--amber) 35%, transparent) }
 html.hq .sbrand img{ border-radius:50% } html.hq .sask{ display:none }
+.pkbtn{ margin:14px auto 0; display:block; padding:12px 18px; border-radius:14px; background:var(--jade-soft); color:var(--jade); font-weight:700; font-size:15px }
+.mecard{ display:flex; gap:14px; align-items:center; padding:16px; border-radius:var(--r-card); background:var(--surface); box-shadow:0 0 0 1px var(--line) }
+.swatch{ width:28px; height:28px; border-radius:50%; background:var(--c); box-shadow:0 0 0 2px var(--surface), 0 0 0 3px var(--line) } .swatch.on{ box-shadow:0 0 0 2px var(--surface), 0 0 0 4px var(--c) }
+html.compact{ font-size:14px } html.compact .card{ --r-card:14px } html.compact .list > *{ padding:9px 14px }
+.wfwrap{ display:grid; grid-template-columns:minmax(0,1.3fr) minmax(260px,.7fr); gap:14px; align-items:start }
+@media (max-width:820px){ .wfwrap{ grid-template-columns:minmax(0,1fr) } .wflib{ order:2 } }
+.wfcanvas{ min-height:300px; transition:box-shadow .15s } .wfcanvas.over{ box-shadow:0 0 0 2px var(--jade) }
+.wfsteps{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:8px }
+.wfstep{ display:flex; gap:10px; align-items:center; padding:10px 12px; border-radius:14px; background:var(--fill); cursor:grab } .wfstep:active{ cursor:grabbing }
+.wfn{ width:26px; height:26px; border-radius:50%; background:var(--jade); color:var(--jade-ink); display:grid; place-items:center; font-size:12px; font-weight:700; flex:none }
+.wflabel{ font:inherit; font-weight:600; background:transparent; border:0; width:100%; color:var(--text); padding:0 } .wflabel:focus{ outline:none; border-bottom:1px solid var(--jade) }
+.wfempty{ padding:30px 16px; text-align:center; color:var(--muted); border:2px dashed var(--line); border-radius:14px; list-style:none }
+.wflib{ max-height:70vh; overflow:auto } .wflib input[type=search]{ font:inherit; padding:9px 12px; border-radius:11px; border:1px solid var(--line); background:var(--bg); color:var(--text) }
+.wfgroup{ margin-bottom:10px } .wfgroup > b{ display:block; font-size:12.5px; color:var(--muted); margin:6px 0 4px; text-transform:none }
+.wfitem{ display:flex; justify-content:space-between; align-items:center; width:100%; padding:8px 10px; border-radius:10px; text-align:left; font-size:14px; cursor:grab } .wfitem:hover{ background:var(--fill) }
 .sr{ position:absolute!important; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0) }
 </style>
 </head>
 <body>
 <div class="jobs" id="jobs"></div>
 <div class="toast" id="toast" role="status"></div>
-<section id="lock" aria-label="Mở khóa superHuy"><div class="mark" id="lockMark"></div><h2>superHuy</h2><p class="sub" id="lockSub" role="status">Nhập mã PIN</p><div class="dots" id="dots" aria-hidden="true"></div><div class="keys" id="keys"></div><p class="hint" id="lockHint"></p></section>
+<section id="lock" aria-label="Mở khóa superHuy"><div class="mark" id="lockMark"></div><h2>superHuy</h2><p class="sub" id="lockSub" role="status">Nhập mã PIN</p><div class="dots" id="dots" aria-hidden="true"></div><div class="keys" id="keys"></div><button id="lockPk" class="pkbtn" hidden onclick="pkLogin()">Mở bằng Face ID / vân tay</button><p class="hint" id="lockHint"></p></section>
 <div id="ptr" aria-hidden="true"></div>
 <main class="wrap" id="app"><div class="center"><div class="spin" style="color:var(--jade)"></div></div></main>
 <nav id="nav" hidden></nav>
@@ -863,7 +878,7 @@ const HQ = /^\/hq(\/|$)/.test(location.pathname); if(HQ) document.documentElemen
 const S = { tok:null, tab:'home', data:{}, jobs:{}, busy:{}, kind:'', calDay:'today', cal:{}, chatWait:false, first:'' };
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const haptic = (t='light') => { try{ tg?.HapticFeedback?.impactOccurred(t) }catch(e){} };
+const haptic = (t='light') => { if(S.haptics===false) return; try{ tg?.HapticFeedback?.impactOccurred(t) }catch(e){} };
 const notifyH = t => { try{ tg?.HapticFeedback?.notificationOccurred(t) }catch(e){} };
 
 /* ---------- biểu tượng (nét mảnh, đồng bộ) */
@@ -965,10 +980,10 @@ function nav(){
 }
 /* thanh bên cho màn hình rộng (Mac, iPad ngang, máy tính) */
 const SIDE = HQ ? [['hq','Tổng quan','home',"go('hq')"],['board','Phòng ban','users',"go('board')"],['mkt','Marketplace','bag',"go('mkt')"],['gd','Giao dịch','wallet',"S.mk.view='qt';S.mk.admTab='gd';go('mkt')"],
-  ['leads','Khách hàng','inbox',"go('leads')"],['lab','Xưởng clone','factory',"go('lab')"],['cfo','Tài chính CFO','chart',"go('cfo')"],['_qc','Hệ thống','check',"openQC()"],['_app','Mở superHuy','spark',"openLink(location.origin+'/app')"]]
+  ['leads','Khách hàng','inbox',"go('leads')"],['lab','Xưởng clone','factory',"go('lab')"],['cfo','Tài chính CFO','chart',"go('cfo')"],['ex','Thử nghiệm','sprout',"go('ex')"],['_qc','Hệ thống','check',"openQC()"],['_app','Mở superHuy','spark',"openLink(location.origin+'/app')"]]
   : [['home','Hôm nay','home',"go('home')"],['tasks','Việc','tasks',"go('tasks')"],['meet','Họp','mic',"go('meet')"],['content','Nội dung','film',"go('content')"],
   ['growth','Phát triển','sprout',"go('growth')"],['mail','Hộp thư','inbox',"go('mail')"],['money','Tài chính','wallet',"go('money')"],['chat','Trò chuyện','chat',"go('chat')"],
-  ['mkt','Marketplace','bag',"go('mkt')"],['_brain','Second Brain','brain',"openBrain()"],['_lark','Lark','lark',"openAgent('lark')"],['_hq','superYou HQ','factory',"openLink(location.origin+'/hq')"],['more','Cài đặt','gear',"go('more')"]];
+  ['mkt','Marketplace','bag',"go('mkt')"],['wf','Workflow của tôi','layers',"go('wf')"],['_brain','Second Brain','brain',"openBrain()"],['_lark','Lark','lark',"openAgent('lark')"],['_hq','superYou HQ','factory',"openLink(location.origin+'/hq')"],['me','Hồ sơ','users',"go('me')"],['more','Cài đặt','gear',"go('more')"]];
 function sideNav(){
   const el = $('#side'); if(!el) return;
   const badge = {tasks:S.tk?.data?.stats?.today, content:S.data?.cq?.new?.length, meet:(S.mt?.items||[]).filter(m=>m.status==='working'||m.status==='queued').length};
@@ -985,7 +1000,7 @@ function render(){
   nav();
   const app = $('#app');
   if(S.enter){ S.enter = false; app.classList.remove('enter'); void app.offsetWidth; app.classList.add('enter'); clearTimeout(S.enterT); S.enterT = setTimeout(()=>app.classList.remove('enter'), 900); }
-  $('#app').innerHTML = ({home:vHome, meet:vMeet, mail:vMail, chat:vChat, content:vContent, news:vContent, studio:vContent, more:vMore, tasks:vTasks, money:vMoney, growth:vGrowth, mkt:vMkt, lab:vLab, leads:vLeads, hq:vHq, board:vBoard, cfo:vCfo})[S.tab]();
+  $('#app').innerHTML = ({home:vHome, meet:vMeet, mail:vMail, chat:vChat, content:vContent, news:vContent, studio:vContent, more:vMore, tasks:vTasks, money:vMoney, growth:vGrowth, mkt:vMkt, lab:vLab, leads:vLeads, hq:vHq, board:vBoard, cfo:vCfo, me:vMe, wf:vWf, ex:vEx})[S.tab]();
   paintBusy();
   if(S.tab==='home'){ loadCal(true); loadInv(true); liveDigests(); loadHomeStats(); }
   if(S.tab==='tasks') tasksEnter();
@@ -994,6 +1009,9 @@ function render(){
   if(S.tab==='mkt') mkLoad();
   if(S.tab==='leads') tipBind();
   if(S.tab==='hq') hqLoad();
+  if(S.tab==='me' && !S.me) meLoad();
+  if(S.tab==='wf' && !S.wf.lib) wfLoad();
+  if(S.tab==='ex' && !S.ex) exLoad();
   if(S.tab==='board' && !S.bd) bdLoad();
   if(S.tab==='cfo'){ if(!S.cf) cfLoad(); else tipBind(); }
   if(S.tab==='mail'){ mailEnter(); bindSwipe(); }
@@ -1076,7 +1094,9 @@ const APPS = [
   ['send','Đăng bài','#c98500',"openAgent('dang')"],
   ['chat','Trò chuyện','#A2338C',"go('chat')"],
   ['bag','Marketplace','#5B3FD9',"go('mkt')"],
-  ['factory','superYou HQ','#2457C5',"openLink(location.origin+'/hq')"],
+  ['layers','Workflow','#2457C5',"go('wf')"],
+  ['users','Hồ sơ','#0E7C6B',"go('me')"],
+  ['factory','superYou HQ','#7A5A00',"openLink(location.origin+'/hq')"],
   ['gear','Cài đặt','#7A7387',"go('more')"],
 ];
 function appsGrid(){ return APPS.map(([i,l,c,f,b])=>{ const n = b ? b() : 0; return `<button onclick="${f}" aria-label="${l}"><i style="--c:${c}">${ico(i,24)}</i>${l}${n?`<span class="bd">${n>99?'99+':n}</span>`:''}</button>`; }).join(''); }
@@ -2570,7 +2590,8 @@ function vMore(){
   <div class="sec"><h2>Nơi đăng</h2></div>
   <div class="card list">${(S.data.targets||[]).map(t=>`<button onclick="openLink('${esc(t.url||'')}')"><span class="thumb">${ico(t.type==='page'?'news':t.type==='group'?'chat':'home',20)}</span><div class="grow"><div style="font-weight:600">${esc(t.name)}</div><div class="meta">${t.auto?'Đăng tự động':'Sao chép rồi mở trang để dán'}</div></div><span class="chev">${ico('chev',18)}</span></button>`).join('')}</div>
   <div class="sec"><h2>Bảo mật</h2></div>
-  <div class="card list"><button onclick="lockNow(true)"><span class="thumb">${ico('lock',20)}</span><div class="grow"><div style="font-weight:600">Khóa ngay</div><div class="meta">Đăng xuất app và khóa super bot. Mở lại bằng mã PIN.</div></div></button>
+  <div class="card list"><button onclick="go('me')"><span class="thumb">${ico('users',20)}</span><div class="grow"><div style="font-weight:600">Hồ sơ, Face ID / vân tay, giao diện</div><div class="meta">Không gian của tôi.</div></div><span class="chev">${ico('chev',18)}</span></button>
+    <button onclick="lockNow(true)"><span class="thumb">${ico('lock',20)}</span><div class="grow"><div style="font-weight:600">Khóa ngay</div><div class="meta">Đăng xuất app và khóa super bot. Mở lại bằng mã PIN.</div></div></button>
     <button onclick="openQC()"><span class="thumb">${ico('check',20)}</span><div class="grow"><div style="font-weight:600">Tình trạng hệ thống</div><div class="meta">QC tự kiểm tra 5 phút/lần và nhắn bạn ngay khi có lỗi.</div></div><span class="chev">${ico('chev',18)}</span></button>
     <button onclick="openAction('caidat','doipin')"><span class="thumb">${ico('gear',20)}</span><div class="grow"><div style="font-weight:600">Đổi mã PIN</div><div class="meta">Chỉ tài khoản Telegram của bạn mở được app. App tự khóa khi không dùng 10 phút.</div></div><span class="chev">${ico('chev',18)}</span></button></div>
   <p class="muted small" style="margin:18px 4px">Giọng đọc video: ${esc(S.data.settings?.voice||'NamMinh')}. Đổi trong Công cụ › Cài đặt.</p>`;
@@ -2900,6 +2921,95 @@ async function ldSaveNote(email){ const it = S.ld.data.items.find(x=>x.email===e
 
 
 
+/* =================================================================== Hồ sơ, cài đặt, passkey, workflow riêng (Không gian của tôi) */
+const ACC = {violet:'#6A3DF0', jade:'#0B9877', blue:'#2457C5', rose:'#C21F78', amber:'#C98205', ink:'#15171A'};
+function applyPrefs(p){
+  if(!p) return;
+  const r = document.documentElement;
+  if(!IN_TG){ if(p.theme && p.theme!=='system') r.dataset.scheme = p.theme; else r.dataset.scheme = matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';
+    if(ACC[p.accent]) r.style.setProperty('--jade', ACC[p.accent]); r.classList.toggle('compact', p.density==='compact'); }
+  S.haptics = p.haptics !== false;
+}
+S.me = null;
+async function meLoad(){ try{ S.me = await run('toi','ho_so',{},'',true); }catch(e){ toast(e.message); S.me={profile:{},prefs:{},themes:{},accents:{},density:{},homes:{},passkeys:[],flags:{flags:{},tier:'free'},tier_names:{}}; } if(S.tab==='me' && !$('#sheet').classList.contains('on')) render(); }
+function vMe(){
+  const m = S.me, head = `<div class="date">Hồ sơ, bảo mật và cài đặt của ${esc(S.first||'anh')}</div><h1>Không gian của tôi</h1>`;
+  if(!m){ meLoad(); return head + `<div class="card empty">Đang tải…</div>`; }
+  const p = m.profile||{}, pr = m.prefs||{}, pk = m.passkeys||[], tier = m.flags?.tier||'free';
+  const pkOk = !IN_TG && !!window.PublicKeyCredential;
+  return head + `<div class="mecard"><span class="orb" style="width:64px;height:64px"><img class="brandimg" src="/icons/huy-192.png?v=3" alt=""></span><div class="grow"><b style="font-size:19px">${esc(p.name||'')}</b><div class="meta">${esc([p.title,p.company].filter(Boolean).join(' · '))}</div><span class="tag role" style="margin-top:4px;display:inline-block">${esc(m.tier_names?.[tier]||tier)}</span></div><button class="btn sm" onclick="meEditProfile()">Sửa</button></div>
+    <div class="sec"><h2>Bảo mật</h2></div>
+    <div class="card list">
+      <div><span class="thumb">${ico('lock',20)}</span><div class="grow"><div style="font-weight:600">Đăng nhập bằng Face ID / Touch ID / vân tay</div><div class="meta">${pkOk?(pk.length?`${pk.length} thiết bị đã đăng ký. Mở app không cần PIN.`:'Dùng khoá sinh trắc của thiết bị thay mã PIN. Mỗi thiết bị đăng ký một lần.'):(IN_TG?'Mở app ngoài Telegram (iPhone, Mac, web) để bật.':'Trình duyệt này chưa hỗ trợ passkey.')}</div></div>${pkOk?`<button class="btn sm pri" onclick="pkRegister()">Thêm thiết bị này</button>`:''}</div>
+      ${pk.map(c=>`<div><span class="thumb">${ico('check',18)}</span><div class="grow"><div style="font-weight:600">${esc(c.name)}</div><div class="meta">Đăng ký ${esc(c.created)}${c.last?` · dùng lần cuối ${esc(c.last)}`:''}</div></div><button class="btn sm" onclick="run('toi','passkey_xoa',{cid:'${esc(c.id)}'},'',true).then(r=>{toast(r.text);S.me=null;meLoad()})">Gỡ</button></div>`).join('')}
+      <button onclick="openAction('caidat','doipin')"><span class="thumb">${ico('gear',20)}</span><div class="grow"><div style="font-weight:600">Đổi mã PIN</div><div class="meta">PIN vẫn là cách dự phòng khi passkey không dùng được.</div></div><span class="chev">${ico('chev',18)}</span></button>
+      <button onclick="lockNow(true)"><span class="thumb">${ico('lock',20)}</span><div class="grow"><div style="font-weight:600">Khoá ngay trên mọi thiết bị</div><div class="meta">Đăng xuất mọi phiên và khoá bot.</div></div></button>
+    </div>
+    <div class="sec"><h2>Giao diện</h2></div>
+    <div class="card pad">
+      <div class="row" style="justify-content:space-between;margin-bottom:10px"><span style="font-weight:600">Chế độ</span><div class="seg">${Object.entries(m.themes||{}).map(([k,l])=>`<button class="${pr.theme===k?'on':''}" onclick="mePref({theme:'${k}'})">${esc(l)}</button>`).join('')}</div></div>
+      <div class="row" style="justify-content:space-between;margin-bottom:10px"><span style="font-weight:600">Màu nhấn</span><div class="row">${Object.entries(m.accents||{}).map(([k,c])=>`<button class="swatch ${pr.accent===k?'on':''}" style="--c:${c}" aria-label="${k}" onclick="mePref({accent:'${k}'})"></button>`).join('')}</div></div>
+      <div class="row" style="justify-content:space-between;margin-bottom:10px"><span style="font-weight:600">Mật độ</span><div class="seg">${Object.entries(m.density||{}).map(([k,l])=>`<button class="${pr.density===k?'on':''}" onclick="mePref({density:'${k}'})">${esc(l)}</button>`).join('')}</div></div>
+      <div class="row" style="justify-content:space-between"><span style="font-weight:600">Trang mở đầu</span><select onchange="mePref({home:this.value})">${Object.entries(m.homes||{}).map(([k,l])=>`<option value="${k}" ${pr.home===k?'selected':''}>${esc(l)}</option>`).join('')}</select></div>
+      <p class="meta" style="margin:10px 0 0">Trong Telegram, app theo màu của Telegram. Trên iPhone, Mac và web dùng cài đặt này.</p>
+    </div>
+    <div class="sec"><h2>Thông báo</h2></div>
+    <div class="card list">${[['notify_brief','Bản tin sáng từ CFO và phòng ban'],['notify_board','Báo khi có đề xuất chờ duyệt'],['haptics','Rung phản hồi khi thao tác']].map(([k,l])=>`<label class="lbopt" style="padding:12px 16px"><input type="checkbox" ${pr[k]!==false?'checked':''} onchange="mePref({${k}:this.checked})"><span>${l}</span></label>`).join('')}</div>
+    <div class="sec"><h2>Tính năng của gói ${esc(m.tier_names?.[tier]||tier)}</h2></div>
+    <div class="card list">${Object.entries(m.flags?.flags||{}).map(([k,on])=>`<div><span class="st ${on?'ok':'no'}"></span><div class="grow"><div style="font-weight:600">${esc(FLAG_NAMES[k]||k)}</div></div></div>`).join('')}</div>`;
+}
+const FLAG_NAMES = {workflow_builder:'Trình dựng workflow kéo thả', passkey_login:'Đăng nhập Face ID / vân tay', assistant_coach:'Trợ lý đồng hành', cfo_brief:'CFO brief mỗi sáng', clone_factory:'Xưởng clone', private_llm:'AI tại chỗ (Ollama)'};
+async function mePref(o){ try{ const r = await run('toi','cai_dat_luu',o,'',true); if(S.me) S.me.prefs = r.prefs; if(S.data.me) S.data.me.prefs = r.prefs; applyPrefs(r.prefs); render(); }catch(e){ toast(e.message); } }
+function meEditProfile(){ const p = S.me?.profile||{}; sheet(`<h2>Hồ sơ</h2><p class="meta">superYou dùng hồ sơ để trả lời đúng vai trò và mục tiêu của anh.</p>
+  ${[['name','Tên'],['title','Chức danh'],['company','Công ty'],['industry','Ngành']].map(([k,l])=>`<label class="field"><span>${l}</span><input type="text" id="pf_${k}" value="${esc(p[k]||'')}"></label>`).join('')}
+  <label class="field"><span>Mục tiêu 90 ngày</span><textarea id="pf_goals" style="min-height:80px">${esc(p.goals||'')}</textarea></label>
+  <button class="btn pri full" onclick="closeSheet();run('toi','ho_so_luu',{name:$('#pf_name').value,title:$('#pf_title').value,company:$('#pf_company').value,industry:$('#pf_industry').value,goals:$('#pf_goals').value},'',true).then(r=>{toast(r.text);S.first=r.profile.name;S.me=null;meLoad()}).catch(e=>toast(e.message))">Lưu</button>`); }
+
+/* ---------- Workflow riêng: kéo thả từ thư viện, trợ lý đồng hành */
+S.wf = { lib:null, list:null, cur:null };
+async function wfLoad(){ try{ const [lib, list] = await Promise.all([run('toi','thu_vien',{},'',true), run('toi','wf_ds',{},'',true)]); S.wf.lib = lib; S.wf.list = list; }catch(e){ toast(e.message); S.wf.lib={steps:[],market:[],sched:{}}; S.wf.list={items:[],runs:[],sched:{}}; } if(S.tab==='wf' && !$('#sheet').classList.contains('on')) render(); }
+function vWf(){
+  const head = `<div class="date">Ghép các bước có sẵn thành quy trình của riêng anh. Chỉ đọc và tổng hợp, không tự gửi hay đăng.</div><h1>Workflow của tôi</h1>`;
+  if(!S.wf.lib){ wfLoad(); return head + `<div class="card empty">Đang tải thư viện…</div>`; }
+  if(S.wf.cur) return head + wfBuilder();
+  const L = S.wf.list;
+  return head + `<div class="row" style="margin-bottom:12px"><button class="btn pri" onclick="wfNew()">${ico('plus',16)} Dựng workflow mới</button><button class="btn" onclick="wfCoachSheet()">${ico('spark',16)} Nhờ trợ lý gợi ý</button></div>
+    <div class="card mklist">${(L.items||[]).map(w=>`<div class="mkrow"><span class="mkicon" style="--c:#2457C5;width:44px;height:44px">${ico('layers',20)}</span><div class="grow" role="button" tabindex="0" onclick="wfEdit('${w.id}')"><div class="ttl2">${esc(w.name)}</div><div class="meta">${w.steps.length} bước${w.schedule?` · ${esc(L.sched[w.schedule]||'')}`:''}${w.runs?` · chạy ${w.runs} lần`:''}${w.last_run?` · ${esc(ago(w.last_run))}`:''}</div></div><div class="row"><button class="btn sm pri" onclick="wfRun('${w.id}')">${ico('play',15)} Chạy</button><button class="btn sm" onclick="wfEdit('${w.id}')">Sửa</button></div></div>`).join('')||'<div class="empty">Chưa có workflow nào. Dựng mới hoặc nhờ trợ lý gợi ý từ một câu mục tiêu.</div>'}</div>
+    ${(L.runs||[]).length?`<div class="sec"><h2>Lần chạy gần đây</h2></div><div class="card mklist">${L.runs.slice(0,5).map(r=>`<div class="mkrow" role="button" tabindex="0" onclick="wfShow(${JSON.stringify(r.text).replace(/"/g,'&quot;')})"><div class="grow"><div class="ttl2">${esc(r.name)}</div><div class="meta">${esc(ago(r.at))} · ${r.ok}/${r.total} bước</div></div><span class="chev">${ico('chev',18)}</span></div>`).join('')}</div>`:''}`;
+}
+function wfShow(text){ sheet(`<h2>Kết quả</h2><div style="white-space:pre-line;margin-top:10px">${esc(text)}</div><div class="row" style="margin-top:12px"><button class="btn" onclick="copyText(${JSON.stringify(text).replace(/"/g,'&quot;')})">${ico('copy',15)} Sao chép</button></div>`); }
+function wfNew(){ S.wf.cur = {id:'', name:'Workflow mới', desc:'', steps:[], schedule:''}; render(); }
+function wfEdit(id){ const w = (S.wf.list.items||[]).find(x=>x.id===id); if(w){ S.wf.cur = JSON.parse(JSON.stringify(w)); render(); } }
+function wfBuilder(){
+  const w = S.wf.cur, lib = S.wf.lib, q = (S.wf.q||'').toLowerCase();
+  const groups = {}; lib.steps.filter(s=>!q||(s.label+s.group+s.desc).toLowerCase().includes(q)).forEach(s=>{ (groups[s.group]=groups[s.group]||[]).push(s); });
+  return `<div class="row" style="justify-content:space-between;margin-bottom:10px"><button class="btn sm" onclick="S.wf.cur=null;render()">${ico('back',15)} Danh sách</button><div class="row"><button class="btn sm" onclick="wfCoachSheet()">${ico('spark',15)} Trợ lý</button>${w.id?`<button class="btn sm" onclick="wfRun('${w.id}')">${ico('play',15)} Chạy thử</button>`:''}<button class="btn sm pri" onclick="wfSave()">Lưu</button></div></div>
+    <div class="wfwrap"><section class="card pad wfcanvas" ondragover="event.preventDefault();this.classList.add('over')" ondragleave="this.classList.remove('over')" ondrop="wfDrop(event)">
+      <label class="field" style="margin-bottom:8px"><span>Tên</span><input type="text" id="wfName" value="${esc(w.name)}" oninput="S.wf.cur.name=this.value"></label>
+      <div class="row" style="justify-content:space-between;margin-bottom:8px"><b>Các bước (${w.steps.length})</b><select onchange="S.wf.cur.schedule=this.value" aria-label="Lịch chạy">${Object.entries(lib.sched||{}).map(([k,l])=>`<option value="${k}" ${w.schedule===k?'selected':''}>${k?'Lịch: ':''}${esc(l)}</option>`).join('')}</select></div>
+      <ol class="wfsteps" id="wfSteps">${w.steps.map((st,i)=>`<li class="wfstep" draggable="true" data-i="${i}" ondragstart="wfDragStep(event,${i})" ondragover="event.preventDefault()" ondrop="wfDropOn(event,${i})"><span class="wfn">${i+1}</span><div class="grow"><input class="wflabel" value="${esc(st.label||'')}" oninput="S.wf.cur.steps[${i}].label=this.value" aria-label="Tên bước"><div class="meta">${esc(st.agent)}.${esc(st.action)}${Object.keys(st.params||{}).length?` · ${esc(Object.entries(st.params).map(([k,v])=>k+'='+v).join(', '))}`:''}</div></div><div class="row" style="flex-wrap:nowrap"><button class="iconbtn" aria-label="Lên" onclick="wfMove(${i},-1)">${ico('chev',16)}</button><button class="iconbtn" aria-label="Xuống" onclick="wfMove(${i},1)" style="transform:rotate(90deg)">${ico('chev',16)}</button><button class="iconbtn" aria-label="Thông số" onclick="wfParams(${i})">${ico('gear',16)}</button><button class="iconbtn" aria-label="Bỏ" onclick="S.wf.cur.steps.splice(${i},1);render()">${ico('trash',16)}</button></div></li>`).join('')||'<li class="wfempty">Kéo bước từ thư viện vào đây, hoặc bấm vào bước để thêm.</li>'}</ol>
+      ${w.steps.length>=2?`<p class="meta">Kéo để sắp xếp lại. Workflow chạy lần lượt từ trên xuống, kết quả gom thành một bản.</p>`:''}
+    </section>
+    <aside class="card pad wflib"><input type="search" placeholder="Tìm bước…" value="${esc(S.wf.q||'')}" oninput="S.wf.q=this.value;render()" aria-label="Tìm bước" style="width:100%;margin-bottom:8px">
+      ${Object.entries(groups).map(([g,items])=>`<div class="wfgroup"><b>${esc(items[0].icon||'')} ${esc(g)}</b>${items.map(s=>`<button class="wfitem" draggable="true" ondragstart="wfDragLib(event,'${s.id}')" onclick="wfAdd('${s.id}')" title="${esc(s.desc)}"><span>${esc(s.label)}</span>${ico('plus',14)}</button>`).join('')}</div>`).join('')||'<div class="empty">Không có bước khớp.</div>'}
+      ${(lib.market||[]).length?`<div class="wfgroup"><b>🛍 Marketplace</b>${lib.market.map(m=>`<button class="wfitem" onclick="go('mkt');setTimeout(()=>mkOpen('${m.lid}'),200)"><span>${esc(m.label)}</span><span class="meta">${m.installed?'đã cài':m.price?vnd(m.price):'miễn phí'}</span></button>`).join('')}</div>`:''}
+    </aside></div>`;
+}
+function wfDragLib(e, id){ e.dataTransfer.setData('text/lib', id); e.dataTransfer.effectAllowed = 'copy'; }
+function wfDragStep(e, i){ e.dataTransfer.setData('text/step', String(i)); e.dataTransfer.effectAllowed = 'move'; }
+function wfDrop(e){ e.preventDefault(); e.currentTarget.classList.remove('over'); const id = e.dataTransfer.getData('text/lib'); if(id) wfAdd(id); }
+function wfDropOn(e, to){ e.preventDefault(); e.stopPropagation(); const from = e.dataTransfer.getData('text/step'); const id = e.dataTransfer.getData('text/lib'); const st = S.wf.cur.steps;
+  if(from!==''){ const [x] = st.splice(+from,1); st.splice(to,0,x); } else if(id){ const s = S.wf.lib.steps.find(x=>x.id===id); if(s) st.splice(to,0,{agent:s.agent, action:s.action, params:{}, label:s.label}); }
+  render(); }
+function wfAdd(id){ const s = S.wf.lib.steps.find(x=>x.id===id); if(!s) return; if(S.wf.cur.steps.length>=12) return toast('Tối đa 12 bước'); S.wf.cur.steps.push({agent:s.agent, action:s.action, params:{}, label:s.label}); haptic('light'); render(); }
+function wfMove(i, d){ const st = S.wf.cur.steps, j = i+d; if(j<0||j>=st.length) return; [st[i],st[j]] = [st[j],st[i]]; render(); }
+function wfParams(i){ const st = S.wf.cur.steps[i], def = S.wf.lib.steps.find(x=>x.agent===st.agent&&x.action===st.action); const ps = def?.params||[];
+  sheet(`<h2>${esc(st.label||'Bước')}</h2><p class="meta">${esc(def?.desc||'')}</p>${ps.length?ps.map(p=>`<label class="field"><span>${esc(p.label)}</span><input type="text" id="wp_${p.name}" value="${esc(st.params?.[p.name]??(p.default??''))}"></label>`).join(''):'<p class="meta">Bước này không có thông số.</p>'}<button class="btn pri full" onclick="closeSheet();${ps.map(p=>`S.wf.cur.steps[${i}].params['${p.name}']=$('#wp_${p.name}').value;`).join('')}render()">Xong</button>`); }
+async function wfSave(){ const w = S.wf.cur; if(!w.steps.length) return toast('Thêm ít nhất một bước'); try{ const r = await run('toi','wf_luu',{wid:w.id, name:$('#wfName')?.value||w.name, steps:JSON.stringify(w.steps), schedule:w.schedule||'', desc:w.desc||''},'',true); toast(r.text, 3500); notifyH('success'); S.wf.cur=null; S.wf.list=null; S.wf.lib=null; wfLoad(); }catch(e){ toast(e.message, 4500); } }
+async function wfRun(id){ toast('Đang chạy…', 2500); try{ const r = await run('toi','wf_chay',{wid:id},'Chạy workflow'); wfShow(r.text||''); S.wf.list=null; wfLoad(); }catch(e){ toast(e.message); } }
+function wfCoachSheet(){ sheet(`<h2>Trợ lý đồng hành</h2><p class="meta">Nói mục tiêu, trợ lý ghép sẵn các bước. Anh kéo thả chỉnh tiếp rồi lưu.</p><label class="field" style="margin-top:10px"><span>Anh muốn workflow làm gì?</span><textarea id="wfGoal" placeholder="Ví dụ: mỗi sáng gom lịch, tin nhắn Lark và tin ngành thành một bản ngắn"></textarea></label><div class="chips" style="padding-top:0">${['Bàn giao buổi sáng','Chuẩn bị trước cuộc họp','Tổng hợp tuần cho đội','Theo dõi đối thủ'].map(x=>`<button class="chip" onclick="$('#wfGoal').value='${x}'">${x}</button>`).join('')}</div><button class="btn pri full" onclick="wfCoach()">${ico('spark',16)} Gợi ý</button>`); }
+async function wfCoach(){ const goal = $('#wfGoal').value.trim(); if(!goal) return toast('Nhập mục tiêu'); closeSheet(); toast('Trợ lý đang ghép bước…', 3000); try{ const r = await run('toi','tro_ly',{goal},'Gợi ý workflow'); if(!S.wf.lib) await wfLoad(); S.wf.cur = {id:'', name:r.name, desc:r.why, steps:r.steps, schedule:''}; go('wf'); toast(r.tip||r.why, 5000); }catch(e){ toast(e.message, 4500); } }
+
 /* =================================================================== superYou HQ: Tổng quan, Phòng ban, Tài chính CFO */
 S.hqd = null; S.bd = null; S.cf = null;
 async function hqLoad(){ try{ const [a, g, b, l] = await Promise.all([run('market','quantri',{},'',true), run('market','gd',{},'',true), run('phongban','bang',{},'',true), run('khach','ds',{},'',true)]); S.hqd = {a, g, b, l}; }catch(e){ toast(e.message); S.hqd = {a:{kpi:{}}, g:{kpi:{}, orders:[]}, b:{counts:{}, items:[], depts:{}}, l:{total:0, by_status:{}}}; } if(S.tab==='hq') render(); }
@@ -2946,6 +3056,28 @@ async function bdDecide(id, decision){ const note = $('#bdn_'+id)?.value||''; tr
 function bdDone(id){ sheet(`<h2>Kết quả</h2><label class="field" style="margin-top:12px"><span>Đã làm gì, kết quả ra sao</span><textarea id="bdr"></textarea></label><button class="btn pri full" onclick="closeSheet();run('phongban','tien_do',{iid:'${id}',status:'xong',result:$('#bdr').value,by:'Anh Huy'},'',true).then(r=>{toast(r.text);S.bd=null;bdLoad()}).catch(e=>toast(e.message))">Đánh dấu xong</button>`); }
 function bdNew(){ const b = S.bd||{depts:{}}; sheet(`<h2>Đề xuất mới</h2><label class="field" style="margin-top:12px"><span>Phòng đề xuất</span><select id="bdD">${Object.entries(b.depts).map(([k,v])=>`<option value="${k}">${esc(v.name)}</option>`).join('')}</select></label><label class="field"><span>Tiêu đề</span><input type="text" id="bdT"></label><label class="field"><span>Nội dung</span><textarea id="bdS"></textarea></label><label class="field"><span>Ưu tiên</span><select id="bdP"><option value="cao">Cao</option><option value="vua" selected>Vừa</option><option value="thap">Thấp</option></select></label><button class="btn pri full" onclick="closeSheet();run('phongban','de_xuat',{dept:$('#bdD').value,title:$('#bdT').value,summary:$('#bdS').value,priority:$('#bdP').value,by:'Anh Huy'},'',true).then(r=>{toast(r.text);S.bd=null;bdLoad()}).catch(e=>toast(e.message))">Đưa lên bảng</button>`); }
 
+S.ex = null;
+async function exLoad(){ try{ S.ex = await run('thunghiem','tong_quan',{},'',true); }catch(e){ toast(e.message); S.ex={flags:[],experiments:[],tiers:{},scopes:{},tier_names:{},top_events:[]}; } if(S.tab==='ex' && !$('#sheet').classList.contains('on')) render(); }
+function vEx(){
+  const x = S.ex, head = `<div class="date">Bật tính năng theo phạm vi, thử nghiệm A/B, đề xuất nâng cấp từ dữ liệu</div><h1>Thử nghiệm</h1>`;
+  if(!x) return head + `<div class="card empty">Đang tải…</div>`;
+  const sc = x.scopes||{}, tn = x.tier_names||{};
+  return head + `<div class="kpis mkkpis">${Object.entries(x.tiers||{}).map(([k,n])=>`<div class="card kpi"><b>${n}</b><span>${esc(tn[k]||k)}</span></div>`).join('')}<div class="card kpi"><b>${x.events_7d||0}</b><span>Sự kiện 7 ngày</span></div></div>
+    <div class="row" style="margin:12px 0"><button class="btn sm pri" onclick="run('thunghiem','nghien_cuu',{},'Nghiên cứu').then(r=>{toast(r.text,4000);S.bd=null}).catch(e=>toast(e.message))">${ico('spark',15)} AI nghiên cứu và đề xuất nâng cấp</button><button class="btn sm" onclick="exNew()">${ico('plus',15)} Thử nghiệm A/B mới</button></div>
+    <div class="sec"><h2>Tính năng theo phạm vi</h2></div><div class="card list">${(x.flags||[]).map(f=>`<div><div class="grow"><div style="font-weight:600">${esc(f.name)}</div><div class="meta">${esc(f.desc||'')}</div></div><select onchange="exScope('${f.key}',this.value)" aria-label="Phạm vi ${esc(f.name)}">${Object.entries(sc).map(([k,l])=>`<option value="${k}" ${f.scope===k?'selected':''}>${esc(l)}${k==='tier'&&f.scope==='tier'?' ('+(f.tiers||[]).map(t=>tn[t]||t).join(', ')+')':''}</option>`).join('')}</select></div>`).join('')}</div>
+    <p class="meta" style="margin:8px 4px">Cách làm: tính năng mới bật “Chỉ anh” để dùng thử; ổn thì mở “Theo gói” (Pro, Doanh nghiệp) hoặc “Tất cả”. Đề xuất từ AI nằm ở Phòng ban, anh duyệt rồi chọn phạm vi ở đây.</p>
+    <div class="sec"><h2>Thử nghiệm A/B</h2></div>${(x.experiments||[]).map(e=>`<div class="card pad" style="margin-bottom:8px"><div class="row" style="justify-content:space-between"><b>${esc(e.name)}</b><span class="tag ${e.status==='running'?'role':'lo'}">${e.status}</span></div><p class="meta" style="margin:4px 0">${esc(e.hypothesis||'')} · chỉ số: ${esc(e.metric)}</p>
+      ${e.results&&Object.keys(e.results).length?`<div class="row">${Object.entries(e.results).map(([v,r])=>`<div class="card pad" style="flex:1;min-width:120px"><b>${esc(v)}</b><div class="meta">${r.users} người · ${r.converted} đạt · <b>${r.rate}%</b></div></div>`).join('')}</div>`:''}
+      <div class="row" style="margin-top:8px">${e.status!=='running'?`<button class="btn sm pri" onclick="exSet('${e.key}','running')">Chạy</button>`:`<button class="btn sm" onclick="exDone('${e.key}')">Kết thúc</button>`}</div></div>`).join('')||'<div class="card empty">Chưa có thử nghiệm. Tạo một thử nghiệm để so hai cách làm trên người dùng thật.</div>'}
+    <div class="sec"><h2>Sự kiện dùng nhiều (7 ngày)</h2></div><div class="card list">${(x.top_events||[]).map(([k,n])=>`<div><div class="grow"><div style="font-weight:600">${esc(k)}</div></div><b>${n}</b></div>`).join('')||'<div class="empty">Chưa có sự kiện.</div>'}</div>`;
+}
+async function exScope(key, scope){ if(scope==='tier'){ return sheet(`<h2>Gói được dùng</h2>${['free','pro','business'].map(t=>`<label class="lbopt"><input type="checkbox" value="${t}" ${t!=='free'?'checked':''}><span>${esc((S.ex.tier_names||{})[t]||t)}</span></label>`).join('')}<button class="btn pri full" onclick="closeSheet();run('thunghiem','bat',{key:'${key}',scope:'tier',tiers:[...document.querySelectorAll('#sheet input:checked')].map(i=>i.value).join(',')},'',true).then(r=>{toast(r.text);S.ex=null;exLoad()})">Lưu</button>`); }
+  if(scope==='pct'){ return sheet(`<h2>Phần trăm người dùng</h2><label class="field" style="margin-top:12px"><span>Bật cho bao nhiêu phần trăm</span><input type="number" id="exP" value="20" min="1" max="99"></label><button class="btn pri full" onclick="closeSheet();run('thunghiem','bat',{key:'${key}',scope:'pct',pct:$('#exP').value},'',true).then(r=>{toast(r.text);S.ex=null;exLoad()})">Lưu</button>`); }
+  try{ const r = await run('thunghiem','bat',{key, scope},'',true); toast(r.text); S.ex=null; exLoad(); }catch(e){ toast(e.message); } }
+async function exSet(key, status){ try{ const r = await run('thunghiem','ab_trang_thai',{key, status},'',true); toast(r.text); S.ex=null; exLoad(); }catch(e){ toast(e.message); } }
+function exDone(key){ sheet(`<h2>Kết thúc thử nghiệm</h2><label class="field" style="margin-top:12px"><span>Kết luận</span><textarea id="exR"></textarea></label><button class="btn pri full" onclick="closeSheet();exSetR('${key}')">Kết thúc</button>`); }
+async function exSetR(key){ try{ const r = await run('thunghiem','ab_trang_thai',{key, status:'done', result:$('#exR').value},'',true); toast(r.text); S.ex=null; exLoad(); }catch(e){ toast(e.message); } }
+function exNew(){ sheet(`<h2>Thử nghiệm A/B mới</h2><label class="field" style="margin-top:12px"><span>Mã (không dấu)</span><input type="text" id="exK" placeholder="onboarding_v2"></label><label class="field"><span>Tên</span><input type="text" id="exN"></label><label class="field"><span>Giả thuyết</span><textarea id="exH" placeholder="Nếu … thì … vì …"></textarea></label><label class="field"><span>Chỉ số đạt (sự kiện)</span><input type="text" id="exM" value="workflow_run"></label><button class="btn pri full" onclick="closeSheet();run('thunghiem','ab_tao',{key:$('#exK').value,name:$('#exN').value,hypothesis:$('#exH').value,metric:$('#exM').value},'',true).then(r=>{toast(r.text);S.ex=null;exLoad()}).catch(e=>toast(e.message))">Tạo</button>`); }
 async function cfLoad(){ try{ S.cf = await run('cfo','tong_quan',{},'',true); }catch(e){ toast(e.message); S.cf={analyst:{revenue:{},flags:[],costs:[],cash:{},top_products:[],leads:{},personal:{}},forecast:{rows:[]},actions:{},briefs:[],periods:{}}; } if(S.tab==='cfo' && !$('#sheet').classList.contains('on')) render(); }
 function vCfo(){
   const c = S.cf, head = `<div class="date">Finance OS superYou · Analyst, Forecaster, Strategist, CFO brief</div><h1>Tài chính</h1>`;
@@ -3817,7 +3949,36 @@ function showLock(a){
   paintDots();
   setSub(a.wait ? `Tạm khóa do nhập sai nhiều lần. Thử lại sau ${Math.ceil(a.wait/60)} phút.` : 'Nhập mã PIN để mở', !!a.wait);
   document.body.classList.add('locked');
+  const pkOk = !IN_TG && window.PublicKeyCredential && lsGet('sy_pk')==='1';
+  $('#lockPk').hidden = !pkOk;
+  if(pkOk && !a.wait) setTimeout(()=>{ if(lockOn() && !LOCK.buf) pkLogin(); }, 350);
   return new Promise(r => LOCK.resolve = r);
+}
+function lsGet(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
+function lsSet(k,v){ try{ v==null ? localStorage.removeItem(k) : localStorage.setItem(k,v); }catch(e){} }
+const b64u = { enc: b => btoa(String.fromCharCode(...new Uint8Array(b))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''), dec: s => Uint8Array.from(atob(s.replace(/-/g,'+').replace(/_/g,'/') + '==='.slice((s.length+3)%4)), c=>c.charCodeAt(0)) };
+async function pkLogin(){
+  if(LOCK.busy || !lockOn()) return; LOCK.busy = true; setSub('Xác nhận bằng Face ID / vân tay…');
+  try{
+    const o = await api('/api/passkey/login/options');
+    const pk = o.publicKey; pk.challenge = b64u.dec(pk.challenge); pk.allowCredentials = (pk.allowCredentials||[]).map(c=>({...c, id:b64u.dec(c.id)}));
+    const cred = await navigator.credentials.get({publicKey: pk});
+    const r = await api('/api/passkey/login', {id: cred.id, clientDataJSON: b64u.enc(cred.response.clientDataJSON), authenticatorData: b64u.enc(cred.response.authenticatorData), signature: b64u.enc(cred.response.signature), device: deviceId()});
+    S.tok = r.session; notifyH('success'); S.enter = true; document.body.classList.add('unlocking'); document.body.classList.remove('locked');
+    setTimeout(()=>document.body.classList.remove('unlocking'), 520); LOCK.busy = false; LOCK.resolve?.(r.session); return;
+  }catch(e){ setSub(/NotAllowed|AbortError|timed out/i.test(String(e.name||e.message)) ? 'Nhập mã PIN để mở' : (e.message||'Không đăng nhập được, nhập PIN'), false); }
+  LOCK.busy = false;
+}
+async function pkRegister(){
+  const name = ($('#pkName')?.value||'').trim() || ((/iPhone/.test(navigator.userAgent)?'iPhone':/iPad/.test(navigator.userAgent)?'iPad':/Macintosh/.test(navigator.userAgent)?'Mac':/Android/.test(navigator.userAgent)?'Android':'Máy tính') + ' của ' + (S.first||'tôi'));
+  try{
+    if(!window.PublicKeyCredential) throw new Error('Trình duyệt này chưa hỗ trợ passkey');
+    const o = await api('/api/passkey/register/options', {name: S.first||'Huy'});
+    const pk = o.publicKey; pk.challenge = b64u.dec(pk.challenge); pk.user.id = b64u.dec(pk.user.id); pk.excludeCredentials = (pk.excludeCredentials||[]).map(c=>({...c, id:b64u.dec(c.id)}));
+    const cred = await navigator.credentials.create({publicKey: pk});
+    const r = await api('/api/passkey/register', {clientDataJSON: b64u.enc(cred.response.clientDataJSON), attestationObject: b64u.enc(cred.response.attestationObject), name});
+    lsSet('sy_pk','1'); toast(r.text, 4500); notifyH('success'); S.me=null; meLoad();
+  }catch(e){ toast(/NotAllowed|AbortError/i.test(String(e.name||'')) ? 'Anh đã huỷ' : e.message, 4500); }
 }
 async function pinKey(k){
   if(LOCK.busy || !lockOn()) return;
@@ -3915,7 +4076,9 @@ document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && S.tok
     await unlockFlow();
     S.enter = true;
     S.data = await api('/api/bootstrap');
+    applyPrefs(S.data.me?.prefs);
     const sp = tg?.initDataUnsafe?.start_param; if(TABS.some(t=>t[0]===sp)) S.tab = sp;
+    if(!IN_TG && !HQ && S.data.me?.prefs?.home && TABS.concat([['mkt'],['chat']]).some(t=>t[0]===S.data.me.prefs.home)) S.tab = S.data.me.prefs.home;
     render();
   }catch(e){
     $('#app').innerHTML = `<div class="center"><div><p style="font-weight:600;color:var(--text)">Chưa mở được app</p><p>${esc(e.message)}</p></div></div>`;

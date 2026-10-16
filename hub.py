@@ -7,7 +7,7 @@ import os
 import re
 
 import targets as targets_mod
-from agents import (board, cfo, pay, factory, market, leads, calendar_agent, content_agent, content_hub, strategy, learning, reel_studio, game, repo_radar, web_tools, gemini_notebook, knowledge_sources, meeting, meeting_share, email_agent, fb_connect, gcal_bridge, imagecard, lark_agent, mailbox, news_agent, publisher,
+from agents import (workspace, board, cfo, pay, factory, market, leads, calendar_agent, content_agent, content_hub, strategy, learning, reel_studio, game, repo_radar, web_tools, gemini_notebook, knowledge_sources, meeting, meeting_share, email_agent, fb_connect, gcal_bridge, imagecard, lark_agent, mailbox, news_agent, publisher,
                     reel_video, second_brain)
 from config import CARD_HANDLE, DATA_DIR
 from core import digests, notify, store
@@ -705,6 +705,47 @@ register(Agent("cfo", "CFO superYou", "💼", "Finance OS: phân tích, dự bá
     Action("chi_phi_xoa", "Xoá chi phí", cfo.remove_cost, hidden=True, params=[Param("cid", "ID", required=True)]),
     Action("tien_mat", "Ghi tiền mặt hiện có", cfo.set_cash, hidden=True, llm=True, desc="Ghi số dư tiền mặt của superYou/Roimaxx để dự báo runway.",
            params=[Param("amount", "Số tiền", required=True)]),
+]))
+
+
+# ================================================================ Không gian cá nhân: hồ sơ, cài đặt, workflow riêng, passkey, thử nghiệm
+from core import flags as _flags, passkey as _passkey  # noqa: E402
+register(Agent("toi", "Không gian của tôi", "👤", "Hồ sơ, cài đặt giao diện, đăng nhập Face ID/vân tay, workflow riêng kéo thả", order=58, actions=[
+    Action("ho_so", "Hồ sơ và cài đặt", workspace.get, hidden=True),
+    Action("ho_so_luu", "Lưu hồ sơ", workspace.set_profile, hidden=True, llm=True, desc="Cập nhật hồ sơ người dùng: tên, chức danh, công ty, ngành, mục tiêu.",
+           params=[Param("name", "Tên"), Param("title", "Chức danh"), Param("company", "Công ty"), Param("industry", "Ngành"), Param("goals", "Mục tiêu", "textarea"), Param("tz", "Múi giờ"), Param("lang", "Ngôn ngữ")]),
+    Action("cai_dat_luu", "Lưu cài đặt giao diện", workspace.set_prefs, hidden=True,
+           params=[Param("theme", "Giao diện"), Param("accent", "Màu nhấn"), Param("density", "Mật độ"), Param("home", "Trang mở đầu"),
+                   Param("notify_brief", "Nhận bản tin sáng", "bool"), Param("notify_board", "Báo đề xuất mới", "bool"), Param("haptics", "Rung phản hồi", "bool")]),
+    Action("passkey_ds", "Thiết bị passkey", _passkey.list_creds, hidden=True),
+    Action("passkey_xoa", "Gỡ passkey", _passkey.remove, hidden=True, params=[Param("cid", "ID", required=True)]),
+    Action("thu_vien", "Thư viện bước", workspace.library, hidden=True),
+    Action("wf_ds", "Workflow của tôi", workspace.list_workflows, hidden=True, llm=True, desc="Các workflow riêng người dùng đã ghép, lịch chạy, lần chạy gần đây."),
+    Action("wf_luu", "Lưu workflow", workspace.save_workflow, hidden=True,
+           params=[Param("wid", "ID"), Param("name", "Tên"), Param("steps", "Các bước (JSON)", "textarea", required=True), Param("schedule", "Lịch"), Param("desc", "Mô tả")]),
+    Action("wf_xoa", "Xoá workflow", workspace.delete_workflow, hidden=True, params=[Param("wid", "ID", required=True)]),
+    Action("wf_chay", "Chạy workflow riêng", workspace.run_workflow, hidden=True, long=True, llm=True, desc="Chạy một workflow riêng của người dùng theo ID.",
+           params=[Param("wid", "ID", required=True)]),
+    Action("wf_dang", "Đăng workflow lên Marketplace", workspace.publish_workflow, hidden=True,
+           params=[Param("wid", "ID", required=True), Param("tagline", "Mô tả ngắn"), Param("description", "Mô tả", "textarea"), Param("price", "Giá", "number", default=0)]),
+    Action("tro_ly", "Trợ lý đồng hành: gợi ý workflow", workspace.coach, hidden=True, long=True, llm=True,
+           desc="Từ một câu mục tiêu, gợi ý chuỗi bước workflow để người dùng kéo thả chỉnh tiếp.", params=[Param("goal", "Mục tiêu", required=True)]),
+    Action("tinh_nang", "Tính năng được bật", _flags.for_user, hidden=True),
+    Action("su_kien", "Ghi sự kiện dùng", _flags.track, hidden=True, params=[Param("event", "Sự kiện", required=True)]),
+]))
+
+
+# ================================================================ Thử nghiệm và phân cấp (chỉ chủ nhân)
+register(Agent("thunghiem", "Thử nghiệm", "🧪", "Bật tính năng theo phạm vi (riêng anh, theo gói, tất cả), A/B testing, đề xuất nâng cấp", order=59, actions=[
+    Action("tong_quan", "Tính năng, thử nghiệm, gói", _flags.overview, hidden=True, llm=True,
+           desc="Trạng thái các tính năng (bật cho ai), thử nghiệm A/B đang chạy và kết quả, số người dùng theo gói."),
+    Action("bat", "Đặt phạm vi tính năng", _flags.set_flag, hidden=True,
+           params=[Param("key", "Mã", required=True), Param("scope", "Phạm vi", required=True), Param("tiers", "Gói"), Param("pct", "Phần trăm", "number", default=100), Param("name", "Tên"), Param("desc", "Mô tả")]),
+    Action("ab_tao", "Tạo thử nghiệm A/B", _flags.create_experiment, hidden=True,
+           params=[Param("key", "Mã", required=True), Param("name", "Tên", required=True), Param("hypothesis", "Giả thuyết", "textarea"), Param("variants", "Biến thể", default="A,B"), Param("split", "Tỷ lệ A", "number", default=50), Param("metric", "Chỉ số", default="convert")]),
+    Action("ab_trang_thai", "Chạy/dừng thử nghiệm", _flags.set_experiment, hidden=True, params=[Param("key", "Mã", required=True), Param("status", "Trạng thái", required=True), Param("result", "Kết luận", "textarea")]),
+    Action("ab_ket_qua", "Kết quả thử nghiệm", _flags.results, hidden=True, params=[Param("key", "Mã", required=True)]),
+    Action("nghien_cuu", "AI nghiên cứu, đề xuất nâng cấp", _flags.research_propose, hidden=True, long=True),
 ]))
 
 
