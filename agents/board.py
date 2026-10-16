@@ -21,7 +21,8 @@ DEPTS = {
     "so": {"name": "Sản phẩm số", "desc": "Tài sản số, Xưởng clone, Marketplace", "kind": "owner", "color": "#C2410C"},
     "finance": {"name": "Tài chính (CFO)", "desc": "Doanh thu, chi phí, dòng tiền, dự báo, đề xuất hành động", "kind": "ai", "color": "#B4236B"},
     "sales": {"name": "Bán hàng (CSO)", "desc": "Khách tiềm năng, phễu, theo đuổi, đối tác", "kind": "ai", "color": "#2457C5"},
-    "ops": {"name": "Vận hành & chất lượng", "desc": "QC hệ thống, tenant, sự cố, chi phí hạ tầng", "kind": "ai", "color": "#7A5A00"},
+    "ops": {"name": "Vận hành", "desc": "Tenant, sự cố, chi phí hạ tầng", "kind": "ai", "color": "#7A5A00"},
+    "qa": {"name": "Kiểm thử & Bảo mật (QA)", "desc": "Kiểm thử như người dùng thật trên đa nền tảng, bảo mật, chất lượng trước khi lên kệ", "kind": "claude", "color": "#B42346"},
 }
 STATUS = {"cho_duyet": "Chờ anh duyệt", "can_lam_ro": "Cần làm rõ", "da_duyet": "Đã duyệt", "dang_lam": "Đang triển khai", "xong": "Xong", "tu_choi": "Từ chối"}
 PRIO = {"cao": "Cao", "vua": "Vừa", "thap": "Thấp"}
