@@ -171,7 +171,7 @@ def connection_checks():
             lark_calendar._token()
             report("larkcal", "Lịch Lark", True)
     except Exception as e:
-        report("larkcal", "Lịch Lark", False, str(e), "Thêm › Kết nối › Lịch Lark (làm trên máy Mac).")
+        report("larkcal", "Lịch Lark", False, str(e), "Thêm › Kết nối › Lịch Lark rồi bấm Cho phép.")
 
 
 def heartbeat():

@@ -982,9 +982,9 @@ def ket_noi_lich_lark() -> dict:
     from agents import lark_oauth, lark_calendar
     if not lark_agent.ready():
         raise ValueError("Cần kết nối app Lark trước (Kết nối > Lark).")
-    url = lark_oauth.authorize_url(lark_oauth.new_state("calendar"), lark_calendar.SCOPES, lark_oauth.LOCAL_REDIRECT)
-    return {"text": "Làm bước này trên máy Mac đang chạy bot: bấm nút dưới, đăng nhập Lark và chọn Authorize. "
-                    "Xong quay lại app, lịch và lời mời họp Lark sẽ hiện ra.",
+    # superHuy chạy trên VPS: Lark chuyển về đúng tên miền của app (không còn 127.0.0.1 của máy Mac cũ)
+    url = lark_oauth.authorize_url(lark_oauth.new_state("calendar"), lark_calendar.SCOPES, lark_oauth.redirect_uri())
+    return {"text": "Bấm nút dưới, đăng nhập Lark và chọn Authorize (Cho phép). Xong quay lại app, lịch, lời mời họp và việc Lark sẽ hiện ra.",
             "open_url": url}
 
 
