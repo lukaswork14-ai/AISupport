@@ -55,7 +55,9 @@ def fake_sources():
 
 
 def seed_market():
-    from agents import leads, market
+    import os
+    os.environ.update(BANK_ID="MB", BANK_ACCOUNT="0123456789", BANK_ACCOUNT_NAME="ROIMAXX", PAY_WEBHOOK_TOKEN="qa-token")
+    from agents import leads, market, pay
     market.catalog()
     s = market.creator_signup("Lan Nguyễn", "lan@shop.vn", "Bán áo POD")
     c = market.creator_auth(s["key"])
@@ -67,6 +69,11 @@ def seed_market():
     lid = next(x["id"] for x in market.catalog()["items"] if x["type"] == "skill")
     market.install(lid)
     market.review(lid, 5, "Biên bản gọn, đúng kiểu anh cần.")
+    # giao dịch mẫu: 1 đơn đã trả (webhook), 1 đơn chờ, 1 đơn của người bán Lan đã duyệt
+    paid = next(x["id"] for x in market.catalog()["items"] if x["price"] > 0)
+    o = pay.create_order(paid, "khach@congty.vn")
+    pay.webhook_bank({"data": [{"description": "CK " + o["order"]["code"], "amount": o["order"]["amount"], "id": "tx1"}]}, "qa-token")
+    pay.create_order(paid, "khach2@congty.vn")
     return s["key"]
 
 
@@ -108,6 +115,9 @@ def main():
             step("02c-mkt-brain", "mkOpen(S.mk.data.items.find(i=>i.type==='brain').id)", 1800, True)
             step("03-mkt-installed", "closeSheet();S.mk.view='cai';render()", 1200)
             step("04-admin", "S.mk.view='qt';S.mk.adm=null;render()", 2200, True)
+            step("04b-admin-quick", "qtQuick(S.mk.adm.listings.find(x=>x.status==='review').id)", 1800)
+            step("04c-admin-gd", "closeSheet();S.mk.admTab='gd';S.mk.gd=null;render()", 2200, True)
+            step("04d-mkt-xuong", "S.mk.admTab='cho';S.mk.view='xuong';S.lb.view='xuong';render()", 2800, True)
             step("05-admin-products", "S.mk.admTab='sp';render()", 1200)
             step("06-lab-factory", "go('lab')", 2800, True)
             step("07-lab-detail", "lbOpen(S.lb.scan.items[1].key)", 2200)
@@ -139,6 +149,20 @@ def main():
                 pub.click("#grid .card-p >> nth=2")
                 pub.wait_for_timeout(900)
                 pub.screenshot(path=str(OUT / f"{tag}-21b-public-workflow.png"))
+                pub.evaluate("document.getElementById('dlg').close()")
+                pub.click("#grid .card-p >> nth=3")
+                pub.wait_for_timeout(700)
+                pub.fill("#ge", "khach3@congty.vn")
+                pub.click("#gf button")
+                pub.wait_for_timeout(1500)
+                pub.screenshot(path=str(OUT / f"{tag}-21c-public-buy.png"))
+                pub.evaluate("document.getElementById('dlg').close()")
+                pub.click("#myo")
+                pub.wait_for_timeout(500)
+                pub.fill("#me", "khach@congty.vn")
+                pub.click("#mf button")
+                pub.wait_for_timeout(1200)
+                pub.screenshot(path=str(OUT / f"{tag}-21d-public-myorders.png"))
             except Exception as e:
                 errs.append(f"[{tag} public detail] {e}")
             pub.goto("http://127.0.0.1:8787/market/console")

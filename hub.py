@@ -7,7 +7,7 @@ import os
 import re
 
 import targets as targets_mod
-from agents import (factory, market, leads, calendar_agent, content_agent, content_hub, strategy, learning, reel_studio, game, repo_radar, web_tools, gemini_notebook, knowledge_sources, meeting, meeting_share, email_agent, fb_connect, gcal_bridge, imagecard, lark_agent, mailbox, news_agent, publisher,
+from agents import (pay, factory, market, leads, calendar_agent, content_agent, content_hub, strategy, learning, reel_studio, game, repo_radar, web_tools, gemini_notebook, knowledge_sources, meeting, meeting_share, email_agent, fb_connect, gcal_bridge, imagecard, lark_agent, mailbox, news_agent, publisher,
                     reel_video, second_brain)
 from config import CARD_HANDLE, DATA_DIR
 from core import digests, notify, store
@@ -628,6 +628,16 @@ register(Agent("market", "Marketplace", "🛍", "Khám phá, cài và bán skill
            params=[Param("lid", "ID", required=True), Param("field", "Trường", required=True), Param("value", "Giá trị"), Param("note", "Ghi chú", "textarea")]),
     Action("qt_nguoitao", "Quản trị người tạo", market.admin_creator, hidden=True,
            params=[Param("cid", "ID", required=True), Param("action", "Thao tác", required=True)]),
+    Action("qt_duyet_gia", "Duyệt lên kệ kèm giá", market.approve_publish, hidden=True,
+           params=[Param("lid", "ID", required=True), Param("price", "Giá", "number"), Param("billing", "Chu kỳ"), Param("featured", "Nổi bật", "bool"), Param("note", "Ghi chú", "textarea")]),
+    Action("goi_y_gia", "Gợi ý giá", market.price_suggest, hidden=True, params=[Param("lid", "ID", required=True)]),
+    # Thanh toán và sổ cái (chỉ chủ nhân)
+    Action("gd", "Giao dịch và doanh thu", pay.admin_overview, hidden=True, llm=True,
+           desc="Doanh thu Marketplace: tổng bán, phí sàn, đơn chờ thanh toán, số còn nợ người bán, cấu hình thanh toán."),
+    Action("gd_nhan", "Xác nhận đã nhận tiền", pay.confirm_manual, hidden=True, params=[Param("oid", "ID đơn", required=True), Param("note", "Ghi chú")]),
+    Action("gd_hoan", "Hoàn tiền", pay.refund, hidden=True, params=[Param("oid", "ID đơn", required=True), Param("note", "Lý do", "textarea")]),
+    Action("gd_tra", "Ghi trả tiền người bán", pay.payout_mark, hidden=True,
+           params=[Param("sid", "ID người bán", required=True), Param("amount", "Số tiền", "number"), Param("ref", "Mã giao dịch")]),
     Action("duyet", "Duyệt sản phẩm gửi lên", market.moderate, hidden=True,
            params=[Param("lid", "ID", required=True), Param("decision", "Quyết định", required=True), Param("note", "Ghi chú", "textarea")]),
 ]))
@@ -653,6 +663,7 @@ register(Agent("xuong", "Xưởng sản phẩm số", "🏭", "Quét app/repo đ
     Action("duan_xoa", "Xoá dự án", factory.project_delete, hidden=True, params=[Param("pid", "ID", required=True)]),
     Action("len_cho", "Đưa dự án lên Marketplace", factory.to_market, hidden=True,
            params=[Param("pid", "ID", required=True), Param("publish", "Lên kệ", "bool", default=False), Param("price", "Giá", "number", default=0)]),
+    Action("goi_y_gia", "Gợi ý giá cho dự án", factory.price_reco, hidden=True, params=[Param("pid", "ID", required=True)]),
 ]))
 
 

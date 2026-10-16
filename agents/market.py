@@ -161,7 +161,7 @@ def _summary(x: dict, d: dict | None = None) -> dict:
     inst = (d or {}).get("installs", {}).get(x["id"]) if d else None
     return {k: x.get(k) for k in ("id", "slug", "type", "name", "tagline", "category", "tags", "price", "color", "creator", "status",
                                   "version", "installs", "interest", "created", "updated")} | {
-        "rating": avg, "rating_n": len(rv), "featured": bool(x.get("featured")), "type_label": TYPES[x["type"]], "cat_label": CATS.get(x["category"], ""),
+        "rating": avg, "rating_n": len(rv), "featured": bool(x.get("featured")), "sales": x.get("sales", 0), "type_label": TYPES[x["type"]], "cat_label": CATS.get(x["category"], ""),
         "size": size, "installed": bool(inst), "enabled": bool(inst and inst.get("enabled", True))}
 
 
@@ -245,6 +245,52 @@ def spec(x: dict) -> dict:
     sp["billing"] = x.get("billing", "once")
     sp["buy_label"] = ("Nhận miễn phí" if not x.get("price") else ("Mua " + f"{x['price']:,}đ".replace(",", ".")) + ("" if x.get("billing", "once") == "once" else "/tháng"))
     return sp
+
+
+def get_listing(lid: str) -> dict | None:
+    with _LOCK:
+        d = _ensure(_load())
+    return d["listings"].get(lid) or next((v for v in d["listings"].values() if v["slug"] == lid), None)
+
+
+def count_sale(lid: str) -> None:
+    with _LOCK:
+        d = _load()
+        x = d["listings"].get(lid)
+        if x:
+            x["sales"] = x.get("sales", 0) + 1
+            _save(d)
+
+
+def approve_publish(lid: str, price: int | None = None, billing: str = "", featured: bool | None = None, note: str = "") -> dict:
+    """Duyệt nhanh lên kệ (Xưởng clone / hàng chờ): đặt giá, chu kỳ, nổi bật trong một bước."""
+    with _LOCK:
+        d = _load()
+        x = d["listings"].get(lid)
+        if not x:
+            raise ValueError("Không tìm thấy sản phẩm")
+        if price is not None and price != "":
+            x["price"] = max(0, int(price))
+        if billing in ("once", "monthly"):
+            x["billing"] = billing
+        if featured is not None:
+            x["featured"] = bool(featured)
+        x["status"] = "published"
+        if note:
+            x["review_note"] = _clean(note, 600)
+        x["updated"] = _now()
+        _log(d, "Huy (quản trị)", f"Duyệt lên kệ “{x['name']}” giá {x['price']:,}đ".replace(",", "."))
+        _save(d)
+    gia = "miễn phí" if not x["price"] else f"{x['price']:,}đ".replace(",", ".")
+    return {"text": f"Đã lên kệ “{x['name']}” với giá {gia}.", "id": lid}
+
+
+def price_suggest(lid: str) -> dict:
+    from agents import pay
+    x = get_listing(lid)
+    if not x:
+        raise ValueError("Không tìm thấy sản phẩm")
+    return pay.price_reco(x) | {"current": x.get("price", 0), "name": x["name"]}
 
 
 def catalog(q: str = "", cat: str = "", type: str = "") -> dict:

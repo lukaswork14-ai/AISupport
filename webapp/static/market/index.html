@@ -90,6 +90,10 @@ h3{ font-size:18px; margin:18px 0 6px }
 .sample{ white-space:pre-line; color:var(--ink) !important; max-height:140px; overflow:hidden; -webkit-mask-image:linear-gradient(#000 70%, transparent) }
 .toc{ max-height:240px; overflow:auto; column-width:220px; column-gap:18px }
 .info{ display:grid; grid-template-columns:max-content 1fr; gap:6px 14px; margin:0; font-size:14px } .info dt{ color:var(--muted) } .info dd{ margin:0 }
+.getbox{ border:2px solid var(--ink); border-radius:18px; padding:16px; margin-top:16px; background:#FFFBEA }
+.payqr{ display:grid; grid-template-columns:auto minmax(0,1fr); gap:16px; align-items:start } .payqr img{ border:2px solid var(--ink); border-radius:14px; background:#fff }
+@media (max-width:600px){ .payqr{ grid-template-columns:1fr } }
+.rev-tiles{ display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:10px }
 /* console */
 .cwrap{ padding-block:30px 60px; display:flex; flex-direction:column; gap:20px }
 .panes{ display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:16px }
@@ -122,7 +126,7 @@ label.f small{ font-weight:500; color:var(--muted) }
 <body>
 <header><div class="w"><nav aria-label="Chính">
   <a class="logo" href="/market"><img src="/icons/huy-128.png" alt="">superYou <em>Marketplace</em></a>
-  <div class="nav-l"><a class="hide" href="/market#kham-pha">Khám phá</a><a href="/market/console">Bán trên superYou</a></div>
+  <div class="nav-l"><a class="hide" href="/market#kham-pha">Khám phá</a><a href="#" id="myo">Đơn của tôi</a><a href="/market/console">Bán trên superYou</a></div>
   <a class="btn y sm" href="/landing">Dùng thử superYou</a>
 </nav></div></header>
 <main id="main"></main>
@@ -179,6 +183,36 @@ function paint(){
   document.querySelectorAll('#grid .card-p, #feat .card-p').forEach(function(b){ b.onclick = function(){ detail(M.items[+b.dataset.i]); }; });
 }
 function openFromPath(){ var m = location.pathname.match(/^\/market\/([a-z0-9-]+)$/); if(m){ var x = M.items.filter(function(i){ return i.slug === m[1]; })[0]; if(x) detail(x, true); } }
+var POLL = null;
+function payBox(r, x){
+  var o = r.order, b = $('#getbox');
+  clearInterval(POLL);
+  if(r.owned || (o && (o.status === 'delivered' || o.status === 'paid'))){
+    b.innerHTML = '<div class="okbox">'+esc(r.text || 'Thanh toán thành công.')+'</div>' + dlList(o) ;
+    return;
+  }
+  if(!o){ b.innerHTML = '<p class="msg err">Chưa tạo được đơn.</p>'; return; }
+  b.innerHTML = '<div class="payqr">'+(o.qr ? '<img src="'+esc(o.qr)+'" alt="Mã QR chuyển khoản" width="220" height="220">' : '<div class="box"><b>Chưa có thông tin nhận tiền</b><p>superYou đang cập nhật tài khoản nhận thanh toán. Bạn thử lại sau ít phút.</p></div>')
+    + '<div><b style="font-size:18px">Chuyển khoản '+esc(o.amount_text)+'</b><p class="by" style="margin:4px 0 8px">Quét mã bằng app ngân hàng, hoặc chuyển tay:</p>'
+    + (o.bank && o.bank.id ? '<dl class="info"><dt>Ngân hàng</dt><dd>'+esc(o.bank.id)+'</dd><dt>Số tài khoản</dt><dd>'+esc(o.bank.account)+' <button class="btn sm" data-c="'+esc(o.bank.account)+'">Sao chép</button></dd><dt>Chủ tài khoản</dt><dd>'+esc(o.bank.name)+'</dd><dt>Nội dung</dt><dd><b>'+esc(o.code)+'</b> <button class="btn sm" data-c="'+esc(o.code)+'">Sao chép</button></dd></dl>' : '')
+    + '<p class="by" style="margin:8px 0 0">Mã đơn <b>'+esc(o.code)+'</b>. '+(o.manual ? 'superYou đối soát thủ công trong vài giờ làm việc, link tải sẽ gửi qua email.' : 'Hệ thống tự xác nhận trong khoảng 1 phút sau khi tiền về.')+'</p><p class="msg" id="pm" role="status">Đang chờ thanh toán…</p></div></div>';
+  b.querySelectorAll('[data-c]').forEach(function(bt){ bt.onclick = function(){ (navigator.clipboard ? navigator.clipboard.writeText(bt.dataset.c) : Promise.reject()).then(function(){ bt.textContent = 'Đã chép'; }).catch(function(){}); }; });
+  POLL = setInterval(function(){ api('/api/pay/status?o='+encodeURIComponent(o.id)+'&e='+encodeURIComponent(lsGet('sy-email')||'')).then(function(st){
+    if(st.status === 'delivered' || st.status === 'paid'){ clearInterval(POLL); b.innerHTML = '<div class="okbox">Đã nhận thanh toán. Cảm ơn bạn!</div>' + dlList(st); }
+    else if(st.status === 'expired' || st.status === 'cancelled'){ clearInterval(POLL); $('#pm').className = 'msg err'; $('#pm').textContent = 'Đơn đã hết hạn. Bấm Mua ngay để tạo đơn mới.'; }
+  }).catch(function(){}); }, 6000);
+}
+function dlList(o){ if(!o || !(o.downloads||[]).length) return '<p class="by">Link tải sẽ gửi qua email.</p>';
+  return '<div class="box" style="margin-top:10px"><b>Tải sản phẩm</b>'+o.downloads.map(function(d){ return '<p><a href="'+esc(d.url)+'">'+esc(d.name)+'</a> <span class="by">· dùng đến '+esc((d.expires||'').slice(0,10))+'</span></p>'; }).join('')+(o.receipt ? '<p><a href="'+esc(o.receipt)+'" target="_blank" rel="noopener">Xem hoá đơn</a></p>' : '')+'</div>'; }
+function myOrders(){
+  var em = lsGet('sy-email') || '';
+  var b = $('#dlgBody'); b.innerHTML = '<button class="x" id="dx" aria-label="Đóng">×</button><h2 style="margin:0">Đơn hàng của tôi</h2><p class="by">Nhập email đã dùng khi mua để xem lại link tải.</p><form class="form" id="mf"><input id="me" type="email" required placeholder="email@congty.com" value="'+esc(em)+'"><button class="btn k">Xem</button></form><div id="ml"></div>';
+  var d = $('#dlg'); if(!d.open) d.showModal(); $('#dx').onclick = function(){ d.close(); };
+  $('#mf').addEventListener('submit', function(e){ e.preventDefault(); lsSet('sy-email', $('#me').value); $('#ml').innerHTML = '<p class="by">Đang tìm…</p>';
+    api('/api/pay/mine', {email:$('#me').value}).then(function(r){ $('#ml').innerHTML = r.items.length ? r.items.map(function(it){ return '<div class="rv"><b>'+esc(it.name)+'</b> <span class="by">'+esc((it.at||'').slice(0,10))+'</span>'+dlList(it)+'</div>'; }).join('') + '<p class="by">Link hết hạn? <button class="btn sm" id="rs">Gửi lại link mới qua email</button></p>' : '<p class="by">Chưa có đơn nào với email này.</p>';
+      var rs = $('#rs'); if(rs) rs.onclick = function(){ rs.disabled = true; api('/api/pay/resend', {email:$('#me').value}).then(function(){ rs.textContent = 'Đã gửi'; }).catch(function(e){ rs.textContent = e.message; }); }; })
+      .catch(function(e){ $('#ml').innerHTML = '<p class="msg err">'+esc(e.message)+'</p>'; }); });
+}
 function specHtml(x){
   var sp = x.spec || {}, k = sp.kind, perm = '<h3>Quyền và tương thích</h3><ul class="lst">'+(sp.permissions||[]).concat(sp.compat||[]).map(function(p){ return '<li>'+esc(p)+'</li>'; }).join('')+'</ul>';
   if(k === 'skill') return '<div class="spec"><div class="box"><b>Kích hoạt khi</b><p>'+esc(sp.trigger||'')+'</p></div><div class="box"><b>Thử bằng câu</b>'+(sp.examples||[]).map(function(e){ return '<p class="ex">“'+esc(e)+'”</p>'; }).join('')+'</div></div>'
@@ -194,8 +228,8 @@ function detail(x, fromPath){
   var sp = x.spec || {}, b = $('#dlgBody');
   b.innerHTML = '<button class="x" id="dx" aria-label="Đóng">×</button><div class="top">'+icon(x,80)+'<div><span class="typ">'+esc(x.type_label)+(x.featured ? ' · Nổi bật' : '')+'</span><h2 style="margin:6px 0 0;font-size:28px">'+esc(x.name)+'</h2><div class="by">'+esc(x.creator && x.creator.name)+(x.creator && x.creator.official ? '<span class="off">Chính chủ</span>' : '')+' · '+esc(x.cat_label)+'</div><div class="tg" style="-webkit-line-clamp:unset">'+esc(x.tagline||'')+'</div></div></div>'
     + '<div class="facts"><div><b>'+(x.rating ? String(x.rating).replace('.',',') : '–')+'</b><span>'+x.rating_n+' đánh giá</span></div><div><b>'+(x.installs+x.interest)+'</b><span>Người dùng</span></div><div><b>'+(x.type==='brain' ? sp.note_count+' ghi chú' : x.type==='workflow' ? sp.step_count+' bước' : (sp.rule_count||'')+' quy tắc')+'</b><span>Nội dung</span></div><div><b>'+esc(x.version)+'</b><span>Phiên bản</span></div><div><b>'+vnd(x.price)+'</b><span>'+(sp.billing==='monthly' ? 'Mỗi tháng' : 'Một lần')+'</span></div></div>'
-    + '<div id="getbox"><b>'+esc(sp.buy_label || (x.price>0 ? 'Mua '+vnd(x.price) : 'Nhận miễn phí'))+'</b><p class="by" style="margin:4px 0 0">'+(x.price>0 ? 'Thanh toán đang mở dần. Để lại email, superYou gửi link mua và hướng dẫn cài khi sẵn sàng.' : 'Để lại email, superYou gửi hướng dẫn cài khi tài khoản của bạn sẵn sàng.')+'</p>'
-    + '<form class="form" id="gf"><label for="ge" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Email</label><input id="ge" type="email" required placeholder="email@congty.com" autocomplete="email"><button class="btn y">'+(x.price>0 ? 'Đặt mua' : 'Nhận')+'</button></form><p class="msg" id="gm" role="status"></p></div>'
+    + '<div id="getbox" class="getbox"><b>'+esc(sp.buy_label || (x.price>0 ? 'Mua '+vnd(x.price) : 'Nhận miễn phí'))+'</b><p class="by" style="margin:4px 0 0">'+(x.price>0 ? 'Thanh toán bằng chuyển khoản VietQR. Nhập email để nhận link tải và hoá đơn.' : 'Nhập email để nhận link tải.')+'</p>'
+    + '<form class="form" id="gf"><label for="ge" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Email</label><input id="ge" type="email" required placeholder="email@congty.com" autocomplete="email"><button class="btn y">'+(x.price>0 ? 'Mua ngay' : 'Nhận')+'</button></form><p class="msg" id="gm" role="status"></p></div>'
     + specHtml(x)
     + (x.whats_new ? '<h3>Có gì mới · phiên bản '+esc(x.version)+'</h3><p>'+esc(x.whats_new)+'</p>' : '')
     + '<h3>Mô tả</h3><p style="white-space:pre-line">'+esc(x.description||'')+'</p>'
@@ -203,11 +237,12 @@ function detail(x, fromPath){
     + '<h3>Đánh giá</h3>' + ((x.reviews||[]).length ? x.reviews.map(function(r){ return '<div class="rv"><b class="st">'+'★'.repeat(r.stars)+'</b> <span class="by">'+esc(r.name)+'</span>'+(r.text ? '<p style="margin:4px 0 0">'+esc(r.text)+'</p>' : '')+'</div>'; }).join('') : '<p class="by">Chưa có đánh giá.</p>');
   var d = $('#dlg'); if(!d.open) d.showModal();
   $('#dx').onclick = function(){ d.close(); };
-  $('#gf').addEventListener('submit', function(e){ e.preventDefault(); var m = $('#gm'), btn = e.target.querySelector('button'); btn.disabled = true; m.className = 'msg'; m.textContent = 'Đang gửi…';
-    api('/api/market/interest', {lid:x.id, email:$('#ge').value}).then(function(){ m.className = 'msg ok'; m.textContent = 'Đã ghi nhận. superYou sẽ liên hệ bạn sớm.'; e.target.reset(); })
-      .catch(function(err){ m.className = 'msg err'; m.textContent = err.message; }).then(function(){ btn.disabled = false; }); });
+  $('#gf').addEventListener('submit', function(e){ e.preventDefault(); var m = $('#gm'), btn = e.target.querySelector('button'); btn.disabled = true; m.className = 'msg'; m.textContent = 'Đang tạo đơn…';
+    api('/api/pay/order', {lid:x.id, email:$('#ge').value}).then(function(r){ lsSet('sy-email', $('#ge').value); payBox(r, x); })
+      .catch(function(err){ m.className = 'msg err'; m.textContent = err.message; btn.disabled = false; }); });
+  var em = lsGet('sy-email'); if(em) $('#ge').value = em;
 }
-$('#dlg').addEventListener('close', function(){ if(/^\/market\/[a-z0-9-]+$/.test(location.pathname) && location.pathname !== '/market/console') history.replaceState(null, '', '/market'); });
+$('#dlg').addEventListener('close', function(){ clearInterval(POLL); if(/^\/market\/[a-z0-9-]+$/.test(location.pathname) && location.pathname !== '/market/console') history.replaceState(null, '', '/market'); });
 $('#dlg').addEventListener('click', function(e){ if(e.target === this) this.close(); });
 
 /* ================================================== console người tạo */
@@ -241,7 +276,17 @@ function dash(){
     + '<div class="tiles"><div class="tile"><b>'+s.products+'</b><span>Sản phẩm</span></div><div class="tile"><b>'+s.published+'</b><span>Đang bán</span></div><div class="tile"><b>'+s.review+'</b><span>Chờ duyệt</span></div><div class="tile"><b>'+s.interest+'</b><span>Khách quan tâm</span></div><div class="tile"><b>'+s.installs+'</b><span>Lượt cài</span></div></div>'
     + '<div class="list">'+(d.items.length ? d.items.map(function(x){ return '<div class="rowi">'+icon(x,44)+'<div style="flex:1;min-width:0"><div class="nm">'+esc(x.name)+'</div><div class="by">'+esc(x.type_label)+' · '+vnd(x.price)+' · '+x.interest+' quan tâm · '+x.installs+' cài'+(x.rating ? ' · ★ '+x.rating : '')+'</div>'+(x.review_note ? '<div class="by" style="color:var(--red)">Phản hồi: '+esc(x.review_note)+'</div>' : '')+'</div><span class="sts s-'+x.status+'">'+(ST[x.status]||x.status)+'</span><button class="btn sm" data-e="'+x.id+'">Sửa</button></div>'; }).join('')
       : '<div class="empty" style="border:0">Chưa có sản phẩm. Bấm “Sản phẩm mới”, dán nguyên liệu và để AI đóng gói giúp bạn.</div>')+'</div>'
-    + '<p class="by">Mọi sản phẩm được đội superYou duyệt trước khi lên kệ, thường trong 1–2 ngày làm việc. Thanh toán cho người bán sẽ mở trong giai đoạn tới.</p></div>';
+    + '<div class="pane" id="rev"><h2>Doanh thu</h2><p class="by">Đang tải…</p></div>'
+    + '<p class="by">Mọi sản phẩm được đội superYou duyệt trước khi lên kệ, thường trong 1–2 ngày làm việc.</p></div>';
+  api('/api/creator/revenue', {}, C.key).then(function(r){
+    var bank = r.bank || {};
+    $('#rev').innerHTML = '<h2>Doanh thu</h2><div class="rev-tiles"><div class="tile"><b>'+vnd(r.balance)+'</b><span>Số dư chờ trả</span></div><div class="tile"><b>'+vnd(r.this_month)+'</b><span>Tháng này</span></div><div class="tile"><b>'+r.sales+'</b><span>Lượt bán</span></div><div class="tile"><b>'+vnd(r.paid)+'</b><span>Đã nhận</span></div></div>'
+      + '<p class="by">Bạn nhận '+(100-r.fee_pct)+'% mỗi lượt bán (sàn giữ '+r.fee_pct+'%). superYou chuyển khoản ngày '+r.payout_day+' hằng tháng khi số dư từ '+vnd(r.payout_min)+'. Kỳ tới: '+esc(r.next_payout)+'.</p>'
+      + (r.recent.length ? '<div class="list">'+r.recent.map(function(e){ return '<div class="rowi"><div style="flex:1;min-width:0"><div class="nm">'+esc(e.name)+'</div><div class="by">'+esc((e.at||'').slice(0,16).replace('T',' '))+(e.kind==='refund' ? ' · hoàn tiền' : '')+'</div></div><b>'+(e.seller_amount<0?'−':'+')+vnd(Math.abs(e.seller_amount))+'</b></div>'; }).join('')+'</div>' : '<p class="by">Chưa có lượt bán nào.</p>')
+      + '<form id="bf" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-top:10px"><label class="f">Ngân hàng<input id="bb" value="'+esc(bank.bank||'')+'" placeholder="MB, VCB, TCB…"></label><label class="f">Số tài khoản<input id="ba" value="'+esc(bank.account||'')+'" inputmode="numeric"></label><label class="f">Chủ tài khoản<input id="bn" value="'+esc(bank.name||'')+'"></label><div style="display:flex;align-items:end"><button class="btn k">Lưu tài khoản nhận tiền</button></div></form><p class="msg" id="bm" role="status"></p>';
+    $('#bf').addEventListener('submit', function(e){ e.preventDefault(); var m = $('#bm'); m.className='msg'; m.textContent='Đang lưu…';
+      api('/api/creator/bank', {bank:$('#bb').value, account:$('#ba').value, name:$('#bn').value}, C.key).then(function(r){ m.className='msg ok'; m.textContent = r.text; }).catch(function(err){ m.className='msg err'; m.textContent = err.message; }); });
+  }).catch(function(e){ $('#rev').innerHTML = '<h2>Doanh thu</h2><p class="msg err">'+esc(e.message)+'</p>'; });
   $('#nw').onclick = function(){ C.draft = {type:'skill', name:'', tagline:'', description:'', body:'', category:'nang-suat', price:0, tags:''}; C.step = 1; wizard(); };
   $('#lo').onclick = function(){ lsSet('sy-key', null); C.key = null; loginView(); };
   document.querySelectorAll('[data-e]').forEach(function(b){ b.onclick = function(){ api('/api/creator/get', {lid:b.dataset.e}, C.key).then(function(p){ C.draft = p; C.step = 2; wizard(); }).catch(function(e){ alertMsg(e.message); }); }; });
@@ -314,6 +359,7 @@ function save(submit, m){
     .catch(function(e){ m.className = 'msg err'; m.textContent = e.message; });
 }
 
+var myo = $('#myo'); if(myo) myo.onclick = function(e){ e.preventDefault(); myOrders(); };
 if(location.pathname.replace(/\/$/, '') === '/market/console') consoleView(); else store();
 })();
 </script>

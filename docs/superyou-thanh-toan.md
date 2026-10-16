@@ -1,0 +1,30 @@
+# superYou Marketplace: thu phí và thanh toán
+
+Anh Huy duyệt ngày 17/10/2026.
+
+## Cơ chế thu phí
+- Sàn giữ **20%** mỗi lượt bán của người tạo khác (`PLATFORM_FEE_PCT`), sản phẩm chính chủ 100% về sàn.
+- Miễn phí đăng bán. Giá sàn tối thiểu 29.000đ; bậc giá gợi ý 0 / 29k / 49k / 99k / 199k / 299k.
+- Mua đứt (skill, gói tri thức) hoặc thuê bao tháng (workflow có chi phí AI khi chạy).
+- Hoàn tiền trong 7 ngày nếu chưa cài hoặc cài dưới 2 lần. Trả người bán ngày 10 hằng tháng khi số dư từ 200.000đ.
+
+## Luồng mua (giai đoạn 1, đang chạy)
+1. Khách bấm Mua trên app.roimaxxhub.com/market, nhập email → đơn có mã `SYXXXXXX`, mã VietQR với nội dung chuyển khoản là mã đơn, hết hạn sau 24 giờ.
+2. Tiền về tài khoản của anh. Xác nhận bằng một trong hai cách:
+   - **Tự động:** Casso hoặc SePay gọi `POST /api/pay/webhook` kèm token (`PAY_WEBHOOK_TOKEN`) trong header `Authorization: Apikey …` (Casso) hoặc `Secure-Token`/`X-Webhook-Token`. superYou tìm mã đơn trong nội dung chuyển khoản, khớp số tiền thì ghi đã trả.
+   - **Tay:** app › Marketplace › Quản trị › Giao dịch › **Đã nhận tiền**.
+3. Giao hàng: đóng gói SKILL.md / zip ghi chú / workflow.json, link tải ký 7 ngày, hoá đơn `/pay/receipt`, email cho khách (cần Gmail hoặc Lark Mail đã kết nối), ghi quyền sở hữu theo email, báo anh qua Telegram.
+4. Khách xem lại ở **Đơn của tôi** trên trang công khai (nhập email), bấm **Gửi lại link** nếu hết hạn.
+
+## Sổ cái và trả người bán
+- Mỗi đơn đã trả ghi một dòng: tổng, phí sàn, phần người bán. Hoàn tiền ghi dòng âm.
+- Quản trị › Giao dịch: tổng bán, về sàn, tháng này, đơn chờ, nợ người bán, hoàn tiền, ghi đã trả (kèm mã giao dịch ngân hàng).
+- Console người bán › Doanh thu: số dư, tháng này, lượt bán, lịch sử, tài khoản nhận tiền, kỳ trả tiếp theo.
+
+## Anh cần làm (không ai làm thay được)
+1. Điền vào `/opt/superhuy/shared/.env` trên VPS: `BANK_ID` (mã ngân hàng VietQR, ví dụ MB, VCB, TCB), `BANK_ACCOUNT`, `BANK_ACCOUNT_NAME`, rồi khởi động lại superHuy.
+2. Đăng ký Casso (casso.vn) hoặc SePay (sepay.vn), nối tài khoản ngân hàng, tạo webhook trỏ về `https://app.roimaxxhub.com/api/pay/webhook`, đặt token và điền `PAY_WEBHOOK_TOKEN`.
+3. Kết nối Gmail hoặc Lark Mail trong app để gửi email hoá đơn.
+4. Giai đoạn 2: đăng ký PayOS (payos.vn), điền `PAYOS_CLIENT_ID`, `PAYOS_API_KEY`, `PAYOS_CHECKSUM_KEY`; webhook trỏ về `/api/pay/webhook/payos`. Bán quốc tế: Lemon Squeezy (làm sau khi anh chốt).
+
+Tình trạng từng mục hiện ở Quản trị › Giao dịch › Thiết lập thanh toán.

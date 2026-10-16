@@ -287,6 +287,16 @@ class Handler(BaseHTTPRequestHandler):
             return self._file(STATIC / APP_FILES[u.path], cache=u.path.startswith("/icons/"))
         if u.path == "/health":
             return self._json(200, {"ok": True})
+        if u.path == "/pay/receipt":  # hoá đơn (link ký)
+            from agents import pay
+            return self._page("<!doctype html><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'>"
+                              "<body style='font:16px/1.5 -apple-system,system-ui,sans-serif;padding:28px;max-width:640px;margin:auto'>" + pay.receipt_html(q.get("o", ""), q.get("s", "")) + "</body>")
+        if u.path == "/api/pay/status":
+            try:
+                from agents import pay
+                return self._json(200, pay.order_status(q.get("o", "")[:20], q.get("e", "")[:254]))
+            except ValueError as e:
+                return self._json(404, {"error": str(e)})
         if u.path == "/api/market/public":  # danh mục Marketplace công khai (không có nội dung skill/gói)
             try:
                 from agents import market
@@ -375,6 +385,34 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(200, {"ok": True})
         if u.path.startswith("/api/creator/"):  # console người tạo Marketplace (khoá truy cập riêng, không dùng phiên của chủ nhân)
             return self._creator(u.path, data if isinstance(data, dict) else {})
+        if u.path in ("/api/pay/webhook", "/api/pay/webhook/payos"):  # đối soát tự động (Casso/SePay/PayOS)
+            from agents import pay
+            try:
+                if u.path.endswith("/payos"):
+                    return self._json(200, pay.payos_webhook(data if isinstance(data, dict) else {}))
+                tok = self.headers.get("Authorization", "").replace("Apikey ", "").replace("Bearer ", "").strip() or self.headers.get("Secure-Token", "") or self.headers.get("X-Webhook-Token", "")
+                return self._json(200, pay.webhook_bank(data if isinstance(data, dict) else {}, tok))
+            except PermissionError as e:
+                return self._json(401, {"error": str(e)})
+            except Exception:
+                log.exception("Webhook thanh toán lỗi")
+                return self._json(500, {"error": "webhook error"})
+        if u.path in ("/api/pay/order", "/api/pay/resend", "/api/pay/mine"):  # khách mua trên trang công khai
+            ip = self.headers.get("X-Real-IP") or self.client_address[0]
+            if not _hello_ok("pay:" + ip):
+                return self._json(429, {"error": "Thao tác quá nhanh, thử lại sau ít phút nhé."})
+            try:
+                from agents import pay
+                if u.path == "/api/pay/order":
+                    return self._json(200, pay.create_order(str(data.get("lid", ""))[:20], str(data.get("email", "")), "public"))
+                if u.path == "/api/pay/resend":
+                    return self._json(200, pay.resend(str(data.get("email", ""))))
+                return self._json(200, pay.entitlements(str(data.get("email", ""))))
+            except ValueError as e:
+                return self._json(400, {"error": str(e)[:200]})
+            except Exception:
+                log.exception("Đặt mua lỗi")
+                return self._json(500, {"error": "Chưa tạo được đơn, bạn thử lại sau nhé."})
         if u.path in ("/api/waitlist", "/api/market/interest"):  # form công khai (giới hạn tần suất)
             ip = self.headers.get("X-Real-IP") or self.client_address[0]
             if not _hello_ok("wl:" + ip):
@@ -534,6 +572,12 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(200, market.creator_get(c, str(data.get("lid", ""))[:20]))
             if path == "/api/creator/save":
                 return self._json(200, market.creator_save(c, data))
+            if path == "/api/creator/revenue":
+                from agents import pay
+                return self._json(200, pay.seller_revenue(c["id"]))
+            if path == "/api/creator/bank":
+                from agents import pay
+                return self._json(200, pay.seller_bank(c["id"], str(data.get("bank", "")), str(data.get("account", "")), str(data.get("name", ""))))
             if path == "/api/creator/pack":
                 market.creator_ai_ok(c)
                 return self._json(200, market.pack(str(data.get("raw", ""))[:20000], str(data.get("hint_type", "")),

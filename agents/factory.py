@@ -417,3 +417,23 @@ def to_market(pid: str, publish: bool = False, price: int = 0) -> dict:
             d["projects"][pid]["updated"] = _now()
             _save(d)
     return r
+
+
+def price_reco(pid: str) -> dict:
+    """Gợi ý bậc giá cho dự án nhắm Marketplace, dựa trên loại, nội dung và đối tượng mục tiêu."""
+    from agents import pay
+    d = _load()
+    p = d["projects"].get(pid)
+    if not p:
+        raise ValueError("Không tìm thấy dự án")
+    if p["target"] not in ("skill", "workflow", "brain"):
+        raise ValueError("Dự án này dựng app, không định giá trên Marketplace")
+    from agents import market
+    fake = {"type": p["target"], "name": p["name"], "category": "nang-suat", "content": market._content_from(p["target"], p["build_prompt"])}
+    try:
+        fake["category"] = next(k for k, v in market.CATS.items() if v.lower().split()[0] in (p.get("metadata") or {}).get("category", "").lower())
+    except StopIteration:
+        pass
+    r = pay.price_reco(fake)
+    r["category"] = fake["category"]
+    return r
