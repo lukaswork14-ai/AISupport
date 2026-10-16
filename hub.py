@@ -524,9 +524,9 @@ register(Agent("noidung", "Nội dung", "🎬", "Săn tin theo chủ đề + cas
     Action("phan_tich", "Phân tích CAO 1 tin", content_hub.analyze_item, hidden=True, long=True, llm=True,
            desc="Phân tích chuyên sâu (vai CAO) 1 tin trong hàng chờ theo 2 lăng kính Roimaxx và Leversphere.",
            params=[Param("iid", "ID tin", required=True)]),
-    Action("chien_luoc", "Chiến lược agentic commerce", strategy.overview, hidden=True, llm=True,
-           desc="Tổng quan tình báo chiến lược: 2 tài liệu sống (Roimaxx mô hình kinh doanh agentic commerce enabler; Leversphere lộ trình trở thành AI-native POD company "
-                "chuyển đổi agentic e-commerce) + các insight đã phân tích gần đây."),
+    Action("chien_luoc", "Chiến lược Roimaxx & Leversphere", strategy.overview, hidden=True, llm=True,
+           desc="Tổng quan tình báo chiến lược: 2 tài liệu sống (Roimaxx mô hình kinh doanh agentic commerce enabler; Leversphere lộ trình trở thành AI-native POD company: "
+                "năng suất, doanh thu, cắt chi phí) + các insight đã phân tích gần đây."),
     Action("insight", "Xem 1 insight", strategy.insight, hidden=True, params=[Param("iid", "ID", required=True)]),
     Action("tai_lieu", "Xem tài liệu chiến lược", strategy.doc, hidden=True, llm=True,
            desc="Đọc toàn văn tài liệu chiến lược: lens = roimaxx (mô hình kinh doanh agentic commerce enabler) | leversphere (lộ trình AI-native POD company).",
