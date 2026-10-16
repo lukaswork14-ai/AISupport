@@ -831,6 +831,9 @@ html.macapp body.standalone{ padding-top:0 }
 .mksample{ white-space:pre-line; font-size:13.5px !important; color:var(--text) !important; max-height:150px; overflow:hidden; -webkit-mask-image:linear-gradient(#000 70%, transparent) }
 .mktoc{ max-height:240px; overflow:auto; column-width:220px; column-gap:18px }
 .mkinfo{ display:grid; grid-template-columns:max-content 1fr; gap:6px 14px; margin:0; font-size:14px } .mkinfo dt{ color:var(--muted) } .mkinfo dd{ margin:0 }
+.hqdepts{ display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:10px } .hqdept{ text-align:left; display:flex; flex-direction:column; gap:4px; border-left:4px solid var(--c) }
+.bdcard{ margin-bottom:10px; border-left:4px solid var(--c) } .bdcard.wait{ box-shadow:0 0 0 1px var(--line), 0 0 0 3px color-mix(in srgb, var(--amber) 35%, transparent) }
+html.hq .sbrand img{ border-radius:50% } html.hq .sask{ display:none }
 .sr{ position:absolute!important; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0) }
 </style>
 </head>
@@ -856,6 +859,7 @@ const tg = window.Telegram?.WebApp;
 const IN_TG = !!tg?.initData;
 if(/superHuyMac/.test(navigator.userAgent)) document.documentElement.classList.add('macapp');  // mở trong Telegram; ngược lại là app iPhone/trình duyệt (đăng nhập bằng PIN)
 const STANDALONE = !!(navigator.standalone || matchMedia('(display-mode: standalone)').matches);
+const HQ = /^\/hq(\/|$)/.test(location.pathname); if(HQ) document.documentElement.classList.add('hq');
 const S = { tok:null, tab:'home', data:{}, jobs:{}, busy:{}, kind:'', calDay:'today', cal:{}, chatWait:false, first:'' };
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -942,7 +946,8 @@ function copyText(t){
 }
 
 /* ---------- điều hướng */
-const TABS = [['home','Hôm nay','home'],['tasks','Việc','tasks'],['ai','superHuy','spark'],['meet','Họp','mic'],['growth','Phát triển','sprout']];
+const TABS = HQ ? [['hq','Tổng quan','home'],['board','Phòng ban','users'],['ai','superHuy','spark'],['mkt','Marketplace','bag'],['cfo','Tài chính','wallet']]
+  : [['home','Hôm nay','home'],['tasks','Việc','tasks'],['ai','superHuy','spark'],['meet','Họp','mic'],['growth','Phát triển','sprout']];
 function nav(){
   const n = $('#nav'); n.hidden = false;
   n.innerHTML = TABS.map(([id,l,i]) => id==='ai' ? `<button data-t="ai" class="ai ${S.dockOpen||S.tab==='chat'?'on':''}" aria-label="Trò chuyện với superHuy"><span class="orb"><img class="brandimg" src="/icons/huy-192.png?v=3" alt=""></span><em>${l}</em></button>`
@@ -959,13 +964,15 @@ function nav(){
   sideNav();
 }
 /* thanh bên cho màn hình rộng (Mac, iPad ngang, máy tính) */
-const SIDE = [['home','Hôm nay','home',"go('home')"],['tasks','Việc','tasks',"go('tasks')"],['meet','Họp','mic',"go('meet')"],['content','Nội dung','film',"go('content')"],
+const SIDE = HQ ? [['hq','Tổng quan','home',"go('hq')"],['board','Phòng ban','users',"go('board')"],['mkt','Marketplace','bag',"go('mkt')"],['gd','Giao dịch','wallet',"S.mk.view='qt';S.mk.admTab='gd';go('mkt')"],
+  ['leads','Khách hàng','inbox',"go('leads')"],['lab','Xưởng clone','factory',"go('lab')"],['cfo','Tài chính CFO','chart',"go('cfo')"],['_qc','Hệ thống','check',"openQC()"],['_app','Mở superHuy','spark',"openLink(location.origin+'/app')"]]
+  : [['home','Hôm nay','home',"go('home')"],['tasks','Việc','tasks',"go('tasks')"],['meet','Họp','mic',"go('meet')"],['content','Nội dung','film',"go('content')"],
   ['growth','Phát triển','sprout',"go('growth')"],['mail','Hộp thư','inbox',"go('mail')"],['money','Tài chính','wallet',"go('money')"],['chat','Trò chuyện','chat',"go('chat')"],
-  ['mkt','Marketplace','bag',"go('mkt')"],['lab','Sản phẩm số','factory',"go('lab')"],['leads','Khách đăng ký','users',"go('leads')"],['_brain','Second Brain','brain',"openBrain()"],['_lark','Lark','lark',"openAgent('lark')"],['more','Cài đặt','gear',"go('more')"]];
+  ['mkt','Marketplace','bag',"go('mkt')"],['_brain','Second Brain','brain',"openBrain()"],['_lark','Lark','lark',"openAgent('lark')"],['_hq','superYou HQ','factory',"openLink(location.origin+'/hq')"],['more','Cài đặt','gear',"go('more')"]];
 function sideNav(){
   const el = $('#side'); if(!el) return;
   const badge = {tasks:S.tk?.data?.stats?.today, content:S.data?.cq?.new?.length, meet:(S.mt?.items||[]).filter(m=>m.status==='working'||m.status==='queued').length};
-  el.innerHTML = `<div class="sbrand"><img class="brandimg" src="/icons/huy-128.png?v=3" alt=""><div><b>superHuy</b><span>${esc(viDate(new Date()))}</span></div></div>
+  el.innerHTML = `<div class="sbrand"><img class="brandimg" src="/icons/huy-128.png?v=3" alt=""><div><b>${HQ?'superYou HQ':'superHuy'}</b><span>${HQ?'Bảng điều hành của anh':esc(viDate(new Date()))}</span></div></div>
     <button class="sask" onclick="S.dockOpen=true;dock();setTimeout(()=>$('#dIn')?.focus(),150)">${ico('spark',18)}<span>Hỏi superHuy</span><kbd>⌘K</kbd></button>
     <div class="snav">${SIDE.map(([id,l,i,f])=>`<button class="${S.tab===id||(id==='content'&&['news','studio'].includes(S.tab))?'on':''}" onclick="${f}">${ico(i,19)}<span>${l}</span>${badge[id]?`<em>${badge[id]>99?'99+':badge[id]}</em>`:''}</button>`).join('')}</div>
     <div class="sfoot"><button onclick="openQC()">${ico('check',16)} Tình trạng hệ thống</button><button onclick="lockNow(true)">${ico('lock',16)} Khoá</button></div>`;
@@ -978,7 +985,7 @@ function render(){
   nav();
   const app = $('#app');
   if(S.enter){ S.enter = false; app.classList.remove('enter'); void app.offsetWidth; app.classList.add('enter'); clearTimeout(S.enterT); S.enterT = setTimeout(()=>app.classList.remove('enter'), 900); }
-  $('#app').innerHTML = ({home:vHome, meet:vMeet, mail:vMail, chat:vChat, content:vContent, news:vContent, studio:vContent, more:vMore, tasks:vTasks, money:vMoney, growth:vGrowth, mkt:vMkt, lab:vLab, leads:vLeads})[S.tab]();
+  $('#app').innerHTML = ({home:vHome, meet:vMeet, mail:vMail, chat:vChat, content:vContent, news:vContent, studio:vContent, more:vMore, tasks:vTasks, money:vMoney, growth:vGrowth, mkt:vMkt, lab:vLab, leads:vLeads, hq:vHq, board:vBoard, cfo:vCfo})[S.tab]();
   paintBusy();
   if(S.tab==='home'){ loadCal(true); loadInv(true); liveDigests(); loadHomeStats(); }
   if(S.tab==='tasks') tasksEnter();
@@ -986,6 +993,9 @@ function render(){
   if(S.tab==='growth') growthEnter();
   if(S.tab==='mkt') mkLoad();
   if(S.tab==='leads') tipBind();
+  if(S.tab==='hq') hqLoad();
+  if(S.tab==='board' && !S.bd) bdLoad();
+  if(S.tab==='cfo'){ if(!S.cf) cfLoad(); else tipBind(); }
   if(S.tab==='mail'){ mailEnter(); bindSwipe(); }
   if(S.tab==='content') contentEnter();
   if(S.tab==='meet'){ if(S.mt.rec) recTick(); else meetEnter(); }
@@ -1065,9 +1075,8 @@ const APPS = [
   ['brain','Second Brain','#8B5CF6',"openBrain()"],
   ['send','Đăng bài','#c98500',"openAgent('dang')"],
   ['chat','Trò chuyện','#A2338C',"go('chat')"],
-  ['bag','Marketplace','#5B3FD9',"go('mkt')", ()=>S.mk.data?.pending],
-  ['factory','Sản phẩm số','#2457C5',"go('lab')"],
-  ['users','Khách đăng ký','#0E7C6B',"go('leads')"],
+  ['bag','Marketplace','#5B3FD9',"go('mkt')"],
+  ['factory','superYou HQ','#2457C5',"openLink(location.origin+'/hq')"],
   ['gear','Cài đặt','#7A7387',"go('more')"],
 ];
 function appsGrid(){ return APPS.map(([i,l,c,f,b])=>{ const n = b ? b() : 0; return `<button onclick="${f}" aria-label="${l}"><i style="--c:${c}">${ico(i,24)}</i>${l}${n?`<span class="bd">${n>99?'99+':n}</span>`:''}</button>`; }).join(''); }
@@ -2590,8 +2599,8 @@ function mkRow(x, i){ return `<div class="mkrow" role="button" tabindex="0" oncl
 function vMkt(){
   const v = S.mk.view, d = S.mk.data;
   const head = `<div class="date">Chợ tài sản số của superYou: skill, workflow, gói tri thức</div><h1>Marketplace</h1>
-    <div class="row" style="margin-bottom:14px;justify-content:space-between"><div class="seg" style="flex-wrap:wrap"><button class="${v==='kham'?'on':''}" onclick="S.mk.view='kham';render()">Khám phá</button><button class="${v==='cai'?'on':''}" onclick="S.mk.view='cai';render()">Đã cài${d?.installed?.length?` ${d.installed.length}`:''}</button><button class="${v==='xuong'?'on':''}" onclick="S.mk.view='xuong';render()" style="white-space:nowrap;display:inline-flex;align-items:center;gap:5px">${ico('factory',14)}Xưởng clone</button><button class="${v==='qt'?'on':''}" onclick="S.mk.view='qt';render()">Quản trị${d?.pending?` <em class="mkbadge">${d.pending}</em>`:''}</button></div>
-    <div class="row"><button class="btn sm pri" onclick="lbNew()">${ico('plus',16)} Tạo tài sản</button><button class="btn sm" onclick="openLink(location.origin+'/market')">${ico('link',16)} Trang công khai</button></div></div>`;
+    <div class="row" style="margin-bottom:14px;justify-content:space-between"><div class="seg" style="flex-wrap:wrap"><button class="${v==='kham'?'on':''}" onclick="S.mk.view='kham';render()">Khám phá</button><button class="${v==='cai'?'on':''}" onclick="S.mk.view='cai';render()">Đã cài${d?.installed?.length?` ${d.installed.length}`:''}</button>${HQ?`<button class="${v==='xuong'?'on':''}" onclick="S.mk.view='xuong';render()" style="white-space:nowrap;display:inline-flex;align-items:center;gap:5px">${ico('factory',14)}Xưởng clone</button><button class="${v==='qt'?'on':''}" onclick="S.mk.view='qt';render()">Quản trị${d?.pending?` <em class="mkbadge">${d.pending}</em>`:''}</button>`:''}</div>
+    <div class="row">${HQ?`<button class="btn sm pri" onclick="lbNew()">${ico('plus',16)} Tạo tài sản</button>`:`<button class="btn sm" onclick="openLink(location.origin+'/hq')">${ico('factory',16)} Quản trị ở HQ</button>`}<button class="btn sm" onclick="openLink(location.origin+'/market')">${ico('link',16)} Trang công khai</button></div></div>`;
   if(v==='xuong') return head + vLabInner();
   if(v==='qt') return head + vQt();
   if(!d) return head + `<div class="card empty">Đang mở Marketplace…</div>`;
@@ -2889,6 +2898,76 @@ async function ldSet(email, status){ try{ const r = await run('khach','trangthai
 function ldNote(email){ sheet(`<h2>Ghi chú khách</h2><p class="meta">${esc(email)}</p><label class="field" style="margin-top:10px"><span>Ghi chú</span><textarea id="ldN" placeholder="Đã gọi, hẹn demo thứ Ba…"></textarea></label><button class="btn pri full" onclick="ldSaveNote('${esc(email)}')">Lưu</button>`); }
 async function ldSaveNote(email){ const it = S.ld.data.items.find(x=>x.email===email); try{ await run('khach','trangthai',{email, status:it?.status||'moi', note:$('#ldN').value},'',true); toast('Đã lưu ghi chú'); closeSheet(); S.ld.data=null; ldLoad(); }catch(e){ toast(e.message); } }
 
+
+
+/* =================================================================== superYou HQ: Tổng quan, Phòng ban, Tài chính CFO */
+S.hqd = null; S.bd = null; S.cf = null;
+async function hqLoad(){ try{ const [a, g, b, l] = await Promise.all([run('market','quantri',{},'',true), run('market','gd',{},'',true), run('phongban','bang',{},'',true), run('khach','ds',{},'',true)]); S.hqd = {a, g, b, l}; }catch(e){ toast(e.message); S.hqd = {a:{kpi:{}}, g:{kpi:{}, orders:[]}, b:{counts:{}, items:[], depts:{}}, l:{total:0, by_status:{}}}; } if(S.tab==='hq') render(); }
+function vHq(){
+  const d = S.hqd, head = `<div class="date">superYou HQ · ${esc(viDate(new Date()))}</div><h1>Tổng quan</h1>`;
+  if(!d) return head + `<div class="card empty">Đang tải…</div>`;
+  const a = d.a.kpi||{}, g = d.g.kpi||{}, b = d.b, l = d.l;
+  const wait = (b.items||[]).filter(x=>x.status==='cho_duyet'||x.status==='can_lam_ro');
+  const need = [];
+  if(wait.length) need.push([`${wait.length} đề xuất chờ anh quyết`, "go('board')"]);
+  if(a.review) need.push([`${a.review} sản phẩm chờ duyệt lên kệ`, "S.mk.view='qt';S.mk.admTab='cho';go('mkt')"]);
+  if(g.pending) need.push([`${g.pending} đơn chờ xác nhận tiền`, "S.mk.view='qt';S.mk.admTab='gd';go('mkt')"]);
+  if(l.by_status?.moi) need.push([`${l.by_status.moi} khách mới chưa liên hệ`, "go('leads')"]);
+  if(g.owed>0) need.push([`Nợ người bán ${money(g.owed)}`, "S.mk.view='qt';S.mk.admTab='gd';go('mkt')"]);
+  const cfg = d.g.config||{};
+  if(!cfg.vietqr_ready) need.push(['Chưa có tài khoản nhận tiền (VietQR)', "S.mk.view='qt';S.mk.admTab='gd';go('mkt')"]);
+  return head + `<div class="kpis mkkpis"><div class="card kpi"><b>${money(g.gross||0)}</b><span>Tổng bán</span></div><div class="card kpi"><b>${money(g.month||0)}</b><span>Doanh thu tháng</span></div><div class="card kpi"><b>${a.published||0}</b><span>Sản phẩm đang bán</span></div><div class="card kpi"><b>${a.creators||0}</b><span>Người bán</span></div><div class="card kpi"><b>${l.total||0}</b><span>Khách đăng ký</span></div><div class="card kpi"><b>${(a.installs||0)+(a.interest||0)}</b><span>Lượt cài + quan tâm</span></div></div>
+    <div class="sec"><h2>Cần anh quyết</h2></div><div class="card list">${need.length?need.map(([t,f])=>`<button onclick="${f}"><span class="thumb">${ico('check',20)}</span><div class="grow"><div style="font-weight:600">${t}</div></div><span class="chev">${ico('chev',18)}</span></button>`).join(''):'<div class="empty">Không có gì chờ anh. Các phòng ban đang làm việc.</div>'}</div>
+    <div class="sec"><h2>Phòng ban</h2><button class="link" onclick="go('board')">Mở bảng</button></div><div class="hqdepts">${Object.entries(b.depts||{}).map(([k,v])=>`<button class="card pad hqdept" style="--c:${v.color}" onclick="S.bdDept='${k}';go('board')"><b>${esc(v.name)}</b><span class="meta">${esc(v.desc)}</span><span class="meta"><b>${v.waiting}</b> chờ duyệt · <b>${v.open}</b> đang làm</span></button>`).join('')}</div>
+    <div class="sec"><h2>Giao dịch gần đây</h2><button class="link" onclick="S.mk.view='qt';S.mk.admTab='gd';go('mkt')">Tất cả</button></div><div class="card mklist">${(d.g.orders||[]).slice(0,6).map(o=>`<div class="mkrow"><div class="grow"><div class="ttl2">${esc(o.code)} · ${esc(o.name)}</div><div class="meta">${esc(o.email)} · ${vnd(o.amount)} · ${esc(o.status_text)} · ${esc(ago(o.paid_at||o.created))}</div></div></div>`).join('')||'<div class="empty">Chưa có giao dịch.</div>'}</div>`;
+}
+async function bdLoad(){ try{ S.bd = await run('phongban','bang',{},'',true); }catch(e){ toast(e.message); S.bd={items:[],counts:{},depts:{},statuses:{},prios:{},log:[]}; } if(S.tab==='board' && !$('#sheet').classList.contains('on')) render(); }
+function vBoard(){
+  const b = S.bd, f = S.bdF||'quyet', dep = S.bdDept||'';
+  const head = `<div class="date">Đề xuất của các phòng ban. Anh duyệt xong, việc tự giao về phòng phụ trách.</div><h1>Phòng ban</h1>`;
+  if(!b) return head + `<div class="card empty">Đang tải…</div>`;
+  const F = [['quyet','Chờ anh quyết',['cho_duyet','can_lam_ro']],['lam','Đang làm',['da_duyet','dang_lam']],['xong','Xong',['xong']],['tu_choi','Từ chối',['tu_choi']],['all','Tất cả',null]];
+  const rows = b.items.filter(x=>(!dep||x.dept===dep||x.assign_to===dep)&&(F.find(y=>y[0]===f)[2]||[x.status]).includes(x.status));
+  const ST = b.statuses, PR = b.prios;
+  return head + `<div class="chips">${F.map(([k,l,st])=>`<button class="chip ${f===k?'on':''}" onclick="S.bdF='${k}';render()">${l} ${b.items.filter(x=>!st||st.includes(x.status)).length}</button>`).join('')}</div>
+    <div class="chips" style="padding-top:0"><button class="chip ${!dep?'on':''}" onclick="S.bdDept='';render()">Mọi phòng</button>${Object.entries(b.depts).map(([k,v])=>`<button class="chip ${dep===k?'on':''}" onclick="S.bdDept='${k}';render()">${esc(v.name)}</button>`).join('')}</div>
+    <div class="row" style="margin:6px 0 10px"><button class="btn sm pri" onclick="bdNew()">${ico('plus',15)} Đề xuất mới</button></div>
+    ${rows.length?rows.map(x=>{ const dv = b.depts[x.dept]||{}, wait = x.status==='cho_duyet'||x.status==='can_lam_ro';
+      return `<article class="card pad bdcard ${wait?'wait':''}" style="--c:${dv.color||'#888'}"><div class="row" style="justify-content:space-between"><span class="tag" style="background:color-mix(in srgb,${dv.color} 14%,transparent);color:${dv.color}">${esc(dv.name||x.dept)}</span><span class="row"><span class="tag ${x.priority==='cao'?'hi':x.priority==='thap'?'lo':'mid'}">${esc(PR[x.priority]||'')}</span><span class="tag lo">${esc(ST[x.status]||x.status)}</span></span></div>
+        <h3 style="margin:8px 0 4px;font-size:16px">${esc(x.title)}</h3><p style="margin:0;white-space:pre-line">${esc(x.summary)}</p>
+        <dl class="mkinfo" style="margin-top:8px">${x.why?`<dt>Vì sao</dt><dd>${esc(x.why)}</dd>`:''}${x.impact?`<dt>Tác động</dt><dd>${esc(x.impact)}</dd>`:''}${x.cost?`<dt>Chi phí</dt><dd>${esc(x.cost)}</dd>`:''}${x.needs?`<dt>Cần</dt><dd>${esc(x.needs)}</dd>`:''}<dt>Người đề xuất</dt><dd>${esc(x.by)} · ${esc(ago(x.created))}</dd>${x.assign_to!==x.dept?`<dt>Giao cho</dt><dd>${esc((b.depts[x.assign_to]||{}).name||x.assign_to)}</dd>`:''}${x.due?`<dt>Hạn</dt><dd>${esc(x.due)}</dd>`:''}</dl>
+        ${x.note?`<p class="meta" style="margin-top:6px"><b>Anh ghi chú:</b> ${esc(x.note)}</p>`:''}${x.result?`<p class="meta" style="margin-top:6px"><b>Kết quả:</b> ${esc(x.result)}</p>`:''}
+        ${wait?`<label class="field" style="margin:10px 0 8px"><span>Ghi chú cho phòng ${esc(dv.name||'')}</span><input type="text" id="bdn_${x.id}" placeholder="Không bắt buộc"></label><div class="row"><button class="btn sm pri" onclick="bdDecide('${x.id}','duyet')">Duyệt và giao việc</button><button class="btn sm" onclick="bdDecide('${x.id}','lam_ro')">Cần làm rõ</button><button class="btn sm" onclick="bdDecide('${x.id}','tu_choi')">Từ chối</button></div>`
+          : ['da_duyet','dang_lam'].includes(x.status)?`<div class="row" style="margin-top:8px"><button class="btn sm" onclick="bdDone('${x.id}')">Ghi kết quả, đánh dấu xong</button></div>`:''}</article>`; }).join('')
+      : `<div class="card empty">${f==='quyet'?'Không có đề xuất nào chờ anh.':'Không có mục nào.'}</div>`}
+    <details class="card pad" style="margin-top:12px"><summary style="cursor:pointer;font-weight:600">Nhật ký</summary>${(b.log||[]).map(l=>`<div class="meta" style="margin-top:4px">${esc(ago(l.at))} · ${esc(l.who)}: ${esc(l.what)}</div>`).join('')}</details>`;
+}
+async function bdDecide(id, decision){ const note = $('#bdn_'+id)?.value||''; try{ const r = await run('phongban','quyet',{iid:id, decision, note},'',true); toast(r.text, 4000); S.bd=null; S.hqd=null; bdLoad(); }catch(e){ toast(e.message); } }
+function bdDone(id){ sheet(`<h2>Kết quả</h2><label class="field" style="margin-top:12px"><span>Đã làm gì, kết quả ra sao</span><textarea id="bdr"></textarea></label><button class="btn pri full" onclick="closeSheet();run('phongban','tien_do',{iid:'${id}',status:'xong',result:$('#bdr').value,by:'Anh Huy'},'',true).then(r=>{toast(r.text);S.bd=null;bdLoad()}).catch(e=>toast(e.message))">Đánh dấu xong</button>`); }
+function bdNew(){ const b = S.bd||{depts:{}}; sheet(`<h2>Đề xuất mới</h2><label class="field" style="margin-top:12px"><span>Phòng đề xuất</span><select id="bdD">${Object.entries(b.depts).map(([k,v])=>`<option value="${k}">${esc(v.name)}</option>`).join('')}</select></label><label class="field"><span>Tiêu đề</span><input type="text" id="bdT"></label><label class="field"><span>Nội dung</span><textarea id="bdS"></textarea></label><label class="field"><span>Ưu tiên</span><select id="bdP"><option value="cao">Cao</option><option value="vua" selected>Vừa</option><option value="thap">Thấp</option></select></label><button class="btn pri full" onclick="closeSheet();run('phongban','de_xuat',{dept:$('#bdD').value,title:$('#bdT').value,summary:$('#bdS').value,priority:$('#bdP').value,by:'Anh Huy'},'',true).then(r=>{toast(r.text);S.bd=null;bdLoad()}).catch(e=>toast(e.message))">Đưa lên bảng</button>`); }
+
+async function cfLoad(){ try{ S.cf = await run('cfo','tong_quan',{},'',true); }catch(e){ toast(e.message); S.cf={analyst:{revenue:{},flags:[],costs:[],cash:{},top_products:[],leads:{},personal:{}},forecast:{rows:[]},actions:{},briefs:[],periods:{}}; } if(S.tab==='cfo' && !$('#sheet').classList.contains('on')) render(); }
+function vCfo(){
+  const c = S.cf, head = `<div class="date">Finance OS superYou · Analyst, Forecaster, Strategist, CFO brief</div><h1>Tài chính</h1>`;
+  if(!c) return head + `<div class="card empty">Đang tải…</div>`;
+  const a = c.analyst, f = c.forecast, act = c.actions||{};
+  const rows = f.rows||[], mx = Math.max(1, ...rows.map(r=>Math.abs(r.cash)), Math.abs(f.cash_now||0));
+  return head + `<div class="kpis mkkpis"><div class="card kpi"><b>${money(a.cash?.amount||0)}</b><span>Tiền mặt${a.cash?.at?` (${esc(a.cash.at.slice(5))})`:''}</span></div><div class="card kpi"><b>${money(a.revenue.month||0)}</b><span>Doanh thu tháng</span></div><div class="card kpi"><b>${money(a.fixed_costs||0)}</b><span>Chi phí cố định/tháng</span></div><div class="card kpi"><b>${f.runway_months!=null?f.runway_months+' tháng':'–'}</b><span>Runway</span></div><div class="card kpi"><b>${a.sales||0}/${a.refunds||0}</b><span>Bán / hoàn</span></div><div class="card kpi"><b>${a.concentration||0}%</b><span>Tập trung doanh thu</span></div></div>
+    <div class="row" style="margin:12px 0"><button class="btn sm pri" onclick="cfStrat()">${ico('spark',15)} Strategist: đề xuất hành động</button><button class="btn sm" onclick="cfBrief()">${ico('news',15)} CFO brief hôm nay</button><button class="btn sm" onclick="cfCash()">Ghi tiền mặt</button><button class="btn sm" onclick="cfCost()">Thêm chi phí</button></div>
+    ${a.flags?.length?`<div class="card pad" style="background:var(--amber-soft)"><b>Analyst cảnh báo</b><ul style="margin:6px 0 0;padding-left:18px">${a.flags.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>`:''}
+    <div class="sec"><h2>Strategist · hành động nên làm</h2>${act.at?`<span class="meta">${esc(ago(act.at))}</span>`:''}</div>
+    <div class="card list">${(act.items||[]).map(x=>`<div><div class="grow"><div style="font-weight:600">${esc(x.title)}</div><div class="meta">${esc(x.why)}${x.impact?` · <b>${esc(x.impact)}</b>`:''} · ${esc(x.dept)}</div></div><button class="btn sm" onclick="run('cfo','len_bang',{action_id:'${x.id}'},'',true).then(r=>toast(r.text,3500)).catch(e=>toast(e.message))">Lên bảng</button></div>`).join('')||'<div class="empty">Bấm “Strategist” để CFO xếp hạng việc nên làm từ số liệu.</div>'}</div>
+    <div class="sec"><h2>Forecaster · ${esc(f.scenario||'Cơ sở')}</h2><div class="seg"><button onclick="cfScen('')">Cơ sở</button><button onclick="cfScen('mất khách lớn')">Mất khách</button><button onclick="cfScen('tăng giá')">Tăng giá</button><button onclick="cfScen('thuê thêm người')">Thuê người</button><button onclick="cfScen('chạy quảng cáo')">Quảng cáo</button></div></div>
+    <div class="card pad chart"><div style="max-width:520px">${vbars(rows.map(r=>({l:r.month.slice(5)+'/'+r.month.slice(2,4), v:Math.max(0,r.cash), tip:`${r.month}: doanh thu ${money(r.revenue)}, chi ${money(r.cost)}, tiền mặt ${money(r.cash)}`, c:'var(--s-blue)'})), {aria:'Tiền mặt dự báo', labels:6, h:120})}</div><div class="tipline meta"></div><p class="meta" style="margin:6px 0 0">${esc(f.note||'')}${rows.some(r=>r.cash<0)?' Tháng tiền mặt âm: '+rows.filter(r=>r.cash<0).map(r=>r.month).join(', ')+'.':''}</p></div>
+    <div class="sec"><h2>Chi phí cố định</h2></div><div class="card list">${(a.costs||[]).map(x=>`<div><div class="grow"><div style="font-weight:600">${esc(x.name)}</div><div class="meta">${vnd(x.amount)} ${esc((c.periods||{})[x.period]||x.period)}${x.note?` · ${esc(x.note)}`:''}</div></div><button class="btn sm" onclick="run('cfo','chi_phi_xoa',{cid:'${x.id}'},'',true).then(()=>{S.cf=null;cfLoad()})">Xoá</button></div>`).join('')||'<div class="empty">Chưa ghi chi phí nào (VPS, tên miền, LLM, công cụ). Bấm “Thêm chi phí”.</div>'}</div>
+    <div class="sec"><h2>Doanh thu theo sản phẩm</h2></div><div class="card list">${(a.top_products||[]).map(x=>`<div><div class="grow"><div style="font-weight:600">${esc(x.name)}</div></div><b>${vnd(x.amount)}</b></div>`).join('')||'<div class="empty">Chưa có lượt bán.</div>'}</div>
+    <div class="sec"><h2>CFO brief gần đây</h2></div>${(c.briefs||[]).map(b=>`<div class="card pad" style="margin-bottom:8px;white-space:pre-line;font-size:14px">${esc(b.text)}</div>`).join('')||'<div class="card empty">CFO gửi bản tin lúc 07:30 mỗi sáng qua Telegram, lưu ở đây.</div>'}`;
+}
+async function cfStrat(){ toast('CFO đang phân tích…', 3000); try{ const r = await run('cfo','de_xuat',{},'Strategist'); toast(r.headline||'Xong', 4000); S.cf=null; cfLoad(); }catch(e){ toast(e.message); } }
+async function cfBrief(){ try{ const r = await run('cfo','ban_tin',{},'',true); sheet(`<h2>CFO brief</h2><div style="white-space:pre-line;margin-top:10px">${esc(r.text)}</div>`); S.cf=null; }catch(e){ toast(e.message); } }
+async function cfScen(sc){ try{ const f = await run('cfo','du_bao',{months:6, scenario:sc},'',true); S.cf.forecast = f; render(); }catch(e){ toast(e.message); } }
+function cfCash(){ sheet(`<h2>Tiền mặt hiện có</h2><label class="field" style="margin-top:12px"><span>Số tiền (ví dụ 25tr, 120tr)</span><input type="text" id="cfA" inputmode="text"></label><button class="btn pri full" onclick="closeSheet();run('cfo','tien_mat',{amount:$('#cfA').value},'',true).then(r=>{toast(r.text);S.cf=null;cfLoad()}).catch(e=>toast(e.message))">Lưu</button>`); }
+function cfCost(){ sheet(`<h2>Chi phí cố định</h2><label class="field" style="margin-top:12px"><span>Tên</span><input type="text" id="cfN" placeholder="VPS, OpenRouter, tên miền…"></label><label class="field"><span>Số tiền</span><input type="text" id="cfM" placeholder="450k"></label><label class="field"><span>Chu kỳ</span><select id="cfP"><option value="monthly">Mỗi tháng</option><option value="yearly">Mỗi năm</option><option value="once">Một lần</option></select></label><label class="field"><span>Ghi chú</span><input type="text" id="cfO"></label><button class="btn pri full" onclick="closeSheet();run('cfo','chi_phi_them',{name:$('#cfN').value,amount:$('#cfM').value,period:$('#cfP').value,note:$('#cfO').value},'',true).then(r=>{toast(r.text);S.cf=null;cfLoad()}).catch(e=>toast(e.message))">Thêm</button>`); }
 
 /* =================================================================== superHuy: biểu đồ dùng chung */
 const SC = {late:'var(--s-red)', todo:'var(--s-blue)', doing:'var(--s-yellow)', done:'var(--s-aqua)', inc:'var(--s-aqua)', exp:'var(--s-orange)'};
@@ -3831,7 +3910,8 @@ document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && S.tok
     try{ const dk = document.documentElement.dataset.scheme==='dark'; tg?.setHeaderColor(dk?'#131019':'#F4F1F8'); tg?.setBackgroundColor(dk?'#131019':'#F4F1F8'); tg?.setBottomBarColor?.(dk?'#131019':'#F4F1F8'); }catch(e){}
     if(STANDALONE) document.body.classList.add('standalone');
     if(!IN_TG && 'serviceWorker' in navigator){ navigator.serviceWorker.register('/sw.js').catch(()=>{}); }
-    if(!IN_TG){ try{ history.replaceState(null, '', '/app'); }catch(e){} }
+    if(!IN_TG && !HQ){ try{ history.replaceState(null, '', '/app'); }catch(e){} }
+    if(HQ){ S.tab = 'hq'; S.mk.view = 'qt'; }
     await unlockFlow();
     S.enter = true;
     S.data = await api('/api/bootstrap');

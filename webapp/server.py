@@ -279,7 +279,7 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         u = urlparse(self.path)
         q = dict(parse_qsl(u.query))
-        if u.path in ("/", "/index.html", "/app"):
+        if u.path in ("/", "/index.html", "/app", "/hq", "/hq/"):
             return self._file(STATIC / "index.html", cache=False)
         if u.path.startswith("/market/") and re.fullmatch(r"/market/[a-z0-9-]{1,80}", u.path):  # trang chi tiết sản phẩm công khai
             return self._file(STATIC / "market/index.html", cache=False)

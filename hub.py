@@ -7,7 +7,7 @@ import os
 import re
 
 import targets as targets_mod
-from agents import (pay, factory, market, leads, calendar_agent, content_agent, content_hub, strategy, learning, reel_studio, game, repo_radar, web_tools, gemini_notebook, knowledge_sources, meeting, meeting_share, email_agent, fb_connect, gcal_bridge, imagecard, lark_agent, mailbox, news_agent, publisher,
+from agents import (board, cfo, pay, factory, market, leads, calendar_agent, content_agent, content_hub, strategy, learning, reel_studio, game, repo_radar, web_tools, gemini_notebook, knowledge_sources, meeting, meeting_share, email_agent, fb_connect, gcal_bridge, imagecard, lark_agent, mailbox, news_agent, publisher,
                     reel_video, second_brain)
 from config import CARD_HANDLE, DATA_DIR
 from core import digests, notify, store
@@ -664,6 +664,47 @@ register(Agent("xuong", "Xưởng sản phẩm số", "🏭", "Quét app/repo đ
     Action("len_cho", "Đưa dự án lên Marketplace", factory.to_market, hidden=True,
            params=[Param("pid", "ID", required=True), Param("publish", "Lên kệ", "bool", default=False), Param("price", "Giá", "number", default=0)]),
     Action("goi_y_gia", "Gợi ý giá cho dự án", factory.price_reco, hidden=True, params=[Param("pid", "ID", required=True)]),
+]))
+
+
+# ================================================================ Phòng ban (đề xuất -> anh duyệt -> giao việc)
+register(Agent("phongban", "Phòng ban", "🏢", "Các phòng ban superYou đề xuất, anh duyệt, việc tự giao về phòng phụ trách", order=59, actions=[
+    Action("bang", "Bảng phòng ban", board.overview, hidden=True, llm=True,
+           desc="Đề xuất của các phòng ban (Product, GTM, Sản phẩm số, Tài chính, Bán hàng, Vận hành): cái nào chờ anh duyệt, cái nào đang làm.",
+           params=[Param("status", "Lọc trạng thái")]),
+    Action("de_xuat", "Đưa đề xuất", board.propose, hidden=True, llm=True,
+           desc="Ghi một đề xuất lên bảng phòng ban để anh duyệt. dept: product|gtm|so|finance|sales|ops.",
+           params=[Param("dept", "Phòng", required=True), Param("title", "Tiêu đề", required=True), Param("summary", "Nội dung", "textarea", required=True),
+                   Param("why", "Vì sao"), Param("impact", "Tác động"), Param("cost", "Chi phí, thời gian"), Param("needs", "Cần phòng khác"),
+                   Param("priority", "Ưu tiên", default="vua"), Param("by", "Người đề xuất"), Param("auto_assign_to", "Giao cho"), Param("key", "Khoá chống trùng")]),
+    Action("quyet", "Anh quyết định", board.decide, hidden=True,
+           params=[Param("iid", "ID", required=True), Param("decision", "duyet|lam_ro|tu_choi", required=True), Param("note", "Ghi chú", "textarea"), Param("due_days", "Hạn (ngày)", "number", default=7)]),
+    Action("tien_do", "Cập nhật tiến độ", board.progress, hidden=True,
+           params=[Param("iid", "ID", required=True), Param("status", "dang_lam|xong|can_lam_ro", required=True), Param("result", "Kết quả", "textarea"), Param("by", "Phòng")]),
+]))
+
+
+# ================================================================ Tài chính superYou (CFO ảo)
+register(Agent("cfo", "CFO superYou", "💼", "Finance OS: phân tích, dự báo, đề xuất hành động và bản tin tài chính mỗi sáng", order=59, actions=[
+    Action("tong_quan", "Tổng quan tài chính superYou", cfo.overview, hidden=True),
+    Action("phan_tich", "Analyst: bức tranh và cảnh báo", cfo.analyst, hidden=True, llm=True,
+           desc="Doanh thu Marketplace, phí sàn, hoàn tiền, tập trung doanh thu, chi phí cố định, tiền mặt, cảnh báo bất thường."),
+    Action("du_bao", "Forecaster: dự báo 3–6 tháng", cfo.forecast, hidden=True, llm=True,
+           desc="Dự báo doanh thu, chi phí, tiền mặt và runway; kịch bản what-if: 'mất khách lớn', 'tăng giá', 'thuê thêm người', 'chạy quảng cáo'.",
+           params=[Param("months", "Số tháng", "number", default=6), Param("scenario", "Kịch bản")]),
+    Action("de_xuat", "Strategist: hành động nên làm", cfo.strategist, hidden=True, long=True, llm=True,
+           desc="CFO xếp hạng 3–5 hành động tăng tiền mặt/doanh thu, cắt chi phí; anh duyệt thì thành việc trên bảng Phòng ban.",
+           params=[Param("auto_propose", "Tự đưa lên bảng", "bool", default=False)]),
+    Action("len_bang", "Đưa hành động lên bảng", cfo.to_board, hidden=True, params=[Param("action_id", "ID", required=True)]),
+    Action("ban_tin", "CFO brief một trang", cfo.brief, hidden=True, llm=True, desc="Bản tin tài chính một trang: tiền mặt, thay đổi, nghĩa vụ, 3 việc nên làm.",
+           params=[Param("save", "Lưu", "bool", default=True)]),
+    Action("chi_phi_them", "Thêm chi phí cố định", cfo.add_cost, hidden=True, llm=True,
+           desc="Ghi một chi phí vận hành cố định của superYou (VPS, tên miền, LLM, công cụ). Ví dụ: VPS 300k mỗi tháng.",
+           params=[Param("name", "Tên", required=True), Param("amount", "Số tiền", required=True), Param("period", "Chu kỳ", default="monthly"),
+                   Param("category", "Nhóm", default="ha_tang"), Param("note", "Ghi chú")]),
+    Action("chi_phi_xoa", "Xoá chi phí", cfo.remove_cost, hidden=True, params=[Param("cid", "ID", required=True)]),
+    Action("tien_mat", "Ghi tiền mặt hiện có", cfo.set_cash, hidden=True, llm=True, desc="Ghi số dư tiền mặt của superYou/Roimaxx để dự báo runway.",
+           params=[Param("amount", "Số tiền", required=True)]),
 ]))
 
 
