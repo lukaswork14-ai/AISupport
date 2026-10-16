@@ -74,6 +74,10 @@ def seed_market():
     o = pay.create_order(paid, "khach@congty.vn")
     pay.webhook_bank({"data": [{"description": "CK " + o["order"]["code"], "amount": o["order"]["amount"], "id": "tx1"}]}, "qa-token")
     pay.create_order(paid, "khach2@congty.vn")
+    from agents import cfo, board
+    cfo.add_cost("VPS", "450k"); cfo.add_cost("OpenRouter", "1tr2", note="LLM"); cfo.set_cash("25tr")
+    board.propose("gtm", "Chốt chia doanh thu 20% và chính sách người bán", "Áp dụng từ 20/10, công bố trên trang người bán.", why="Mở thanh toán", impact="Doanh thu Marketplace", priority="cao", by="GTM")
+    board.propose("sales", "Gọi 3 khách đăng ký mới trong tuần", "minh@, an@, thu@ đã để lại email 2 ngày trước.", priority="vua", by="CSO (AI)")
     return s["key"]
 
 
@@ -129,6 +133,21 @@ def main():
             step("13-lab-new", "lbNew()", 1000)
             step("14-lab-editor", "lbEdit(S.lb.mine.mine[0].id)", 1500)
             step("15-leads", "closeSheet();go('leads')", 2200, True)
+            # superYou HQ (bảng điều hành riêng)
+            hq = ctx.new_page()
+            hq.route("https://telegram.org/js/telegram-web-app.js", lambda r: r.fulfill(status=200, content_type="text/javascript", body=ui_qa.TG_STUB % json.dumps(ui_qa.init_data())))
+            hq.on("pageerror", lambda e, t=tag: errs.append(f"[{t} hq pageerror] {e}"))
+            hq.goto("http://127.0.0.1:8787/hq")
+            hq.wait_for_timeout(3500)
+            hq.screenshot(path=str(OUT / f"{tag}-30-hq-overview.png"), full_page=True)
+            for name, js in (("31-hq-board", "go('board')"), ("32-hq-cfo", "go('cfo')"), ("33-hq-mkt", "go('mkt')")):
+                try:
+                    hq.evaluate(js)
+                    hq.wait_for_timeout(2200)
+                    hq.screenshot(path=str(OUT / f"{tag}-{name}.png"), full_page=True)
+                except Exception as e:
+                    errs.append(f"[{tag} {name}] {e}")
+            report.append(f"{tag} hq scrollWidth {hq.evaluate('document.documentElement.scrollWidth')}")
             if tag == "phone":
                 page.emulate_media(color_scheme="dark")
                 page.evaluate("document.documentElement.dataset.scheme='dark'")

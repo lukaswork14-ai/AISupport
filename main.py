@@ -288,6 +288,19 @@ async def job_strategy_weekly():
                      "Mở app › Nội dung › Chiến lược để xem.")
 
 
+async def job_cfo_brief():
+    """Mỗi sáng: CFO superYou gửi bản tin tài chính một trang; thứ Hai thêm 3 hành động đề xuất lên bảng Phòng ban."""
+    from agents import cfo
+    from core import notify
+    try:
+        if dt.date.today().weekday() == 0:
+            await asyncio.to_thread(cfo.strategist, True)
+        r = await asyncio.to_thread(cfo.brief, True)
+        notify.send(text=r["text"][:3500])
+    except Exception:
+        log.exception("CFO brief lỗi")
+
+
 async def job_repo_weekly():
     """Thứ Hai: săn repo GitHub nổi bật, phân tích, đề xuất áp dụng cho superHuy; kiểm tra bản phát hành repo đang theo dõi."""
     from agents import repo_radar
@@ -407,6 +420,7 @@ async def post_init(app: Application):
     if not IS_TENANT:  # chiến lược Roimaxx/Leversphere và Repo radar là của riêng anh Huy
         scheduler.add_job(job_strategy_weekly, CronTrigger(day_of_week="mon", hour=6, minute=20), misfire_grace_time=6 * 3600, coalesce=True)
         scheduler.add_job(job_repo_weekly, CronTrigger(day_of_week="mon", hour=6, minute=40), misfire_grace_time=6 * 3600, coalesce=True)
+    scheduler.add_job(job_cfo_brief, CronTrigger(hour=7, minute=30), misfire_grace_time=3 * 3600, coalesce=True)
     scheduler.add_job(job_knowledge_sync, "interval", hours=6, coalesce=True, max_instances=1, misfire_grace_time=3600,
                       next_run_time=dt.datetime.now() + dt.timedelta(minutes=3))
     for h in CONTENT_SCAN_HOURS:
