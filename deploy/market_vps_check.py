@@ -30,6 +30,13 @@ cfg = pay.config()
 print("pay_setup:", {k: cfg[k] for k in ("vietqr_ready", "webhook_ready", "payos_ready", "mail_ready", "fee_pct")})
 st, b = get(base + "/api/pay/status?o=khong")
 print("pay_status_route:", st)
+from core import passkey, flags  # noqa: E402
+print("passkey_rp:", passkey.rp(), "creds:", len(passkey.list_creds()))
+fo = flags.overview()
+print("flags:", {f["key"]: f["scope"] for f in fo["flags"]}, "experiments:", len(fo["experiments"]))
+from agents import workspace, board  # noqa: E402
+print("ws_library:", len(workspace.library()["steps"]), "workflows:", len(workspace.list_workflows()["items"]))
+print("board:", board.overview()["counts"])
 from agents import factory as f  # noqa: E402
 for src, kw in (("ios", {"country": "vn", "chart": "free", "genre": "6007"}), ("mac", {"country": "us", "chart": "free"}), ("github", {}), ("ph", {})):
     try:
