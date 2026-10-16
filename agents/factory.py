@@ -179,7 +179,10 @@ def scan(src: str = "ios", country: str = "vn", chart: str = "free", genre: str 
     for it in items:
         it["cloned"] = it["key"] in d["cloned"]
         it["starred"] = it["key"] in d["stars"]
-    label = f"{SOURCES[src]} · {COUNTRIES[country]}" + (f" · tìm “{q}”" if q else f" · {CHARTS[chart]}" + (f" · {GENRES[genre]}" if genre else "") if src in ("ios", "mac") else "")
+    if src in ("ios", "mac"):
+        label = f"{SOURCES[src]} · {COUNTRIES[country]}" + (f" · tìm “{q}”" if q else f" · {CHARTS[chart]}" + (f" · {GENRES[genre]}" if genre else ""))
+    else:
+        label = SOURCES[src] + (f" · tìm “{q}”" if q else "")
     return {"text": f"{label}: {len(items)} sản phẩm.", "items": items, "label": label,
             "filters": {"sources": SOURCES, "countries": COUNTRIES, "charts": CHARTS, "genres": GENRES}}
 
