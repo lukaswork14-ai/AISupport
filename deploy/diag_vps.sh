@@ -5,7 +5,6 @@ echo "time: $(date -Is)"
 echo "service: $(systemctl is-active superhuy 2>/dev/null)"
 echo "current: $(basename "$(readlink -f /opt/superhuy/current)")"
 echo "health: $(curl -fsS -m 5 http://127.0.0.1:8787/health 2>/dev/null || echo FAIL)"
-echo "board_seed: $(cd /opt/superhuy/current && SUPERHUY_HOME=$S timeout 60 /opt/superhuy/venv/bin/python deploy/maint_board_seed.py 2>&1 | tail -6 | tr "\n" "|")"
 echo "--- marketplace ---"; (cd /opt/superhuy/current && SUPERHUY_HOME=$S timeout 240 /opt/superhuy/venv/bin/python -u deploy/market_vps_check.py 2>&1 | tail -14)
 echo "landing_public: $(curl -s -o /dev/null -w "%{http_code} %{size_download}" -m 10 https://app.roimaxxhub.com/landing)"
 echo "env_keys: $(grep -oE '^[A-Z_]+=' $S/.env 2>/dev/null | tr -d '=' | tr '\n' ' ')"
