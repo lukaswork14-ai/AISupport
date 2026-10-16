@@ -318,6 +318,13 @@ def _page_text(url: str) -> str:
         h = r.text
     except Exception:
         return ""
+    try:
+        from agents import web_tools
+        t = web_tools.extract(h, url)
+        if len(t) > 300:
+            return t[:9000]
+    except Exception:
+        pass
     h = re.sub(r"(?is)<(script|style|nav|footer|header|aside|form)[^>]*>.*?</\1>", " ", h)
     paras = [html.unescape(re.sub(r"<[^>]+>", " ", p)) for p in re.findall(r"(?is)<p[^>]*>(.*?)</p>", h)]
     paras = [re.sub(r"\s+", " ", p).strip() for p in paras]

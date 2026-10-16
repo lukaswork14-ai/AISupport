@@ -428,6 +428,9 @@ def _latest_release(full_name: str) -> str:
 
 def _ticket(it: dict, p: dict) -> dict:
     a = it["a"]
+    same = next((x for x in _read(TICKETS, []) if x["repo"] == it["full_name"] and x["title"].strip().lower() == p["tieu_de"].strip().lower()), None)
+    if same:
+        return same
     plan = ask_json(PLAN.format(superhuy=SUPERHUY, title=p["tieu_de"], desc=p.get("mo_ta", ""), repo=it["full_name"], url=it["url"],
                                 la_gi=a.get("la_gi", ""), nhan_dinh=a.get("nhan_dinh", "")), 3500, 2,
                     ok=lambda x: isinstance(x, dict) and x.get("buoc"), tag="repo-plan") or {}
@@ -463,7 +466,7 @@ def ticket_markdown(t: dict) -> str:
             f"## Mục tiêu\n{pl.get('muc_tieu', '')}\n\n## Phạm vi\n{bl(pl.get('pham_vi'))}\n\n## Các bước\n{nl(pl.get('buoc'))}\n\n"
             f"## Phụ thuộc mới\n{bl(pl.get('phu_thuoc'))}\n\n## Kiểm thử trước khi triển khai\n{bl(pl.get('kiem_thu'))}\n\n"
             f"## Rủi ro\n{bl(pl.get('rui_ro'))}\n\n## Lùi lại\n{pl.get('lui_lai', '')}\n\n**Chi phí vận hành:** {pl.get('chi_phi', '')} · "
-            f"**Ước lượng:** {pl.get('uoc_luong', '')}\n\n> superHuy không tự sửa code đang chạy. Phiếu này do lập trình viên thực hiện, "
+            f"**Ước lượng:** {pl.get('uoc_luong', '')}\n\n" + (f"## Kết quả xử lý\n{t['resolution']}\n\n" if t.get("resolution") else "") + f"> superHuy không tự sửa code đang chạy. Phiếu này do lập trình viên thực hiện, "
             f"kiểm thử (QA giao diện + VPS) rồi mới triển khai.\n")
 
 
@@ -486,6 +489,9 @@ def _set(rid: str, **kw):
 def apply(rid: str, picks: str = "") -> dict:
     """Áp dụng đề xuất của 1 repo. picks = '0,2' (thứ tự đề xuất) hoặc rỗng = tất cả."""
     it = _get(rid)
+    if it.get("status") == "applied" and it.get("applied"):  # bấm/quẹt 2 lần: không tạo phiếu trùng
+        return {"text": "Repo này đã được áp dụng rồi.", "done": it["applied"].get("done", []), "tickets": it["applied"].get("tickets", [])}
+    _set(rid, status="applied")
     props = it["a"].get("de_xuat") or []
     idx = [int(x) for x in re.findall(r"\d+", picks or "")] if picks else list(range(len(props)))
     chosen = [props[i] for i in idx if 0 <= i < len(props)]
@@ -542,7 +548,7 @@ def undo(rid: str) -> dict:
 
 
 # ------------------------------------------------------------------ phiếu, quy tắc, theo dõi
-def set_ticket(tid: str, status: str) -> dict:
+def set_ticket(tid: str, status: str, note: str = "") -> dict:
     if status not in STATUS:
         raise ValueError("Trạng thái không hợp lệ")
     with _lock:
@@ -551,6 +557,8 @@ def set_ticket(tid: str, status: str) -> dict:
         if not t:
             raise ValueError("Không tìm thấy phiếu")
         t["status"], t["updated"] = status, _now()
+        if note:
+            t["resolution"] = note.strip()[:600]
         _write(TICKETS, rows)
     try:
         if t.get("note"):

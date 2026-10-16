@@ -262,6 +262,21 @@ def _learning_bootstrap():
                              ". Bài ngày 1 đang được soạn (kèm audio, quiz, thực hành cho Leversphere/Sellnity). Mở app › Phát triển › Học tập.")
     except Exception:
         log.exception("Tạo khoá học mới lỗi")
+    # bù audio cho bài đã soạn nhưng chưa có giọng đọc (vd soạn lúc giọng đọc đang lỗi)
+    try:
+        from pathlib import Path as _P
+        for c in learning._load():
+            if c.get("status") != "active":
+                continue
+            for d in c["days"]:
+                L = d.get("lesson") or {}
+                if L and not (L.get("audio") and _P(L["audio"]).exists()):
+                    try:
+                        learning.make_audio(c["id"], d["day"])
+                    except Exception:
+                        log.exception("Bù audio bài học lỗi")
+    except Exception:
+        log.exception("Bù audio bài học lỗi")
 
 
 async def job_strategy_weekly():

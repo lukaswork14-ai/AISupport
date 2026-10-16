@@ -7,7 +7,7 @@ import os
 import re
 
 import targets as targets_mod
-from agents import (calendar_agent, content_agent, content_hub, strategy, learning, reel_studio, game, repo_radar, gemini_notebook, knowledge_sources, meeting, meeting_share, email_agent, fb_connect, gcal_bridge, imagecard, lark_agent, mailbox, news_agent, publisher,
+from agents import (calendar_agent, content_agent, content_hub, strategy, learning, reel_studio, game, repo_radar, web_tools, gemini_notebook, knowledge_sources, meeting, meeting_share, email_agent, fb_connect, gcal_bridge, imagecard, lark_agent, mailbox, news_agent, publisher,
                     reel_video, second_brain)
 from config import CARD_HANDLE, DATA_DIR
 from core import digests, notify, store
@@ -578,10 +578,22 @@ register(Agent("noidung", "Nội dung", "🎬", "Săn tin theo chủ đề + cas
     Action("repo_hoantac", "Hoàn tác bỏ qua repo", repo_radar.undo, hidden=True, params=[Param("rid", "ID", required=True)]),
     Action("phieu_xem", "Phiếu nâng cấp", repo_radar.ticket, hidden=True, params=[Param("tid", "ID", required=True)]),
     Action("phieu_trangthai", "Đổi trạng thái phiếu", repo_radar.set_ticket, hidden=True,
-           params=[Param("tid", "ID", required=True), Param("status", "Trạng thái", required=True)]),
+           params=[Param("tid", "ID", required=True), Param("status", "Trạng thái", required=True), Param("note", "Ghi chú", "textarea")]),
     Action("quytac_bat", "Bật/tắt quy tắc", repo_radar.toggle_rule, hidden=True, params=[Param("rule_id", "ID", required=True)]),
     Action("quytac_xoa", "Xoá quy tắc", repo_radar.remove_rule, hidden=True, params=[Param("rule_id", "ID", required=True)]),
     Action("bo_theodoi", "Bỏ theo dõi repo", repo_radar.unwatch, hidden=True, params=[Param("full_name", "Repo", required=True)]),
+]))
+
+
+# ================================================================ Web: tìm kiếm + đọc trang
+register(Agent("web", "Web", "🌐", "Tìm trên Internet và đọc nội dung trang web để trả lời có nguồn", order=58, actions=[
+    Action("tim", "Tìm trên web", web_tools.search, hidden=True, llm=True,
+           desc="Tìm thông tin MỚI trên Internet (tin tức, giá, sự kiện, người, công ty, tài liệu). Dùng khi câu hỏi cần dữ liệu hiện tại "
+                "hoặc anh nhờ tra cứu. Sau đó có thể dùng web__doc để đọc trang phù hợp nhất. Luôn ghi nguồn (link) khi trả lời.",
+           params=[Param("query", "Từ khoá", required=True), Param("n", "Số kết quả", "number", default=6)]),
+    Action("doc", "Đọc trang web", web_tools.read, hidden=True, llm=True,
+           desc="Đọc nội dung chính của 1 trang web (bài báo, tài liệu, trang sản phẩm) từ link anh gửi hoặc từ kết quả web__tim.",
+           params=[Param("url", "Link", required=True), Param("max_chars", "Độ dài tối đa", "number", default=6000)]),
 ]))
 
 
