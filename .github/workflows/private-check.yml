@@ -1,0 +1,48 @@
+# Chạy 1 script kiểm tra trên VPS; kết quả MÃ HOÁ bằng khoá công khai (deploy/audit_pub.pem) rồi ghi vào nhánh "audit".
+name: Kiểm tra riêng tư
+
+on:
+  workflow_dispatch:
+    inputs:
+      script:
+        description: "Script trong deploy/ (vd lark_connect_check.py)"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  run:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - name: Khoá SSH
+        env:
+          KEY: ${{ secrets.VPS_SSH_KEY }}
+          HOST: ${{ secrets.VPS_HOST }}
+          PORT: ${{ secrets.VPS_PORT || '22' }}
+        run: |
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          K=$(printf '%s\n' "$KEY" | tr -d '\r' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | sed '/^$/d')
+          if [ "$(printf '%s\n' "$K" | wc -l)" -le 2 ]; then
+            BODY=$(printf '%s' "$K" | sed 's/-----[A-Z ]*-----//g' | tr -d ' \n')
+            K=$(printf -- '-----BEGIN OPENSSH PRIVATE KEY-----\n%s\n-----END OPENSSH PRIVATE KEY-----' "$(printf '%s' "$BODY" | fold -w 70)")
+          fi
+          printf '%s\n' "$K" > ~/.ssh/deploy && chmod 600 ~/.ssh/deploy
+          ssh-keyscan -p "$PORT" -H "$HOST" >> ~/.ssh/known_hosts 2>/dev/null
+      - name: Chạy và mã hoá
+        env:
+          HOST: ${{ secrets.VPS_HOST }}
+          USER: ${{ secrets.VPS_USER || 'superhuy' }}
+          PORT: ${{ secrets.VPS_PORT || '22' }}
+          SCRIPT: ${{ inputs.script }}
+        run: |
+          case "$SCRIPT" in *[!A-Za-z0-9_.-]*|"") echo "tên script không hợp lệ"; exit 1;; esac
+          ssh -i ~/.ssh/deploy -p "$PORT" "$USER@$HOST" "cd /opt/superhuy/current && set -a && . /opt/superhuy/shared/.env 2>/dev/null; set +a; SUPERHUY_HOME=/opt/superhuy/shared timeout 300 /opt/superhuy/venv/bin/python deploy/$SCRIPT" > /tmp/out.txt 2>&1 || true
+          openssl rand -hex 32 > /tmp/k
+          openssl enc -aes-256-cbc -pbkdf2 -salt -in /tmp/out.txt -out /tmp/report.enc -pass file:/tmp/k
+          openssl pkeyutl -encrypt -pubin -inkey deploy/audit_pub.pem -in /tmp/k -out /tmp/key.enc
+          rm -f /tmp/k /tmp/out.txt
+          git config user.name "superHuy CI"; git config user.email "ci@superhuy.local"
+          git checkout --orphan audit-tmp && git rm -rq --cached . && find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} + && cp /tmp/report.enc /tmp/key.enc .
+          git add -A && git commit -qm "private $(date -Is)" && git push -qf origin HEAD:audit
