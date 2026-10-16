@@ -322,7 +322,7 @@ def _strategy_bootstrap():
                 content_hub.scan(t)
         strategy.weekly()
         notify.send(text="🧭 superHuy đã có bản đầu tiên của 2 tài liệu chiến lược: mô hình kinh doanh agentic commerce cho Roimaxx "
-                         "và lộ trình chuyển đổi agentic cho Leversphere, kèm các phân tích CAO. Mở app › Nội dung › Chiến lược.")
+                         "và lộ trình đưa Leversphere thành AI-native POD company, kèm các phân tích CAO. Mở app › Nội dung › Chiến lược.")
     except Exception:
         log.exception("Khởi tạo tài liệu chiến lược lỗi")
 
