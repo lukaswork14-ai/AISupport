@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   audit:
@@ -15,14 +15,16 @@ jobs:
       - uses: actions/checkout@v5
       - name: Repo có công khai không (nhìn như người lạ, không đăng nhập)
         run: |
+          exec > >(tee -a /tmp/audit.txt) 2>&1
           for r in AISupport superhuy-vault; do
             c=$(curl -s -o /dev/null -w '%{http_code}' "https://github.com/lukaswork14-ai/$r")
             [ "$c" = "404" ] && echo "PASS repo $r: người lạ KHÔNG xem được" || echo "FAIL repo $r: người lạ xem được (HTTP $c)"
           done
       - name: App có chặn truy cập trái phép không
-        if: vars.APP_URL != ''
         run: |
-          U="${{ vars.APP_URL }}"
+          set +e
+          exec > >(tee -a /tmp/audit.txt) 2>&1
+          U="${{ vars.APP_URL || 'https://app.roimaxxhub.com' }}"
           t(){ c=$(curl -s -o /dev/null -w '%{http_code}' -m 15 "$@"); echo "$c"; }
           [ "$(t "$U/api/bootstrap")" = "401" ] && echo "PASS /api/bootstrap không phiên -> 401" || echo "FAIL /api/bootstrap không bị chặn"
           [ "$(t "$U/media?f=.env")" = "401" ] && echo "PASS /media không phiên -> 401" || echo "FAIL /media không bị chặn"
@@ -37,6 +39,8 @@ jobs:
         env:
           HOST: ${{ secrets.VPS_HOST }}
         run: |
+          set +e
+          exec > >(tee -a /tmp/audit.txt) 2>&1
           for p in 22 80 443 8787 5432 6379 3306; do
             if timeout 4 bash -c "</dev/tcp/$HOST/$p" 2>/dev/null; then echo "INFO cổng $p mở"; [ $p = 8787 ] && echo "FAIL cổng app 8787 mở thẳng ra Internet"; fi
           done
@@ -49,11 +53,26 @@ jobs:
           PORT: ${{ secrets.VPS_PORT || '22' }}
         run: |
           mkdir -p ~/.ssh && chmod 700 ~/.ssh
-          printf '%s\n' "$KEY" | tr -d '\r' > ~/.ssh/deploy && chmod 600 ~/.ssh/deploy
+          K=$(printf '%s\n' "$KEY" | tr -d '\r' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | sed '/^$/d')
+          if [ "$(printf '%s\n' "$K" | wc -l)" -le 2 ]; then
+            BODY=$(printf '%s' "$K" | sed 's/-----[A-Z ]*-----//g' | tr -d ' \n')
+            K=$(printf -- '-----BEGIN OPENSSH PRIVATE KEY-----\n%s\n-----END OPENSSH PRIVATE KEY-----' "$(printf '%s' "$BODY" | fold -w 70)")
+          fi
+          printf '%s\n' "$K" > ~/.ssh/deploy && chmod 600 ~/.ssh/deploy
           ssh-keyscan -p "$PORT" -H "$HOST" >> ~/.ssh/known_hosts 2>/dev/null
       - name: Kiểm tra trên VPS
         env:
           HOST: ${{ secrets.VPS_HOST }}
           USER: ${{ secrets.VPS_USER || 'superhuy' }}
           PORT: ${{ secrets.VPS_PORT || '22' }}
-        run: ssh -i ~/.ssh/deploy -p "$PORT" "$USER@$HOST" 'bash -s' < deploy/security_vps.sh
+        run: ssh -i ~/.ssh/deploy -p "$PORT" "$USER@$HOST" 'bash -s' < deploy/security_vps.sh 2>&1 | tee -a /tmp/audit.txt || true
+      - name: Ghi kết quả (đã mã hoá, chỉ người giữ khoá riêng đọc được) vào nhánh audit
+        if: always()
+        run: |
+          openssl rand -hex 32 > /tmp/k
+          openssl enc -aes-256-cbc -pbkdf2 -salt -in /tmp/audit.txt -out /tmp/report.enc -pass file:/tmp/k
+          openssl pkeyutl -encrypt -pubin -inkey deploy/audit_pub.pem -in /tmp/k -out /tmp/key.enc
+          rm -f /tmp/k
+          git config user.name "superHuy CI"; git config user.email "ci@superhuy.local"
+          git checkout --orphan audit-tmp && git rm -rq --cached . && find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} + && cp /tmp/report.enc /tmp/key.enc .
+          git add -A && git commit -qm "audit $(date -Is)" && git push -qf origin HEAD:audit
