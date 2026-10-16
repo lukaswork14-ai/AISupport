@@ -1,6 +1,10 @@
 """Chẩn đoán trên VPS (không in bí mật): Marketplace công khai, console người tạo, Xưởng clone quét dữ liệu thật."""
 import json
+import sys
 import urllib.request
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 
 def get(u):
