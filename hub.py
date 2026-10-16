@@ -7,7 +7,7 @@ import os
 import re
 
 import targets as targets_mod
-from agents import (calendar_agent, content_agent, content_hub, strategy, learning, reel_studio, game, repo_radar, web_tools, gemini_notebook, knowledge_sources, meeting, meeting_share, email_agent, fb_connect, gcal_bridge, imagecard, lark_agent, mailbox, news_agent, publisher,
+from agents import (factory, market, leads, calendar_agent, content_agent, content_hub, strategy, learning, reel_studio, game, repo_radar, web_tools, gemini_notebook, knowledge_sources, meeting, meeting_share, email_agent, fb_connect, gcal_bridge, imagecard, lark_agent, mailbox, news_agent, publisher,
                     reel_video, second_brain)
 from config import CARD_HANDLE, DATA_DIR
 from core import digests, notify, store
@@ -582,6 +582,86 @@ register(Agent("noidung", "Nội dung", "🎬", "Săn tin theo chủ đề + cas
     Action("quytac_bat", "Bật/tắt quy tắc", repo_radar.toggle_rule, hidden=True, params=[Param("rule_id", "ID", required=True)]),
     Action("quytac_xoa", "Xoá quy tắc", repo_radar.remove_rule, hidden=True, params=[Param("rule_id", "ID", required=True)]),
     Action("bo_theodoi", "Bỏ theo dõi repo", repo_radar.unwatch, hidden=True, params=[Param("full_name", "Repo", required=True)]),
+]))
+
+
+# ================================================================ Marketplace: skill, gói Second Brain, workflow
+register(Agent("market", "Marketplace", "🛍", "Khám phá, cài và bán skill, gói Second Brain, workflow cho superHuy", order=59, actions=[
+    Action("ds", "Khám phá Marketplace", market.catalog, hidden=True, llm=True,
+           desc="Xem sản phẩm trên superHuy Marketplace (skill, gói Second Brain, workflow), tìm theo từ khoá, xem anh đã cài gì.",
+           params=[Param("q", "Từ khoá"), Param("cat", "Danh mục"), Param("type", "Loại")]),
+    Action("xem", "Chi tiết sản phẩm", market.item, hidden=True, params=[Param("lid", "ID", required=True)]),
+    Action("cai", "Cài sản phẩm", market.install, hidden=True, long=True, params=[Param("lid", "ID", required=True)]),
+    Action("go", "Gỡ sản phẩm", market.uninstall, hidden=True, params=[Param("lid", "ID", required=True)]),
+    Action("batat", "Bật/tắt sản phẩm đã cài", market.toggle, hidden=True, params=[Param("lid", "ID", required=True)]),
+    Action("chay", "Chạy workflow", market.run_workflow, hidden=True, long=True, llm=True,
+           desc="Chạy một workflow đã cài từ Marketplace (ví dụ 'Bàn giao buổi sáng'). Truyền name = tên workflow hoặc lid = ID.",
+           params=[Param("lid", "ID"), Param("name", "Tên workflow")]),
+    Action("danhgia", "Đánh giá sản phẩm", market.review, hidden=True,
+           params=[Param("lid", "ID", required=True), Param("stars", "Số sao", "number", default=5), Param("text", "Nhận xét", "textarea")]),
+    Action("tao", "Đăng sản phẩm lên Marketplace", market.create, hidden=True,
+           params=[Param("type", "Loại", required=True), Param("name", "Tên", required=True), Param("tagline", "Mô tả ngắn"),
+                   Param("description", "Mô tả", "textarea"), Param("body", "Nội dung", "textarea", required=True),
+                   Param("category", "Danh mục", default="nang-suat"), Param("price", "Giá (đồng)", "number", default=0),
+                   Param("tags", "Thẻ (cách nhau dấu phẩy)"), Param("publish", "Lên kệ ngay", "bool", default=True)]),
+    Action("sua", "Cập nhật sản phẩm", market.update, hidden=True,
+           params=[Param("lid", "ID", required=True), Param("version", "Phiên bản"), Param("whats_new", "Có gì mới", "textarea"),
+                   Param("body", "Nội dung", "textarea"), Param("tagline", "Mô tả ngắn"), Param("description", "Mô tả", "textarea"),
+                   Param("price", "Giá", "number"), Param("status", "Trạng thái")]),
+    Action("cuatoi", "Sản phẩm của tôi", market.mine, hidden=True),
+    # Phòng Phát triển sản phẩm số (chỉ chủ nhân)
+    Action("donggoi", "AI đóng gói tài sản số", market.pack, hidden=True, long=True,
+           params=[Param("raw", "Nguyên liệu", "textarea"), Param("hint_type", "Loại"), Param("source_url", "Link nguồn"),
+                   Param("clone", "Dựng từ nguồn", "bool", default=False)]),
+    Action("studio_luu", "Lưu sản phẩm trong Studio", market.studio_save, hidden=True,
+           params=[Param("type", "Loại", required=True), Param("name", "Tên", required=True), Param("tagline", "Mô tả ngắn"),
+                   Param("description", "Mô tả", "textarea"), Param("body", "Nội dung", "textarea", required=True),
+                   Param("category", "Danh mục", default="nang-suat"), Param("price", "Giá", "number", default=0), Param("tags", "Thẻ"),
+                   Param("publish", "Lên kệ", "bool", default=False), Param("featured", "Nổi bật", "bool", default=False),
+                   Param("source_url", "Nguồn"), Param("lid", "ID")]),
+    Action("studio_xem", "Nội dung gốc sản phẩm", market.studio_body, hidden=True, params=[Param("lid", "ID", required=True)]),
+    Action("nhanban", "Nhân bản sản phẩm", market.clone, hidden=True, params=[Param("lid", "ID", required=True)]),
+    # Quản trị cao nhất (chủ App Store)
+    Action("quantri", "Quản trị Marketplace", market.admin_overview, hidden=True, llm=True,
+           desc="Bảng quản trị Marketplace (chỉ chủ nhân): số sản phẩm, người tạo, lượt cài, lượt quan tâm, hàng chờ duyệt, nhật ký."),
+    Action("qt_sua", "Quản trị: đổi trạng thái/giá/nổi bật", market.admin_set, hidden=True,
+           params=[Param("lid", "ID", required=True), Param("field", "Trường", required=True), Param("value", "Giá trị"), Param("note", "Ghi chú", "textarea")]),
+    Action("qt_nguoitao", "Quản trị người tạo", market.admin_creator, hidden=True,
+           params=[Param("cid", "ID", required=True), Param("action", "Thao tác", required=True)]),
+    Action("duyet", "Duyệt sản phẩm gửi lên", market.moderate, hidden=True,
+           params=[Param("lid", "ID", required=True), Param("decision", "Quyết định", required=True), Param("note", "Ghi chú", "textarea")]),
+]))
+
+
+# ================================================================ Xưởng sản phẩm số (Clone Factory, chỉ chủ nhân)
+register(Agent("xuong", "Xưởng sản phẩm số", "🏭", "Quét app/repo đang thắng thị trường, clone thành sản phẩm của riêng anh", order=59, actions=[
+    Action("quet", "Quét thị trường", factory.scan, hidden=True, long=True, llm=True,
+           desc="Quét bảng xếp hạng App Store (iPhone/Mac, theo nước và danh mục), GitHub Trending, Product Hunt; hoặc tìm theo từ khoá. src=ios|mac|github|ph.",
+           params=[Param("src", "Nguồn", default="ios"), Param("country", "Nước", default="vn"), Param("chart", "Bảng", default="free"),
+                   Param("genre", "Danh mục"), Param("q", "Từ khoá"), Param("limit", "Số lượng", "number", default=50)]),
+    Action("xem", "Chi tiết sản phẩm gốc", factory.detail, hidden=True, long=True,
+           params=[Param("key", "Mã", required=True), Param("country", "Nước", default="vn")]),
+    Action("theodoi", "Theo dõi sản phẩm", factory.star, hidden=True, params=[Param("key", "Mã", required=True)]),
+    Action("ghichu", "Lưu ghi chú clone", factory.save_note, hidden=True, params=[Param("text", "Ghi chú", "textarea", required=True)]),
+    Action("clone", "Clone thành bản thiết kế", factory.clone, hidden=True, long=True,
+           params=[Param("key", "Mã", required=True), Param("target", "Nền tảng đích", default="web"), Param("options", "Tuỳ chọn"),
+                   Param("notes", "Ghi chú", "textarea"), Param("project", "Tên dự án"), Param("country", "Nước", default="vn")]),
+    Action("duan_ds", "Dự án trong xưởng", factory.projects, hidden=True),
+    Action("duan", "Chi tiết dự án", factory.project, hidden=True, params=[Param("pid", "ID", required=True)]),
+    Action("duan_sua", "Đổi trạng thái dự án", factory.project_set, hidden=True,
+           params=[Param("pid", "ID", required=True), Param("status", "Trạng thái"), Param("note", "Ghi chú", "textarea")]),
+    Action("duan_xoa", "Xoá dự án", factory.project_delete, hidden=True, params=[Param("pid", "ID", required=True)]),
+    Action("len_cho", "Đưa dự án lên Marketplace", factory.to_market, hidden=True,
+           params=[Param("pid", "ID", required=True), Param("publish", "Lên kệ", "bool", default=False), Param("price", "Giá", "number", default=0)]),
+]))
+
+
+# ================================================================ Khách đăng ký (landing page, Marketplace công khai)
+register(Agent("khach", "Khách đăng ký", "📇", "Email khách để lại trên landing page và Marketplace, theo dõi phễu liên hệ", order=59, actions=[
+    Action("ds", "Khách đăng ký", leads.overview, hidden=True, llm=True,
+           desc="Danh sách khách để lại email trên landing page / Marketplace, trạng thái liên hệ, nguồn đến, số đăng ký theo ngày."),
+    Action("trangthai", "Đổi trạng thái khách", leads.set_status, hidden=True,
+           params=[Param("email", "Email", required=True), Param("status", "Trạng thái", required=True), Param("note", "Ghi chú", "textarea")]),
 ]))
 
 

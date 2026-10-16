@@ -101,7 +101,8 @@ APP_FILES = {"/manifest.webmanifest": "manifest.webmanifest", "/sw.js": "sw.js",
              "/apple-touch-icon-precomposed.png": "icons/huy-180.png", "/favicon.ico": "icons/huy-128.png",
              **{f"/icons/huy-{n}.png": f"icons/huy-{n}.png" for n in ("128", "180", "192", "512", "maskable-512")},
              "/install": "install/index.html", "/install/": "install/index.html", "/install/superHuy.mobileconfig": "install/superHuy.mobileconfig",
-             "/landing": "landing/index.html", "/landing/": "landing/index.html"}
+             "/landing": "landing/index.html", "/landing/": "landing/index.html",
+             "/market": "market/index.html", "/market/": "market/index.html"}
 _HELLO: dict[str, list[float]] = {}
 
 
@@ -111,25 +112,6 @@ def _hello_ok(ip: str) -> bool:
     xs.append(now)
     _HELLO[ip] = xs[-40:]
     return len(xs) <= 30
-
-
-_EMAIL_RE = re.compile(r"^[^@\s<>]{1,64}@[^@\s<>]{1,190}\.[A-Za-z]{2,24}$")
-
-
-def _waitlist_add(email: str, src: str) -> bool:
-    """Ghi email đăng ký chờ từ landing page; báo chủ nhân qua Telegram khi có người mới."""
-    f = DATA_DIR / "waitlist.json"
-    with _WL_LOCK:
-        rows = json.loads(f.read_text()) if f.exists() else []
-        if any(r.get("email") == email for r in rows):
-            return False
-        rows.append({"email": email, "src": src, "at": time.strftime("%Y-%m-%dT%H:%M:%S")})
-        f.write_text(json.dumps(rows[-5000:], ensure_ascii=False, indent=1))
-    security.alert_once(f"wl:{email}", f"🎉 Landing page có người đăng ký chờ mới: {email} (tổng {len(rows)}).", every=10**9)
-    return True
-
-
-_WL_LOCK = threading.Lock()
 
 
 def _note_device(dev: str, ua: str):
@@ -299,10 +281,19 @@ class Handler(BaseHTTPRequestHandler):
         q = dict(parse_qsl(u.query))
         if u.path in ("/", "/index.html", "/app"):
             return self._file(STATIC / "index.html", cache=False)
+        if u.path.startswith("/market/") and re.fullmatch(r"/market/[a-z0-9-]{1,80}", u.path):  # trang chi tiết sản phẩm công khai
+            return self._file(STATIC / "market/index.html", cache=False)
         if u.path in APP_FILES:  # ứng dụng iPhone (PWA): manifest, service worker, biểu tượng
             return self._file(STATIC / APP_FILES[u.path], cache=u.path.startswith("/icons/"))
         if u.path == "/health":
             return self._json(200, {"ok": True})
+        if u.path == "/api/market/public":  # danh mục Marketplace công khai (không có nội dung skill/gói)
+            try:
+                from agents import market
+                return self._json(200, market.public_catalog())
+            except Exception:
+                log.exception("Marketplace công khai lỗi")
+                return self._json(500, {"error": "Marketplace tạm lỗi"})
         if u.path == "/lark/callback":  # Lark chuyển về sau khi chủ nhân bấm Cho phép
             return self._lark_callback(q)
         if u.path == "/dl":  # tải file bằng link ký (Telegram downloadFile / trình duyệt)
@@ -382,18 +373,23 @@ class Handler(BaseHTTPRequestHandler):
             except Exception:
                 pass
             return self._json(200, {"ok": True})
-        if u.path == "/api/waitlist":  # form đăng ký chờ trên landing page (công khai, có giới hạn tần suất)
+        if u.path.startswith("/api/creator/"):  # console người tạo Marketplace (khoá truy cập riêng, không dùng phiên của chủ nhân)
+            return self._creator(u.path, data if isinstance(data, dict) else {})
+        if u.path in ("/api/waitlist", "/api/market/interest"):  # form công khai (giới hạn tần suất)
             ip = self.headers.get("X-Real-IP") or self.client_address[0]
             if not _hello_ok("wl:" + ip):
-                return self._json(429, {"error": "Anh thử lại sau ít phút nhé."})
-            email = str(data.get("email", "")).strip().lower()[:254]
-            if not _EMAIL_RE.match(email):
-                return self._json(400, {"error": "Email chưa đúng, anh kiểm tra lại nhé."})
+                return self._json(429, {"error": "Anh/chị thử lại sau ít phút nhé."})
             try:
-                _waitlist_add(email, str(data.get("src", ""))[:120])
+                from agents import leads, market
+                if u.path == "/api/waitlist":
+                    leads.add(str(data.get("email", "")), str(data.get("src", ""))[:120])
+                elif u.path == "/api/market/interest":
+                    market.public_interest(str(data.get("lid", ""))[:20], str(data.get("email", "")))
+            except ValueError as e:
+                return self._json(400, {"error": str(e)[:200]})
             except Exception:
-                log.exception("Ghi danh sách chờ lỗi")
-                return self._json(500, {"error": "Chưa ghi được, anh thử lại sau nhé."})
+                log.exception("Form công khai lỗi")
+                return self._json(500, {"error": "Chưa ghi được, anh/chị thử lại sau nhé."})
             return self._json(200, {"ok": True})
         if u.path == "/api/auth":
             user = check_init_data(data.get("initData", ""))
@@ -522,6 +518,34 @@ class Handler(BaseHTTPRequestHandler):
             return self._file(meeting._dir(rec["mid"]) / "audio.mp3", cache=False)
         meeting_share.hit(rec["token"])
         return self._page(meeting_share.render(rec))
+
+    def _creator(self, path: str, data: dict):
+        from agents import market
+        ip = self.headers.get("X-Real-IP") or self.client_address[0]
+        if not _hello_ok("cr:" + ip):
+            return self._json(429, {"error": "Thao tác quá nhanh, thử lại sau ít phút nhé."})
+        try:
+            if path == "/api/creator/signup":
+                return self._json(200, market.creator_signup(str(data.get("name", "")), str(data.get("email", "")), str(data.get("bio", ""))))
+            c = market.creator_auth(self.headers.get("X-Creator-Key", ""))
+            if path == "/api/creator/console":
+                return self._json(200, market.creator_console(c))
+            if path == "/api/creator/get":
+                return self._json(200, market.creator_get(c, str(data.get("lid", ""))[:20]))
+            if path == "/api/creator/save":
+                return self._json(200, market.creator_save(c, data))
+            if path == "/api/creator/pack":
+                market.creator_ai_ok(c)
+                return self._json(200, market.pack(str(data.get("raw", ""))[:20000], str(data.get("hint_type", "")),
+                                                   str(data.get("source_url", ""))[:500], bool(data.get("clone"))))
+            return self._json(404, {"error": "not found"})
+        except PermissionError as e:
+            return self._json(401, {"error": str(e)})
+        except ValueError as e:
+            return self._json(400, {"error": str(e)[:300]})
+        except Exception:
+            log.exception("Console người tạo lỗi")
+            return self._json(500, {"error": "Có lỗi, thử lại sau ít phút nhé."})
 
     def _page(self, body: str, code: int = 200):
         b = body.encode()

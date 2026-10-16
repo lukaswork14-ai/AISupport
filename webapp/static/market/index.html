@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>superYou Marketplace</title>
+<meta name="description" content="Chợ skill, workflow và gói tri thức cho siêu trợ lý superYou. Dành cho nhà quản lý, solopreneur và bất kỳ ai muốn làm việc hiệu quả hơn.">
+<meta property="og:title" content="superYou Marketplace">
+<meta property="og:description" content="Cài skill, workflow và gói tri thức cho trợ lý AI của bạn. Hoặc đóng gói kinh nghiệm của bạn để bán.">
+<meta property="og:image" content="/icons/huy-512.png">
+<meta name="theme-color" content="#6A3DF0">
+<link rel="icon" href="/icons/huy-128.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root{ --ink:#0E0B14; --paper:#FFFFFF; --soft:#F4F1FA; --muted:#5A5170; --line:#E4DEEE; --violet:#6A3DF0; --violet-d:#4B22C9; --yellow:#FFD23F; --pink:#FF5AA8; --green:#0F7A45; --red:#B42346;
+  --font:"Be Vietnam Pro",system-ui,-apple-system,"Segoe UI",sans-serif }
+*{ box-sizing:border-box }
+html,body{ margin:0; background:var(--paper); color:var(--ink); font:16px/1.55 var(--font); -webkit-font-smoothing:antialiased }
+a{ color:var(--violet) } a:hover{ color:var(--violet-d) }
+button,input,textarea,select{ font:inherit; color:inherit }
+:focus-visible{ outline:3px solid var(--violet); outline-offset:2px }
+.w{ max-width:1200px; margin:0 auto; padding-left:max(16px,env(safe-area-inset-left,0px)); padding-right:max(16px,env(safe-area-inset-right,0px)) }
+header{ position:sticky; top:0; z-index:20; padding-block:10px; background:rgba(255,255,255,.88); backdrop-filter:blur(12px); border-bottom:2px solid var(--ink) }
+nav{ display:flex; align-items:center; gap:18px }
+.logo{ display:flex; align-items:center; gap:9px; text-decoration:none; color:var(--ink); font-weight:900; font-size:19px; letter-spacing:-.03em }
+.logo img{ width:32px; height:32px; border-radius:10px; border:2px solid var(--ink); object-fit:cover }
+.logo em{ font-style:normal; font-weight:700; color:var(--muted); font-size:15px }
+.nav-l{ display:flex; gap:16px; font-weight:600; font-size:15px; margin-left:auto }
+.nav-l a{ color:var(--ink); text-decoration:none }
+.btn{ display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:11px 18px; border-radius:13px; border:2px solid var(--ink); background:var(--paper); font-weight:800; cursor:pointer; text-decoration:none; color:var(--ink); transition:transform .15s, box-shadow .15s; white-space:nowrap }
+.btn:hover{ transform:translateY(-2px); box-shadow:0 4px 0 var(--ink); color:var(--ink) }
+.btn.y{ background:var(--yellow) } .btn.v{ background:var(--violet); color:#fff } .btn.v:hover{ color:#fff } .btn.k{ background:var(--ink); color:#fff } .btn.k:hover{ color:#fff }
+.btn.sm{ padding:7px 12px; font-size:14px; border-radius:10px }
+.btn:disabled{ opacity:.5; cursor:default; transform:none; box-shadow:none }
+@media (prefers-reduced-motion:reduce){ .btn,.card-p{ transition:none } }
+.hero{ padding-block:44px 28px; display:grid; grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr); gap:36px; align-items:center }
+.hero h1{ margin:0; font-size:56px; line-height:1.03; letter-spacing:-.045em; font-weight:900; text-wrap:balance }
+.hero h1 span{ background:var(--violet); color:#fff; padding:0 12px; border-radius:14px; display:inline-block; transform:rotate(-1.2deg) }
+.hero p{ font-size:19px; color:#3D3550; max-width:56ch }
+.search{ display:flex; gap:8px; margin-top:18px; max-width:560px }
+.search input{ flex:1; min-width:0; padding:15px 16px; border-radius:14px; border:2px solid var(--ink); font-size:16px; background:#fff }
+.who{ display:flex; flex-wrap:wrap; gap:8px; margin-top:16px }
+.who span{ font-size:13.5px; font-weight:700; padding:6px 11px; border-radius:999px; background:var(--soft); border:1px solid var(--line) }
+.stack{ position:relative; min-height:300px }
+.stack .card-p{ position:absolute; width:min(300px, 80%); cursor:default }
+.stack .card-p:nth-child(1){ top:0; left:6%; transform:rotate(-5deg) } .stack .card-p:nth-child(2){ top:70px; right:0; transform:rotate(4deg) } .stack .card-p:nth-child(3){ top:160px; left:16%; transform:rotate(-1deg) }
+.bar{ display:flex; flex-wrap:wrap; gap:8px; padding-block:10px }
+.chip{ padding:8px 14px; border-radius:999px; border:2px solid var(--ink); background:#fff; font-weight:700; font-size:14px; cursor:pointer }
+.chip[aria-pressed="true"]{ background:var(--ink); color:#fff }
+h2{ font-size:34px; letter-spacing:-.035em; line-height:1.1; margin:36px 0 14px; font-weight:900; text-wrap:balance }
+.grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:16px }
+.card-p{ background:#fff; border:2px solid var(--ink); border-radius:22px; padding:18px; display:flex; flex-direction:column; gap:8px; cursor:pointer; text-align:left; transition:transform .2s, box-shadow .2s; min-width:0 }
+.card-p:hover{ transform:translateY(-4px); box-shadow:6px 6px 0 var(--ink) }
+.ic{ width:56px; height:56px; border-radius:28%; display:grid; place-items:center; color:#fff; flex:none; font-weight:900; font-size:22px; border:2px solid var(--ink) }
+.top{ display:flex; gap:12px; align-items:center }
+.nm{ font-weight:800; font-size:17px; line-height:1.25 }
+.by{ font-size:13px; color:var(--muted) } .off{ font-size:11px; font-weight:800; background:var(--yellow); border:1.5px solid var(--ink); border-radius:6px; padding:1px 6px; margin-left:4px }
+.tg{ color:#3D3550; font-size:14.5px; flex:1; display:-webkit-box; -webkit-line-clamp:4; -webkit-box-orient:vertical; overflow:hidden }
+.ft{ display:flex; justify-content:space-between; align-items:center; gap:8px; font-size:14px }
+.pr{ font-weight:800 } .st{ color:#B7791F; font-weight:700 }
+.typ{ font-size:12px; font-weight:800; padding:3px 9px; border-radius:999px; background:var(--soft) }
+.sell{ margin-block:48px; background:var(--violet); color:#fff; border:2px solid var(--ink); border-radius:32px; padding:44px clamp(20px,5vw,56px); display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:30px; align-items:center }
+.sell h2{ margin:0 0 10px; font-size:40px } .sell p{ color:#E7DFFF; font-size:17px }
+.steps{ display:flex; flex-direction:column; gap:10px; margin:0; padding:0; list-style:none; counter-reset:s }
+.steps li{ background:#fff; color:var(--ink); border:2px solid var(--ink); border-radius:16px; padding:14px 16px 14px 56px; position:relative; counter-increment:s }
+.steps li::before{ content:counter(s); position:absolute; left:14px; top:12px; width:30px; height:30px; border-radius:9px; background:var(--yellow); border:2px solid var(--ink); display:grid; place-items:center; font-weight:900 }
+.steps b{ display:block }
+footer{ border-top:2px solid var(--ink); padding-block:24px; color:var(--muted); font-size:14px; margin-top:40px }
+dialog{ border:2px solid var(--ink); border-radius:26px; padding:0; width:min(760px, calc(100% - 24px)); max-height:min(90vh, 900px); box-shadow:10px 10px 0 var(--ink) }
+dialog::backdrop{ background:rgba(14,11,20,.45) }
+.dlg{ padding:24px; overflow:auto; max-height:min(90vh, 900px) }
+.x{ position:sticky; top:0; float:right; border:2px solid var(--ink); background:#fff; border-radius:10px; width:38px; height:38px; cursor:pointer; font-size:20px; font-weight:800 }
+.facts{ display:grid; grid-template-columns:repeat(auto-fit,minmax(110px,1fr)); gap:8px; margin:18px 0; padding:12px 0; border-block:1px solid var(--line); text-align:center }
+.facts b{ display:block; font-size:16px } .facts span{ font-size:12px; color:var(--muted) }
+h3{ font-size:18px; margin:18px 0 6px }
+.lst{ margin:0; padding-left:20px; display:flex; flex-direction:column; gap:3px }
+.rv{ border:1px solid var(--line); border-radius:14px; padding:12px 14px; margin-top:8px }
+.form{ display:flex; gap:8px; flex-wrap:wrap; margin-top:10px }
+.form input{ flex:1 1 220px; min-width:0; padding:13px 14px; border-radius:12px; border:2px solid var(--ink) }
+.msg{ font-weight:700; min-height:1.4em; margin:8px 0 0 } .msg.err{ color:var(--red) } .msg.ok{ color:var(--green) }
+.empty{ padding:30px; text-align:center; color:var(--muted); border:2px dashed var(--line); border-radius:20px }
+/* console */
+.cwrap{ padding-block:30px 60px; display:flex; flex-direction:column; gap:20px }
+.panes{ display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:16px }
+.pane{ border:2px solid var(--ink); border-radius:24px; padding:24px; background:#fff; display:flex; flex-direction:column; gap:10px }
+.pane h2{ margin:0; font-size:26px }
+label.f{ display:flex; flex-direction:column; gap:6px; font-weight:700; font-size:14px }
+label.f input, label.f textarea, label.f select{ padding:12px 13px; border-radius:12px; border:2px solid var(--ink); font-weight:400; font-size:15px; background:#fff; width:100% }
+label.f textarea{ min-height:110px; resize:vertical }
+label.f small{ font-weight:500; color:var(--muted) }
+.keybox{ font-family:ui-monospace,Menlo,monospace; word-break:break-all; background:var(--soft); border:2px dashed var(--ink); border-radius:14px; padding:14px }
+.tiles{ display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px }
+.tile{ border:2px solid var(--ink); border-radius:18px; padding:16px; background:#fff }
+.tile b{ display:block; font-size:30px; font-weight:900; letter-spacing:-.03em; font-variant-numeric:tabular-nums } .tile span{ color:var(--muted); font-size:14px }
+.rowi{ display:flex; gap:12px; align-items:center; padding:14px 16px; border-top:1px solid var(--line) } .rowi:first-child{ border-top:0 }
+.list{ border:2px solid var(--ink); border-radius:20px; background:#fff; overflow:hidden }
+.sts{ font-size:12.5px; font-weight:800; padding:3px 10px; border-radius:999px; white-space:nowrap }
+.s-published{ background:#E5F5EA; color:var(--green) } .s-review{ background:#FDF0E2; color:#9A4A06 } .s-draft{ background:var(--soft); color:var(--muted) } .s-rejected,.s-archived{ background:#FBE7EC; color:var(--red) }
+.wiz{ display:grid; grid-template-columns:minmax(0,1.2fr) minmax(0,.8fr); gap:20px; align-items:start }
+.stepper{ display:flex; gap:8px; flex-wrap:wrap }
+.stepper span{ padding:7px 13px; border-radius:999px; border:2px solid var(--ink); font-weight:700; font-size:14px; background:#fff }
+.stepper span.on{ background:var(--yellow) } .stepper span.done{ background:var(--ink); color:#fff }
+.issues{ background:#FDF0E2; border:2px solid #9A4A06; border-radius:14px; padding:12px 16px } .issues ul{ margin:6px 0 0; padding-left:18px }
+.okbox{ background:#E5F5EA; border:2px solid var(--green); border-radius:14px; padding:12px 16px; color:var(--green); font-weight:700 }
+.tabs3{ display:flex; gap:8px; flex-wrap:wrap }
+.drop{ border:2px dashed var(--ink); border-radius:16px; padding:16px; text-align:center; color:var(--muted); background:var(--soft) }
+.drop.on{ background:#FFF4CC }
+@media (max-width:860px){ .hero{ grid-template-columns:1fr } .stack{ display:none } .hero h1{ font-size:40px } .sell{ grid-template-columns:1fr } .wiz{ grid-template-columns:1fr } .nav-l a.hide{ display:none } h2{ font-size:28px } }
+</style>
+</head>
+<body>
+<header><div class="w"><nav aria-label="Chính">
+  <a class="logo" href="/market"><img src="/icons/huy-128.png" alt="">superYou <em>Marketplace</em></a>
+  <div class="nav-l"><a class="hide" href="/market#kham-pha">Khám phá</a><a href="/market/console">Bán trên superYou</a></div>
+  <a class="btn y sm" href="/landing">Dùng thử superYou</a>
+</nav></div></header>
+<main id="main"></main>
+<footer><div class="w" style="display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap"><span><b style="color:var(--ink)">superYou</b> · siêu trợ lý cho người làm việc thông minh. Một sản phẩm của Roimaxx.</span><span><a href="/landing">Giới thiệu</a> · <a href="/market/console">Dành cho người tạo</a></span></div></footer>
+<dialog id="dlg" aria-label="Chi tiết sản phẩm"><div class="dlg" id="dlgBody"></div></dialog>
+
+<script>
+(function(){
+var $ = function(s){ return document.querySelector(s); };
+function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+function vnd(v){ return v > 0 ? Number(v).toLocaleString('vi-VN') + 'đ' : 'Miễn phí'; }
+var TYPE_IC = { skill:'S', workflow:'W', brain:'B' };
+function lsGet(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
+function lsSet(k, v){ try{ if(v == null) localStorage.removeItem(k); else localStorage.setItem(k, v); }catch(e){} }
+function api(path, body, key){
+  var h = {'Content-Type':'application/json'}; if(key) h['X-Creator-Key'] = key;
+  return fetch(path, body === undefined ? {headers:h} : {method:'POST', headers:h, body:JSON.stringify(body)})
+    .then(function(r){ return r.json().catch(function(){ return {error:'Phản hồi không hợp lệ'}; }).then(function(j){ if(!r.ok || j.error){ var e = new Error(j.error || 'Có lỗi'); e.status = r.status; throw e; } return j; }); });
+}
+function icon(x, s){ s = s || 56; return '<span class="ic" style="width:'+s+'px;height:'+s+'px;background:'+esc(x.color||'#6A3DF0')+'">'+(TYPE_IC[x.type]||'S')+'</span>'; }
+function stars(x){ return x.rating ? '<span class="st">★ '+String(x.rating).replace('.',',')+'</span> <span class="by">('+x.rating_n+')</span>' : '<span class="by">Mới</span>'; }
+function card(x, i){ return '<button class="card-p" data-i="'+i+'"><div class="top">'+icon(x)+'<div><div class="nm">'+esc(x.name)+'</div><div class="by">'+esc(x.creator && x.creator.name)+(x.creator && x.creator.official ? '<span class="off">Chính chủ</span>' : '')+'</div></div></div>'
+  + '<div class="tg">'+esc(x.tagline||'')+'</div><div class="ft"><span class="typ">'+esc(x.type_label)+'</span>'+stars(x)+'<span class="pr">'+vnd(x.price)+'</span></div></button>'; }
+
+/* ================================================== cửa hàng */
+var M = { items:[], cats:{}, types:{}, cat:'', type:'', q:'' };
+function store(){
+  $('#main').innerHTML = '<div class="w"><section class="hero"><div><h1>Siêu năng lực cho <span>trợ lý AI</span> của bạn.</h1>'
+    + '<p>Cài skill, workflow và gói tri thức do người làm thật đóng gói. superYou làm việc theo đúng cách của bạn, từ biên bản họp đến báo cáo bán hàng.</p>'
+    + '<form class="search" id="sf" role="search"><label for="q" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Tìm sản phẩm</label><input id="q" placeholder="Tìm: biên bản họp, báo cáo, listing POD…" autocomplete="off"><button class="btn v">Tìm</button></form>'
+    + '<div class="who"><span>Nhà quản lý</span><span>Solopreneur</span><span>Chủ shop online</span><span>Người làm nội dung</span><span>Bất kỳ ai muốn làm nhanh hơn</span></div></div>'
+    + '<div class="stack" id="stack" aria-hidden="true"></div></section>'
+    + '<div id="kham-pha"></div><div class="bar" id="cats" role="group" aria-label="Danh mục"></div><div class="bar" id="types" role="group" aria-label="Loại" style="padding-top:0"></div>'
+    + '<div id="feat"></div><h2>Tất cả sản phẩm</h2><div class="grid" id="grid"><div class="empty">Đang tải…</div></div>'
+    + '<section class="sell"><div><h2>Kinh nghiệm của bạn đáng tiền.</h2><p>Bạn có quy trình họp, checklist bán hàng hay bộ ghi chú làm nghề? Đóng gói thành sản phẩm trên superYou trong vài phút. AI viết mô tả, kiểm tra trước khi gửi, đội superYou duyệt rồi đưa lên kệ.</p><a class="btn y" href="/market/console">Bắt đầu bán</a></div>'
+    + '<ol class="steps"><li><b>Dán nguyên liệu</b>SKILL.md, ghi chú, quy trình hoặc một đường link.</li><li><b>AI đóng gói</b>Tự đặt tên, viết mô tả, chia nội dung và chỉ ra chỗ cần sửa.</li><li><b>Gửi duyệt và bán</b>Theo dõi lượt quan tâm, lượt cài và đánh giá trong console.</li></ol></section></div>';
+  $('#sf').addEventListener('submit', function(e){ e.preventDefault(); M.q = $('#q').value.trim().toLowerCase(); paint(); });
+  api('/api/market/public').then(function(d){ M.items = d.items; M.cats = d.cats; M.types = d.types; paint(); openFromPath(); })
+    .catch(function(e){ $('#grid').innerHTML = '<div class="empty">Chưa tải được Marketplace: '+esc(e.message)+'</div>'; });
+}
+function filtered(){ return M.items.filter(function(x){ return (!M.cat || x.category === M.cat) && (!M.type || x.type === M.type) && (!M.q || (x.name+' '+(x.tagline||'')+' '+(x.tags||[]).join(' ')).toLowerCase().indexOf(M.q) >= 0); }); }
+function chipRow(el, obj, cur, key, allLabel){
+  el.innerHTML = (allLabel ? '<button class="chip" aria-pressed="'+(!cur)+'" data-v="">'+allLabel+'</button>' : '') + Object.keys(obj).map(function(k){ return '<button class="chip" aria-pressed="'+(cur===k)+'" data-v="'+k+'">'+esc(obj[k])+'</button>'; }).join('');
+  el.onclick = function(e){ var b = e.target.closest('button'); if(!b) return; M[key] = (key==='type' && M.type===b.dataset.v) ? '' : b.dataset.v; paint(); };
+}
+function paint(){
+  chipRow($('#cats'), M.cats, M.cat, 'cat', 'Tất cả');
+  chipRow($('#types'), M.types, M.type, 'type', '');
+  var list = filtered(), grid = $('#grid');
+  var feat = M.items.filter(function(x){ return x.featured; }).slice(0,3);
+  $('#stack').innerHTML = M.items.slice(0,3).map(card).join('');
+  $('#feat').innerHTML = (!M.q && !M.cat && !M.type && feat.length) ? '<h2>Đang nổi bật</h2><div class="grid">'+feat.map(function(x){ return card(x, M.items.indexOf(x)); }).join('')+'</div>' : '';
+  grid.innerHTML = list.length ? list.map(function(x){ return card(x, M.items.indexOf(x)); }).join('') : '<div class="empty">Không có sản phẩm khớp. Thử từ khoá khác.</div>';
+  document.querySelectorAll('#grid .card-p, #feat .card-p').forEach(function(b){ b.onclick = function(){ detail(M.items[+b.dataset.i]); }; });
+}
+function openFromPath(){ var m = location.pathname.match(/^\/market\/([a-z0-9-]+)$/); if(m){ var x = M.items.filter(function(i){ return i.slug === m[1]; })[0]; if(x) detail(x, true); } }
+function detail(x, fromPath){
+  if(!fromPath) history.replaceState(null, '', '/market/' + x.slug);
+  var b = $('#dlgBody');
+  b.innerHTML = '<button class="x" id="dx" aria-label="Đóng">×</button><div class="top">'+icon(x,80)+'<div><h2 style="margin:0;font-size:28px">'+esc(x.name)+'</h2><div class="by">'+esc(x.creator && x.creator.name)+(x.creator && x.creator.official ? '<span class="off">Chính chủ</span>' : '')+'</div><div class="tg">'+esc(x.tagline||'')+'</div></div></div>'
+    + '<div class="facts"><div><b>'+(x.rating ? String(x.rating).replace('.',',') : '–')+'</b><span>'+x.rating_n+' đánh giá</span></div><div><b>'+esc(x.type_label)+'</b><span>Loại</span></div><div><b>'+esc(x.cat_label)+'</b><span>Danh mục</span></div><div><b>'+(x.installs+x.interest)+'</b><span>Người dùng</span></div><div><b>'+vnd(x.price)+'</b><span>Giá</span></div></div>'
+    + '<div id="getbox"><b>'+(x.price>0 ? 'Nhận sớm với giá '+vnd(x.price) : 'Nhận miễn phí')+'</b><p class="by" style="margin:4px 0 0">Để lại email, superYou gửi hướng dẫn cài khi tài khoản của bạn sẵn sàng.</p>'
+    + '<form class="form" id="gf"><label for="ge" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Email</label><input id="ge" type="email" required placeholder="email@congty.com" autocomplete="email"><button class="btn y">Nhận</button></form><p class="msg" id="gm" role="status"></p></div>'
+    + (x.whats_new ? '<h3>Có gì mới · phiên bản '+esc(x.version)+'</h3><p>'+esc(x.whats_new)+'</p>' : '')
+    + '<h3>Mô tả</h3><p style="white-space:pre-line">'+esc(x.description||'')+'</p>'
+    + ((x.contents||[]).length ? '<h3>'+(x.type==='brain' ? 'Gồm '+x.contents.length+' ghi chú' : 'Các bước')+'</h3><ol class="lst">'+x.contents.map(function(c){ return '<li>'+esc(c)+'</li>'; }).join('')+'</ol>' : '')
+    + '<h3>Đánh giá</h3>' + ((x.reviews||[]).length ? x.reviews.map(function(r){ return '<div class="rv"><b class="st">'+'★'.repeat(r.stars)+'</b> <span class="by">'+esc(r.name)+'</span>'+(r.text ? '<p style="margin:4px 0 0">'+esc(r.text)+'</p>' : '')+'</div>'; }).join('') : '<p class="by">Chưa có đánh giá.</p>');
+  var d = $('#dlg'); if(!d.open) d.showModal();
+  $('#dx').onclick = function(){ d.close(); };
+  $('#gf').addEventListener('submit', function(e){ e.preventDefault(); var m = $('#gm'), btn = e.target.querySelector('button'); btn.disabled = true; m.className = 'msg'; m.textContent = 'Đang gửi…';
+    api('/api/market/interest', {lid:x.id, email:$('#ge').value}).then(function(){ m.className = 'msg ok'; m.textContent = 'Đã ghi nhận. superYou sẽ liên hệ bạn sớm.'; e.target.reset(); })
+      .catch(function(err){ m.className = 'msg err'; m.textContent = err.message; }).then(function(){ btn.disabled = false; }); });
+}
+$('#dlg').addEventListener('close', function(){ if(/^\/market\/[a-z0-9-]+$/.test(location.pathname) && location.pathname !== '/market/console') history.replaceState(null, '', '/market'); });
+$('#dlg').addEventListener('click', function(e){ if(e.target === this) this.close(); });
+
+/* ================================================== console người tạo */
+var C = { key: lsGet('sy-key'), data:null, draft:null, step:1 };
+function consoleView(){
+  if(!C.key) return loginView();
+  $('#main').innerHTML = '<div class="w cwrap"><div class="empty">Đang mở console…</div></div>';
+  api('/api/creator/console', {}, C.key).then(function(d){ C.data = d; dash(); }).catch(function(e){ if(e.status === 401){ lsSet('sy-key', null); C.key = null; loginView(e.message); } else $('#main').innerHTML = '<div class="w cwrap"><div class="empty">'+esc(e.message)+'</div></div>'; });
+}
+function loginView(err){
+  $('#main').innerHTML = '<div class="w cwrap"><div><h2 style="margin-top:10px">Bán trên superYou</h2><p style="max-width:62ch;color:#3D3550">Đóng gói kinh nghiệm làm việc của bạn thành skill, workflow hoặc gói tri thức. Người dùng superYou cài và dùng ngay. Bạn theo dõi lượt quan tâm, lượt cài và đánh giá ở đây.</p></div>'
+    + (err ? '<p class="msg err">'+esc(err)+'</p>' : '')
+    + '<div class="panes"><form class="pane" id="su"><h2>Tạo tài khoản người bán</h2><label class="f">Tên hiển thị<input id="sn" required maxlength="60" autocomplete="name"></label><label class="f">Email<input id="se" type="email" required autocomplete="email"></label><label class="f">Giới thiệu ngắn<input id="sb" maxlength="300" placeholder="Ví dụ: 8 năm vận hành shop POD"></label><button class="btn y">Tạo tài khoản</button><p class="msg" id="sm" role="status"></p></form>'
+    + '<form class="pane" id="li"><h2>Đã có khoá truy cập</h2><label class="f">Khoá truy cập<input id="lk" required placeholder="shc_…" autocomplete="off"><small>Khoá được cấp khi tạo tài khoản. Mất khoá thì liên hệ superYou để được cấp lại.</small></label><button class="btn k">Vào console</button></form></div></div>';
+  $('#su').addEventListener('submit', function(e){ e.preventDefault(); var m = $('#sm'), btn = e.target.querySelector('button'); btn.disabled = true; m.className = 'msg'; m.textContent = 'Đang tạo…';
+    api('/api/creator/signup', {name:$('#sn').value, email:$('#se').value, bio:$('#sb').value}).then(function(r){ showKey(r.key); })
+      .catch(function(err){ m.className = 'msg err'; m.textContent = err.message; btn.disabled = false; }); });
+  $('#li').addEventListener('submit', function(e){ e.preventDefault(); C.key = $('#lk').value.trim(); lsSet('sy-key', C.key); consoleView(); });
+}
+function showKey(key){
+  $('#main').innerHTML = '<div class="w cwrap"><div class="pane" style="max-width:640px"><h2>Lưu khoá truy cập của bạn</h2><p>Đây là chìa khoá duy nhất để vào console. superYou chỉ hiện khoá này một lần.</p><div class="keybox" id="kb">'+esc(key)+'</div>'
+    + '<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" id="kc">Sao chép khoá</button><button class="btn y" id="kg">Tôi đã lưu, vào console</button></div><p class="msg" id="km" role="status"></p></div></div>';
+  $('#kc').onclick = function(){ var m = $('#km'); (navigator.clipboard ? navigator.clipboard.writeText(key) : Promise.reject()).then(function(){ m.className='msg ok'; m.textContent = 'Đã sao chép.'; })
+    .catch(function(){ var r = document.createRange(); r.selectNodeContents($('#kb')); var s = getSelection(); s.removeAllRanges(); s.addRange(r); m.className='msg'; m.textContent = 'Đã chọn khoá, bấm Sao chép trên bàn phím.'; }); };
+  $('#kg').onclick = function(){ C.key = key; lsSet('sy-key', key); consoleView(); };
+}
+var ST = { published:'Đang bán', review:'Chờ duyệt', draft:'Nháp', rejected:'Cần sửa', archived:'Đã gỡ' };
+function dash(){
+  var d = C.data, s = d.stats;
+  $('#main').innerHTML = '<div class="w cwrap"><div style="display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap"><div><p class="by" style="margin:0">Console người bán</p><h2 style="margin:4px 0 0">Chào '+esc(d.creator.name)+'</h2></div><div style="display:flex;gap:8px"><button class="btn v" id="nw">+ Sản phẩm mới</button><button class="btn sm" id="lo">Đăng xuất</button></div></div>'
+    + '<div class="tiles"><div class="tile"><b>'+s.products+'</b><span>Sản phẩm</span></div><div class="tile"><b>'+s.published+'</b><span>Đang bán</span></div><div class="tile"><b>'+s.review+'</b><span>Chờ duyệt</span></div><div class="tile"><b>'+s.interest+'</b><span>Khách quan tâm</span></div><div class="tile"><b>'+s.installs+'</b><span>Lượt cài</span></div></div>'
+    + '<div class="list">'+(d.items.length ? d.items.map(function(x){ return '<div class="rowi">'+icon(x,44)+'<div style="flex:1;min-width:0"><div class="nm">'+esc(x.name)+'</div><div class="by">'+esc(x.type_label)+' · '+vnd(x.price)+' · '+x.interest+' quan tâm · '+x.installs+' cài'+(x.rating ? ' · ★ '+x.rating : '')+'</div>'+(x.review_note ? '<div class="by" style="color:var(--red)">Phản hồi: '+esc(x.review_note)+'</div>' : '')+'</div><span class="sts s-'+x.status+'">'+(ST[x.status]||x.status)+'</span><button class="btn sm" data-e="'+x.id+'">Sửa</button></div>'; }).join('')
+      : '<div class="empty" style="border:0">Chưa có sản phẩm. Bấm “Sản phẩm mới”, dán nguyên liệu và để AI đóng gói giúp bạn.</div>')+'</div>'
+    + '<p class="by">Mọi sản phẩm được đội superYou duyệt trước khi lên kệ, thường trong 1–2 ngày làm việc. Thanh toán cho người bán sẽ mở trong giai đoạn tới.</p></div>';
+  $('#nw').onclick = function(){ C.draft = {type:'skill', name:'', tagline:'', description:'', body:'', category:'nang-suat', price:0, tags:''}; C.step = 1; wizard(); };
+  $('#lo').onclick = function(){ lsSet('sy-key', null); C.key = null; loginView(); };
+  document.querySelectorAll('[data-e]').forEach(function(b){ b.onclick = function(){ api('/api/creator/get', {lid:b.dataset.e}, C.key).then(function(p){ C.draft = p; C.step = 2; wizard(); }).catch(function(e){ alertMsg(e.message); }); }; });
+}
+function alertMsg(t){ var m = document.createElement('p'); m.className = 'msg err'; m.textContent = t; $('#main .cwrap').prepend(m); }
+var HINT = { skill:'Hướng dẫn đánh số, superYou làm theo khi gặp đúng loại việc.', brain:'Nhiều ghi chú, mỗi ghi chú bắt đầu bằng dòng “# Tiêu đề”.', workflow:'Mỗi dòng một bước dạng agent.hanh_dong: Tên bước. Không dùng bước gửi, đăng hoặc xoá.' };
+function wizard(){
+  var p = C.draft, d = C.data, st = C.step;
+  var steps = ['Nguyên liệu','Trang sản phẩm','Gửi duyệt'].map(function(l,i){ return '<span class="'+(st===i+1 ? 'on' : st>i+1 ? 'done' : '')+'">'+(i+1)+'. '+l+'</span>'; }).join('');
+  var body = '';
+  if(st === 1) body = '<div class="pane"><h2>Bạn có gì sẵn?</h2><p class="by">Dán bất cứ thứ gì: SKILL.md (chuẩn Agent Skills), checklist, quy trình, ghi chú, prompt. Hoặc kéo thả file .md vào ô bên dưới.</p>'
+    + '<label class="f">Loại mong muốn<select id="wt"><option value="">Để AI chọn</option>'+Object.keys(d.types).map(function(k){ return '<option value="'+k+'">'+esc(d.types[k])+'</option>'; }).join('')+'</select></label>'
+    + '<div class="drop" id="dz">Kéo thả file .md hoặc .txt vào đây, hoặc <label style="color:var(--violet);cursor:pointer;font-weight:700"><input type="file" id="wf" accept=".md,.txt,text/markdown,text/plain" hidden>chọn file</label></div>'
+    + '<label class="f">Nguyên liệu<textarea id="wr" style="min-height:200px" placeholder="---&#10;name: bien-ban-hop&#10;description: Viết biên bản họp gọn một trang&#10;---&#10;1. Ghi quyết định lên đầu…"></textarea></label>'
+    + '<label class="f">Hoặc một đường link (bài viết, repo, trang hướng dẫn)<input id="wu" type="url" inputmode="url" placeholder="https://…"><small>AI dựng bản của bạn dựa trên ý tưởng của nguồn, không chép nguyên văn.</small></label>'
+    + '<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn v" id="wa">AI đóng gói</button><button class="btn" id="wm">Tự điền</button><button class="btn sm" id="wx">Huỷ</button></div><p class="msg" id="wmsg" role="status"></p></div>';
+  if(st === 2) body = '<div class="wiz"><div class="pane">'+((p.issues||[]).length ? '<div class="issues"><b>Nên sửa trước khi gửi</b><ul>'+p.issues.map(function(i){ return '<li>'+esc(i)+'</li>'; }).join('')+'</ul></div>' : '')
+    + (p.review_note ? '<div class="issues"><b>Phản hồi từ superYou</b><p style="margin:4px 0 0">'+esc(p.review_note)+'</p></div>' : '')
+    + '<label class="f">Loại<select id="ft" '+(p.id ? 'disabled' : '')+'>'+Object.keys(d.types).map(function(k){ return '<option value="'+k+'" '+(p.type===k?'selected':'')+'>'+esc(d.types[k])+'</option>'; }).join('')+'</select></label>'
+    + '<label class="f">Tên<input id="fn" maxlength="80" value="'+esc(p.name)+'"></label><label class="f">Câu giới thiệu<input id="fg" maxlength="160" value="'+esc(p.tagline)+'"><small>Một câu nói rõ lợi ích, từ 20 ký tự.</small></label>'
+    + '<label class="f">Mô tả<textarea id="fd">'+esc(p.description)+'</textarea><small>Dành cho ai, làm được gì, dùng thế nào. Từ 120 ký tự.</small></label>'
+    + '<label class="f">Nội dung<textarea id="fb" style="min-height:220px;font-family:ui-monospace,Menlo,monospace;font-size:13.5px">'+esc(p.body)+'</textarea><small id="fh">'+esc(HINT[p.type]||'')+'</small></label>'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><label class="f">Danh mục<select id="fc">'+Object.keys(d.cats).map(function(k){ return '<option value="'+k+'" '+(p.category===k?'selected':'')+'>'+esc(d.cats[k])+'</option>'; }).join('')+'</select></label>'
+    + '<label class="f">Giá (đồng)<input id="fp" type="number" min="0" step="1000" value="'+(p.price||0)+'"><small>0 = miễn phí</small></label></div>'
+    + '<label class="f">Thẻ<input id="fk" value="'+esc(p.tags||'')+'" placeholder="họp, CEO, báo cáo"></label>'
+    + '<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" id="fs">Lưu nháp</button><button class="btn v" id="fn2">Tiếp: kiểm tra và gửi</button><button class="btn sm" id="fx">Về console</button></div><p class="msg" id="fmsg" role="status"></p></div>'
+    + '<div><p class="by" style="margin:0 0 8px">Xem trước trên Marketplace</p><div id="pv"></div></div></div>';
+  if(st === 3) body = '<div class="pane" style="max-width:720px"><h2>Kiểm tra lần cuối</h2><div id="pv"></div><div id="chk"></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" id="bk">Quay lại sửa</button><button class="btn y" id="go">Gửi duyệt</button></div><p class="msg" id="gmsg" role="status"></p></div>';
+  $('#main').innerHTML = '<div class="w cwrap"><div class="stepper">'+steps+'</div>'+body+'</div>';
+  if(st === 1){
+    var rd = function(f){ var r = new FileReader(); r.onload = function(){ $('#wr').value = String(r.result).slice(0, 20000); }; r.readAsText(f); };
+    $('#wf').onchange = function(){ if(this.files[0]) rd(this.files[0]); };
+    var dz = $('#dz'); ['dragenter','dragover'].forEach(function(ev){ dz.addEventListener(ev, function(e){ e.preventDefault(); dz.classList.add('on'); }); });
+    ['dragleave','drop'].forEach(function(ev){ dz.addEventListener(ev, function(e){ e.preventDefault(); dz.classList.remove('on'); if(ev==='drop' && e.dataTransfer.files[0]) rd(e.dataTransfer.files[0]); }); });
+    $('#wx').onclick = dash;
+    $('#wm').onclick = function(){ if($('#wt').value) p.type = $('#wt').value; if($('#wr').value.trim()) p.body = $('#wr').value; C.step = 2; wizard(); };
+    $('#wa').onclick = function(){ var m = $('#wmsg'), btn = this; if(!$('#wr').value.trim() && !$('#wu').value.trim()){ m.className='msg err'; m.textContent = 'Dán nguyên liệu hoặc một link trước nhé.'; return; }
+      btn.disabled = true; m.className = 'msg'; m.textContent = 'AI đang đọc và đóng gói, khoảng 20–40 giây…';
+      api('/api/creator/pack', {raw:$('#wr').value, hint_type:$('#wt').value, source_url:$('#wu').value.trim(), clone:!!$('#wu').value.trim()}, C.key)
+        .then(function(r){ r.tags = (r.tags||[]).join(', '); r.price = 0; C.draft = r; C.step = 2; wizard(); })
+        .catch(function(e){ m.className = 'msg err'; m.textContent = e.message; btn.disabled = false; }); };
+  }
+  if(st === 2){
+    var read = function(){ p.type = $('#ft').value; p.name = $('#fn').value; p.tagline = $('#fg').value; p.description = $('#fd').value; p.body = $('#fb').value; p.category = $('#fc').value; p.price = +$('#fp').value||0; p.tags = $('#fk').value; };
+    var preview = function(){ read(); var x = {type:p.type, name:p.name||'Tên sản phẩm', tagline:p.tagline||'Câu giới thiệu', price:p.price, type_label:d.types[p.type], creator:{name:d.creator.name}, color:'#6A3DF0', rating:0, rating_n:0};
+      $('#pv').innerHTML = card(x, -1); $('#fh').textContent = HINT[p.type]||''; };
+    preview(); ['input','change'].forEach(function(ev){ $('#main').addEventListener(ev, function(e){ if(e.target.closest('.pane')) preview(); }); });
+    $('#fx').onclick = function(){ consoleView(); };
+    $('#fs').onclick = function(){ read(); save(false, $('#fmsg')); };
+    $('#fn2').onclick = function(){ read(); C.step = 3; wizard(); };
+  }
+  if(st === 3){
+    var x = {type:p.type, name:p.name, tagline:p.tagline, price:p.price, type_label:d.types[p.type], creator:{name:d.creator.name}, color:'#6A3DF0', rating:0, rating_n:0};
+    $('#pv').innerHTML = card(x, -1);
+    var iss = [];
+    if((p.name||'').length < 4) iss.push('Tên quá ngắn.');
+    if((p.tagline||'').length < 20) iss.push('Câu giới thiệu nên từ 20 ký tự và nói rõ lợi ích.');
+    if((p.description||'').length < 120) iss.push('Mô tả nên từ 120 ký tự.');
+    if((p.body||'').trim().length < 40) iss.push('Nội dung còn quá ngắn.');
+    $('#chk').innerHTML = iss.length ? '<div class="issues"><b>Cần sửa '+iss.length+' điểm</b><ul>'+iss.map(function(i){ return '<li>'+esc(i)+'</li>'; }).join('')+'</ul></div>' : '<div class="okbox">Đạt các kiểm tra cơ bản. Đội superYou sẽ xem nội dung trước khi lên kệ.</div>';
+    $('#go').disabled = iss.length > 0;
+    $('#bk').onclick = function(){ C.step = 2; wizard(); };
+    $('#go').onclick = function(){ save(true, $('#gmsg')); };
+  }
+}
+function save(submit, m){
+  var p = C.draft; m.className = 'msg'; m.textContent = submit ? 'Đang gửi…' : 'Đang lưu…';
+  api('/api/creator/save', {lid:p.id||'', type:p.type, name:p.name, tagline:p.tagline, description:p.description, body:p.body, category:p.category, price:p.price, tags:p.tags, submit:submit}, C.key)
+    .then(function(r){ p.id = r.id; m.className = 'msg ok'; m.textContent = r.text; if(submit) setTimeout(consoleView, 900); })
+    .catch(function(e){ m.className = 'msg err'; m.textContent = e.message; });
+}
+
+if(location.pathname.replace(/\/$/, '') === '/market/console') consoleView(); else store();
+})();
+</script>
+</body>
+</html>

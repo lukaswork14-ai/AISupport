@@ -60,5 +60,9 @@ if [ $ok != 1 ]; then
   exit 1
 fi
 echo "==> Bot đã chạy bản $SHA"
+# superYou thí điểm: khởi động lại các tenant để dùng bản mới (nếu có)
+for u in $(systemctl list-units --type=service --state=running --no-legend 'superyou@*' 2>/dev/null | awk '{print $1}'); do
+  sudo systemctl restart "$u" && echo "  ↻ $u" || echo "  !! không khởi động lại được $u"
+done
 # giữ 5 bản gần nhất để quay lại khi cần
 ls -1dt $ROOT/releases/*/ | tail -n +6 | xargs -r rm -rf

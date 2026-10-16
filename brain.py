@@ -101,6 +101,11 @@ def _loop(history: list[dict], actions: list[dict]) -> str:
             system += "\n\n" + rc
     except Exception:
         pass
+    try:
+        from agents import market
+        system += market.skills_context()
+    except Exception:
+        pass
     q = _kb_query(history)
     if len(q.strip()) >= 8:
         from core import kb
