@@ -749,6 +749,19 @@ register(Agent("thunghiem", "Thử nghiệm", "🧪", "Bật tính năng theo ph
 ]))
 
 
+# ================================================================ Người dùng, vai trò, gói (chỉ chủ sàn)
+from core import accounts as _accounts, plans as _plans  # noqa: E402
+register(Agent("nguoidung", "Người dùng & gói", "🪪", "Tài khoản, vai trò, gói, chính sách gói, nhật ký kiểm toán", order=59, actions=[
+    Action("ds", "Danh sách người dùng", _accounts.admin_list, hidden=True, llm=True, desc="Người dùng superYou theo vai trò và gói; nhật ký kiểm toán.",
+           params=[Param("q", "Tìm"), Param("role", "Vai"), Param("plan", "Gói")]),
+    Action("sua", "Đổi gói, trạng thái, vai", _accounts.admin_set, hidden=True,
+           params=[Param("uid", "ID", required=True), Param("plan", "Gói"), Param("status", "Trạng thái"), Param("roles", "Vai (phẩy)"), Param("note", "Ghi chú")]),
+    Action("goi", "Chính sách gói", _plans.all_plans, hidden=True, llm=True, desc="Ma trận gói: giá, tính năng, giới hạn."),
+    Action("goi_sua", "Sửa chính sách gói", _plans.update, hidden=True,
+           params=[Param("plan", "Gói", required=True), Param("price", "Giá", "number"), Param("tagline", "Mô tả ngắn"), Param("features", "Tính năng (mỗi dòng)", "textarea"), Param("limits", "Giới hạn (JSON)")]),
+]))
+
+
 # ================================================================ Khách đăng ký (landing page, Marketplace công khai)
 register(Agent("khach", "Khách đăng ký", "📇", "Email khách để lại trên landing page và Marketplace, theo dõi phễu liên hệ", order=59, actions=[
     Action("ds", "Khách đăng ký", leads.overview, hidden=True, llm=True,

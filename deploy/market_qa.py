@@ -145,7 +145,7 @@ def main():
             hq.goto("http://127.0.0.1:8787/hq")
             hq.wait_for_timeout(3500)
             hq.screenshot(path=str(OUT / f"{tag}-30-hq-overview.png"), full_page=True)
-            for name, js in (("31-hq-board", "go('board')"), ("32-hq-cfo", "go('cfo')"), ("33-hq-mkt", "go('mkt')"), ("34-hq-ex", "go('ex')")):
+            for name, js in (("31-hq-board", "go('board')"), ("32-hq-cfo", "go('cfo')"), ("33-hq-mkt", "go('mkt')"), ("34-hq-ex", "go('ex')"), ("35-hq-users", "go('users')"), ("36-hq-plans", "S.usView='goi';render()"), ("37-hq-roles", "roleMenu()")):
                 try:
                     hq.evaluate(js)
                     hq.wait_for_timeout(2200)
@@ -189,6 +189,26 @@ def main():
                 pub.screenshot(path=str(OUT / f"{tag}-21d-public-myorders.png"))
             except Exception as e:
                 errs.append(f"[{tag} public detail] {e}")
+            # một cửa đăng nhập: đăng ký người dùng, trung tâm tài khoản, chuyển vai
+            pub.goto("http://127.0.0.1:8787/login?mode=signup")
+            pub.wait_for_timeout(1200)
+            pub.screenshot(path=str(OUT / f"{tag}-24-login-signup.png"), full_page=True)
+            try:
+                pub.fill("#sn", "Minh Trần"); pub.fill("#se", f"minh-{tag}@congty.vn"); pub.fill("#sp", "matkhau-rat-manh-1"); pub.select_option("#spl", "trial")
+                pub.click("#sf button")
+                pub.wait_for_timeout(1800)
+                pub.screenshot(path=str(OUT / f"{tag}-25-account-home.png"), full_page=True)
+                pub.click("#rsb"); pub.wait_for_timeout(400)
+                pub.screenshot(path=str(OUT / f"{tag}-26-account-roles.png"))
+                pub.click("#addSeller"); pub.wait_for_timeout(1500)
+                pub.click("[data-v=plan]"); pub.wait_for_timeout(600)
+                pub.screenshot(path=str(OUT / f"{tag}-27-account-plans.png"), full_page=True)
+                pub.evaluate("localStorage.removeItem('sy-key')")
+                pub.goto("http://127.0.0.1:8787/market/console"); pub.wait_for_timeout(1800)
+                pub.screenshot(path=str(OUT / f"{tag}-28-console-via-account.png"), full_page=True)
+                pub.evaluate("localStorage.removeItem('sy-acc')")
+            except Exception as e:
+                errs.append(f"[{tag} account] {e}")
             pub.goto("http://127.0.0.1:8787/market/console")
             pub.wait_for_timeout(1500)
             pub.screenshot(path=str(OUT / f"{tag}-22-console-login.png"), full_page=True)
