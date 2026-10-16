@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # Kiểm tra bảo mật trên VPS. CHỈ in kết quả đạt/không đạt, không in bí mật hay nội dung riêng tư.
 S=/opt/superhuy/shared
-ok(){ echo "PASS $1"; } bad(){ echo "FAIL $1"; } info(){ echo "INFO $1"; }
+ok(){ echo "PASS $1"; }
+bad(){ echo "FAIL $1"; }
+info(){ echo "INFO $1"; }
 cfg=$(cat /etc/ssh/sshd_config /etc/ssh/sshd_config.d/*.conf 2>/dev/null | grep -v '^\s*#' | tr 'A-Z' 'a-z')
 pa=$(echo "$cfg" | awk '$1=="passwordauthentication"{print $2; exit}'); pr=$(echo "$cfg" | awk '$1=="permitrootlogin"{print $2; exit}')
 kb=$(echo "$cfg" | awk '$1=="kbdinteractiveauthentication"||$1=="challengeresponseauthentication"{print $2; exit}')
