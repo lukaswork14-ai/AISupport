@@ -1,0 +1,8 @@
+# Cấu hình gitleaks cho superHuy/superYou: dùng bộ luật mặc định + bỏ qua mẫu printf
+# trong workflow dựng lại khoá SSH từ GitHub Secrets (chuỗi định dạng, không phải khoá thật).
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Mẫu dựng khoá SSH từ secrets trong workflow"
+regexes = ['''-----BEGIN OPENSSH PRIVATE KEY-----\\n%s\\n-----END OPENSSH PRIVATE KEY-----''']

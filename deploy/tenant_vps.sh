@@ -42,6 +42,7 @@ Wants=network-online.target
 User=superhuy
 WorkingDirectory=/opt/superhuy/current
 Environment=SUPERHUY_HOME=/opt/superyou-tenants/%i
+Environment=SUPERYOU_TENANT=1
 EnvironmentFile=/opt/superyou-tenants/%i/.env
 Environment=PYTHONUNBUFFERED=1
 Environment=TZ=Asia/Ho_Chi_Minh
