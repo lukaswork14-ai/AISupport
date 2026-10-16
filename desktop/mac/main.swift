@@ -16,7 +16,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
         cfg.websiteDataStore = .default()
         cfg.preferences.javaScriptCanOpenWindowsAutomatically = true
         cfg.mediaTypesRequiringUserActionForPlayback = []
-        cfg.applicationNameForUserAgent = "superHuyMac/1.0 Version/17.0 Safari/605.1.15"
+        cfg.applicationNameForUserAgent = "superHuyMac/1.1 Version/17.0 Safari/605.1.15"
         web = WKWebView(frame: .zero, configuration: cfg)
         web.navigationDelegate = self
         web.uiDelegate = self
@@ -24,17 +24,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
         web.allowsMagnification = true
         if #available(macOS 13.3, *) { web.isInspectable = false }
 
-        let frame = NSRect(x: 0, y: 0, width: 460, height: 900)
+        let vis = NSScreen.main?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
+        let frame = NSRect(x: 0, y: 0, width: min(1320, vis.width * 0.86), height: min(880, vis.height * 0.9))
         window = NSWindow(contentRect: frame, styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
                           backing: .buffered, defer: false)
         window.title = "superHuy"
         window.titlebarAppearsTransparent = true
         window.titleVisibility = .hidden
         window.minSize = NSSize(width: 380, height: 560)
+        window.collectionBehavior.insert(.fullScreenPrimary)
         window.backgroundColor = NSColor(red: 0.957, green: 0.945, blue: 0.973, alpha: 1)
         window.contentView = web
-        window.setFrameAutosaveName("superHuyMain")
-        if !window.setFrameUsingName("superHuyMain") { window.center() }
+        window.setFrameAutosaveName("superHuyMain2")
+        if !window.setFrameUsingName("superHuyMain2") { window.center() }
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
         web.load(URLRequest(url: APP_URL))

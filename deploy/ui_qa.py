@@ -267,6 +267,25 @@ def main():
             sp.screenshot(path=str(OUT / "21-share-page.png"), full_page=True)
             report.append(f"share page title: {sp.title()}")
             sp.close()
+        # ---- Responsive: máy Mac / máy tính / iPad
+        try:
+            page.evaluate("closeSheet();S.dockOpen=false;dock()")
+            for vw, vh, tag in ((1440, 900, "mac"), (1180, 820, "ipad-ngang"), (820, 1180, "ipad-doc")):
+                page.set_viewport_size({"width": vw, "height": vh})
+                page.wait_for_timeout(500)
+                step(f"60-{tag}-home", "go('home')", 2200)
+                if tag == "mac":
+                    step("61-mac-tasks", "go('tasks')", 1800)
+                    step("62-mac-content-repo", "go('content');S.cview='repo';render()", 1800)
+                    step("63-mac-growth", "go('growth');S.gr.view='learn';render()", 2200)
+                    step("64-mac-sheet", "go('content');S.cview='repo';render();setTimeout(()=>rpOpen('r1'),300)", 1800)
+                    step("65-mac-chat", "closeSheet();S.dockOpen=true;dock()", 1200)
+                    page.evaluate("S.dockOpen=false;dock()")
+            page.set_viewport_size({"width": 390, "height": 844})
+            page.wait_for_timeout(400)
+            step("66-phone-home-after", "go('home')", 1500)
+        except Exception as e:
+            errs.append(f"[responsive] {e}")
         # chế độ tối
         page.emulate_media(color_scheme="dark")
         page.evaluate("document.documentElement.dataset.scheme='dark'")
