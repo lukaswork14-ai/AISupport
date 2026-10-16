@@ -29,5 +29,25 @@ q = DATA_DIR / "qc.json"
 if q.exists():
     d = json.loads(q.read_text())
     for k, v in d.items():
-        if "lark" in k.lower() or (isinstance(v, dict) and "lark" in str(v.get("name", "")).lower()):
+        if isinstance(v, dict) and (v.get("ok") is False or "lark" in k.lower()):
             print("qc", k, {x: v.get(x) for x in ("ok", "fails", "detail", "name")} if isinstance(v, dict) else v)
+
+try:
+    from webapp import server  # noqa
+    import main as M  # noqa
+except Exception:
+    pass
+try:
+    from core import qc
+    print("connections:", [(c.get("id"), c.get("ok"), str(c.get("detail") or c.get("err") or "")[:120]) for c in ([])])
+except Exception as e:
+    print("connections err", e)
+try:
+    from core import qc
+    for it in qc.status_items():
+        if not it.get("ok") or "lark" in str(it).lower():
+            print("qc_item", {k: str(v)[:160] for k, v in it.items()})
+    st = qc.selftest()
+    print("selftest_lark", {k: v for k, v in st.items() if "lark" in k})
+except Exception as e:
+    print("qc err", type(e).__name__, e)
