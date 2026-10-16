@@ -1870,7 +1870,7 @@ function vStudio(embed){
 }
 
 /* ---------- Nội dung: săn tin + duyệt quẹt + bộ nội dung (reels, group, fanpage) */
-const TRK = {tin:'Theo chủ đề', founder:'Founder & startup AI', roimaxx:'Agentic · Roimaxx', leversphere:'Chuyển đổi · Leversphere', tay:'Anh gửi'};
+const TRK = {tin:'Theo chủ đề', founder:'Founder & startup AI', roimaxx:'Agentic · Roimaxx', leversphere:'AI-native · Leversphere', tay:'Anh gửi'};
 const ITYPE = {tin:'Tin', case_study:'Case study', best_practice:'Best practice', tinh_nang:'Tính năng mới', y_tuong:'Ý tưởng', bao_cao:'Báo cáo'};
 const CSTYLE = {auto:'Tự chọn', founder:'Kể chuyện founder', tin:'Tin nóng', bai_hoc:'3 bài học'};
 const COUT = {reel:'Video reels', group:'Bài group', page:'Bài fanpage'};
@@ -2443,7 +2443,7 @@ function cSettings(){
     <label class="pick"><input type="checkbox" ${s.tin?'checked':''} onchange="S.cset.tin=this.checked"><div class="grow"><div style="font-weight:600">Tin theo chủ đề</div><div class="meta">Tin nóng theo các chủ đề bên dưới</div></div></label>
     <label class="pick"><input type="checkbox" ${s.founder?'checked':''} onchange="S.cset.founder=this.checked"><div class="grow"><div style="font-weight:600">Founder & startup AI</div><div class="meta">Case thành công: hành trình founder, gọi vốn, định giá, tăng trưởng</div></div></label>
     <label class="pick"><input type="checkbox" ${s.roimaxx?'checked':''} onchange="S.cset.roimaxx=this.checked"><div class="grow"><div style="font-weight:600">Agentic commerce · Roimaxx</div><div class="meta">Mô hình kinh doanh enabler, agents factory, agency chuyển đổi AI, giao thức mới — kèm phân tích CAO</div></div></label>
-    <label class="pick"><input type="checkbox" ${s.leversphere?'checked':''} onchange="S.cset.leversphere=this.checked"><div class="grow"><div style="font-weight:600">Chuyển đổi · Leversphere</div><div class="meta">Case study, best practice, công cụ AI cho công ty POD — kèm phân tích CAO</div></div></label>
+    <label class="pick"><input type="checkbox" ${s.leversphere?'checked':''} onchange="S.cset.leversphere=this.checked"><div class="grow"><div style="font-weight:600">AI-native · Leversphere</div><div class="meta">Case study, best practice, công cụ AI cho công ty POD — kèm phân tích CAO</div></div></label>
     <p class="lbl" style="margin-top:12px">Chủ đề (${s.topics.length})</p>
     <div class="chips" style="padding-top:0;flex-wrap:wrap;margin-bottom:8px">${s.topics.map((t,i)=>`<button class="chip rm" onclick="S.cset.topics.splice(${i},1);S.cspaint()" aria-label="Bỏ chủ đề ${esc(t)}">${esc(t)} ${ico('x',14)}</button>`).join('')}</div>
     <div class="row" style="margin-bottom:14px"><input id="tnew" class="grow" placeholder="Thêm chủ đề, ví dụ: AI agent cho ecommerce" style="padding:11px 13px;border-radius:12px;border:0;background:var(--fill);color:var(--text);font:inherit">

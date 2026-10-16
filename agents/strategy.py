@@ -3,7 +3,7 @@ phân tích chuyên sâu từng tin theo 2 lăng kính và tích luỹ thành 2 
 
 1) ROIMAXX: mô hình kinh doanh "agentic e-commerce enabler" (từ one-stop-shop e-commerce enabler), ví dụ Agents Factory + agency/consulting
    giúp doanh nghiệp chuyển đổi AI toàn diện, triển khai dễ và hiệu quả.
-2) LEVERSPHERE: lộ trình + kế hoạch chi tiết để anh Huy chuyển công ty POD Leversphere sang mô hình agentic e-commerce.
+2) LEVERSPHERE: lộ trình + kế hoạch chi tiết để anh Huy biến công ty POD Leversphere thành AI-native POD company (năng suất, doanh thu, cắt chi phí/công sức thừa).
 
 Mỗi tin -> phân tích CAO (JSON) -> lưu kho insight + ghi chú Obsidian (03 Resources/Agentic Commerce).
 Hằng tuần (và khi anh bấm) -> viết lại 2 tài liệu sống từ insight mới + Second Brain + trí nhớ, lưu phiên bản + Obsidian.
@@ -56,13 +56,15 @@ LENSES = {
         ],
     },
     "leversphere": {
-        "name": "Leversphere · Chuyển đổi agentic POD",
+        "name": "Leversphere · AI-native POD company",
         "short": "Leversphere",
-        "goal": ("Lập lộ trình và kế hoạch chi tiết để anh Huy (CGO kiêm CAO) nhanh chóng chuyển công ty POD Leversphere sang mô hình agentic e-commerce: "
-                 "agent cho nghiên cứu xu hướng, thiết kế, listing/SEO, quảng cáo, chăm sóc khách hàng, vận hành/fulfillment, tài chính; "
-                 "sẵn sàng bán qua AI agent (feed sản phẩm, giao thức thanh toán); tổ chức, quản trị, KPI, chi phí tiết kiệm."),
-        "doc": "Leversphere – Lộ trình chuyển đổi Agentic E-commerce",
-        "folder": "01 Projects/Leversphere Agentic Transformation",
+        "goal": ("Biến Leversphere (công ty POD) thành một AI-native POD company: khai thác, áp dụng, ứng dụng AI tối đa vào toàn bộ tổ chức "
+                 "để TĂNG NĂNG SUẤT (mỗi người làm được nhiều hơn, chu kỳ nhanh hơn), TĂNG DOANH THU (nhiều sản phẩm thắng hơn, chuyển đổi cao hơn, "
+                 "kênh mới gồm bán qua AI agent), và CẮT CHI PHÍ, CÔNG SỨC KHÔNG CẦN THIẾT (tự động hoá việc lặp lại, giảm lỗi, giảm thuê ngoài). "
+                 "Phạm vi: nghiên cứu xu hướng, thiết kế, listing/SEO, quảng cáo, CSKH, vận hành/fulfillment/QA, tài chính/báo cáo, nhân sự/đào tạo, "
+                 "ra quyết định bằng dữ liệu; cùng văn hoá, kỹ năng AI, quản trị dữ liệu/bảo mật và KPI đo hiệu quả. Anh Huy là CGO kiêm CAO dẫn dắt."),
+        "doc": "Leversphere – Lộ trình trở thành AI-native POD company",
+        "folder": "01 Projects/Leversphere AI-native",
         "sources": [
             ("GNews: print on demand AI", _gn('"print on demand" AI')),
             ("GNews: POD platforms AI (Printful/Printify/Gelato)", _gn('(Printful OR Printify OR Gelato OR Teespring OR Redbubble) AI')),
@@ -75,6 +77,8 @@ LENSES = {
             ("Reddit r/printondemand", "https://www.reddit.com/r/printondemand/top/.rss?t=week"),
             ("Reddit r/ecommerce", "https://www.reddit.com/r/ecommerce/top/.rss?t=week"),
             ("Modern Retail", "https://www.modernretail.co/feed/"),
+            ("GNews: AI-native company productivity", _gn('"AI-native" company (productivity OR "headcount" OR "revenue per employee")')),
+            ("GNews: AI automation cost savings SMB ecommerce", _gn('AI automation (ecommerce OR "small business") "cost savings" OR "hours saved"')),
         ],
     },
 }
@@ -123,7 +127,7 @@ Trả về DUY NHẤT JSON:
  "dieu_moi": "1-2 câu: điều thật sự mới/khác biệt",
  "phan_tich": ["3-5 ý phân tích sâu: cơ chế tạo giá trị, kinh tế học (chi phí, biên lợi nhuận, định giá), vì sao bây giờ, ai thắng/ai thua"],
  "roimaxx": {{"lien_quan": 0-10, "y_nghia": "1-2 câu", "goi_y": ["2-4 gợi ý đưa vào mô hình kinh doanh: gói dịch vụ/agent, định giá, delivery, GTM, đối tác"]}},
- "leversphere": {{"lien_quan": 0-10, "y_nghia": "1-2 câu", "ung_dung": ["2-4 cách áp dụng vào quy trình POD cụ thể"], "kpi": "chỉ số đo hiệu quả"}},
+ "leversphere": {{"lien_quan": 0-10, "y_nghia": "1-2 câu", "ung_dung": ["2-4 cách áp dụng AI vào Leversphere (quy trình/bộ phận cụ thể) để tăng năng suất, doanh thu hoặc cắt chi phí"], "kpi": "chỉ số đo hiệu quả (giờ tiết kiệm, doanh thu/nhân sự, chi phí/đơn...)"}},
  "hanh_dong": [{{"viec": "việc cụ thể", "ai": "anh Huy | team ...", "khi": "7 ngày | 30 ngày | 90 ngày"}}],
  "rui_ro": ["1-3 rủi ro/điểm cần thận trọng"],
  "do_tin_cay": "cao | trung bình | thấp — lý do ngắn (nguồn, số liệu)",
@@ -239,14 +243,15 @@ CẤU TRÚC BẮT BUỘC (markdown, tiêu đề ##):
     "leversphere": """Viết (hoặc cập nhật) kế hoạch: "{doc}" — phiên bản {ver}, ngày {today}. Người thực hiện chính: anh Huy (CGO kiêm CAO).
 MỤC TIÊU: {goal}
 CẤU TRÚC BẮT BUỘC (markdown, tiêu đề ##):
-## 0. Tóm tắt điều hành (mục tiêu 6 tháng, phạm vi, KPI chính, ngân sách định hướng)
-## 1. Hiện trạng: điều đã biết và điều CẦN XÁC MINH (checklist kiểm tra dữ liệu, quy trình, công cụ)
-## 2. Bản đồ cơ hội theo chuỗi giá trị POD — bảng: Mảng | Agent đề xuất | Tác động | Độ khó | Ưu tiên (nghiên cứu xu hướng, thiết kế, listing/SEO, quảng cáo, CSKH, fulfillment/QA, tài chính, sẵn sàng bán qua AI agent)
-## 3. Lộ trình theo giai đoạn: GĐ0 (tuần 1-2 chuẩn bị) · GĐ1 (ngày 0-30 quick wins) · GĐ2 (31-90 mở rộng) · GĐ3 (91-180 vận hành agentic + agentic commerce readiness)
+## 0. Tóm tắt điều hành (tầm nhìn AI-native, mục tiêu 6-12 tháng về năng suất · doanh thu · chi phí, KPI chính, ngân sách định hướng)
+## 1. Hiện trạng và mức độ trưởng thành AI của Leversphere: điều đã biết và điều CẦN XÁC MINH (checklist dữ liệu, quy trình, công cụ, kỹ năng)
+## 2. Bản đồ cơ hội AI theo bộ phận — bảng: Bộ phận/quy trình | Ứng dụng AI (agent, tự động hoá, trợ lý) | Tác động (giờ tiết kiệm / doanh thu / chi phí) | Độ khó | Ưu tiên
+   (nghiên cứu xu hướng, thiết kế, listing/SEO, quảng cáo, CSKH, fulfillment/QA, tài chính/báo cáo, nhân sự/đào tạo, quản lý/ra quyết định; kênh bán qua AI agent)
+## 3. Lộ trình theo giai đoạn: GĐ0 (tuần 1-2 nền tảng: dữ liệu, công cụ, quy tắc) · GĐ1 (ngày 0-30 quick wins tiết kiệm công sức) · GĐ2 (31-90 mở rộng toàn bộ phận, tăng doanh thu) · GĐ3 (91-180 vận hành AI-native: agent làm việc lặp lại, con người làm việc giá trị cao)
 ## 4. Kế hoạch 30 ngày đầu theo tuần — bảng: Tuần | Việc | Người phụ trách | Đầu ra | Tiêu chí xong
-## 5. Tổ chức và con người (vai trò, đào tạo, nhịp họp), quản trị (dữ liệu, bảo mật, human-in-the-loop)
-## 6. Công nghệ và chi phí (stack tiết kiệm, mua vs xây, ngân sách theo tháng — ghi rõ giả định)
-## 7. KPI và nhịp đo hằng tuần
+## 5. Con người và văn hoá AI-native (vai trò mới, đào tạo kỹ năng AI cho từng bộ phận, cơ chế khuyến khích, nhịp họp), quản trị (dữ liệu, bảo mật, human-in-the-loop)
+## 6. Công nghệ và chi phí (stack tiết kiệm, mua vs xây, ngân sách theo tháng, ROI dự kiến — ghi rõ giả định)
+## 7. KPI và nhịp đo hằng tuần (năng suất: giờ tiết kiệm, sản phẩm/người; doanh thu: doanh thu/nhân sự, tỷ lệ chuyển đổi; chi phí: chi phí/đơn, chi phí thuê ngoài)
 ## 8. Rủi ro và phương án
 ## 9. Việc anh Huy làm ngay tuần này (checklist)
 ## 10. Thay đổi so với phiên bản trước và nguồn tham khảo (liệt kê insight đã dùng)

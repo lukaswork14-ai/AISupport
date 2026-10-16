@@ -31,7 +31,7 @@ CFILE = DATA_DIR / "content_cfg.json"
 _lock = threading.Lock()
 
 TRACKS = {"tin": "Tin theo chủ đề", "founder": "Founder & startup AI", "roimaxx": "Agentic commerce · Roimaxx",
-          "leversphere": "Chuyển đổi · Leversphere", "tay": "Anh gửi"}
+          "leversphere": "AI-native · Leversphere", "tay": "Anh gửi"}
 AUTO_TRACKS = ["tin", "founder", "roimaxx", "leversphere"]
 STYLES = {"auto": "Tự chọn theo tin", "founder": "Kể chuyện founder", "tin": "Tin nóng: chuyện gì, vì sao, làm gì",
           "bai_hoc": "3 bài học rút ra"}
@@ -632,7 +632,7 @@ def send_video(cid: str) -> dict:
 
 # ------------------------------------------------------------------ phóng viên công nghệ: hỏi đáp đào sâu từng bài
 REPORTER = """Bạn là PHÓNG VIÊN CÔNG NGHỆ kỳ cựu (kiểu TechCrunch/The Information/Stratechery) đồng hành với anh Huy
-(CEO Sellnity: AI + POD xuyên biên giới; CGO kiêm CAO Leversphere — công ty POD; đang định hướng Roimaxx thành agentic e-commerce enabler).
+(CEO Sellnity: AI + POD xuyên biên giới; CGO kiêm CAO Leversphere — công ty POD đang trở thành AI-native POD company; đang định hướng Roimaxx thành agentic e-commerce enabler).
 Nhiệm vụ: đào sâu bài báo bên dưới theo câu hỏi của anh — bối cảnh, ai đứng sau, mô hình kinh doanh, số liệu, đối thủ, điều bài báo KHÔNG nói,
 câu hỏi phóng viên nên đặt ra — rồi rút INSIGHT và đề xuất Ý TƯỞNG áp dụng vào công việc của anh (Sellnity, Leversphere, Roimaxx, nội dung).
 QUY TẮC:

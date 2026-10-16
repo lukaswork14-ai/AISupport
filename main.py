@@ -284,7 +284,7 @@ async def job_strategy_weekly():
     from agents import strategy
     await asyncio.to_thread(strategy.weekly)
     from core import notify
-    notify.send(text="🧭 Đã cập nhật tài liệu chiến lược tuần này: mô hình kinh doanh Roimaxx và lộ trình chuyển đổi Leversphere. "
+    notify.send(text="🧭 Đã cập nhật tài liệu chiến lược tuần này: mô hình kinh doanh Roimaxx và lộ trình đưa Leversphere thành AI-native POD company. "
                      "Mở app › Nội dung › Chiến lược để xem.")
 
 
@@ -312,7 +312,7 @@ def _strategy_bootstrap():
     memory.seed_once([
         ("work", "Roimaxx: định vị ban đầu là one-stop-shop e-commerce enabler, nay anh Huy định hướng thành agentic e-commerce enabler "
                  "(giúp doanh nghiệp khác triển khai agentic commerce: Agents Factory + agency/consulting chuyển đổi AI)."),
-        ("work", "Leversphere là công ty POD (print on demand); anh Huy là CGO kiêm CAO, đang lập lộ trình chuyển Leversphere sang mô hình agentic e-commerce."),
+        ("work", "Leversphere là công ty POD (print on demand); anh Huy là CGO kiêm CAO, mục tiêu biến Leversphere thành AI-native POD company: ứng dụng AI tối đa để tăng năng suất, tăng doanh thu, cắt chi phí và công sức không cần thiết."),
     ])
     if any(strategy.doc(k).get("version") for k in strategy.LENSES):
         return
