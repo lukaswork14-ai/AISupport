@@ -74,7 +74,7 @@ def _official_seed() -> list[dict]:
         "tagline": "Biên bản gọn một trang: quyết định, đầu việc có người và hạn, rủi ro cần theo dõi.",
         "description": ("Skill này dạy superHuy viết biên bản họp theo cách một CEO cần đọc: quyết định lên đầu, việc nào cũng có người "
                         "chịu trách nhiệm và hạn chót, câu hỏi còn treo được tách riêng. Dùng cho mọi cuộc họp ghi âm trong app hoặc file gửi qua Telegram."),
-        "tags": ["họp", "biên bản", "giao việc"],
+        "tags": ["họp", "biên bản", "giao việc"], "examples": ["Tóm tắt cuộc họp sáng nay và giao việc cho team", "Viết biên bản cuộc họp vừa ghi âm, gửi vào nhóm Lark"],
         "content": {"skill": (
             "Khi viết hoặc tóm tắt biên bản họp:\n"
             "1. Mở đầu bằng 'Quyết định' (đánh số, mỗi dòng một quyết định, ghi ai chốt).\n"
@@ -87,7 +87,7 @@ def _official_seed() -> list[dict]:
         "tagline": "Mỗi khi anh hỏi nên hay không, superHuy chạy pre-mortem và soi hệ quả bậc hai trước khi khuyên.",
         "description": ("Rút từ khoá 'Ra quyết định đỉnh cao 30 ngày' trong superHuy. Khi anh cân nhắc một quyết định, superHuy không trả lời "
                         "có hoặc không ngay mà đi qua checklist: điều gì làm nó thất bại, hệ quả của hệ quả, có đảo ngược được không, cần thêm dữ liệu gì."),
-        "tags": ["ra quyết định", "mental models", "CEO"],
+        "tags": ["ra quyết định", "mental models", "CEO"], "examples": ["Có nên mở thêm kho ở Hà Nội không?", "Chọn chạy quảng cáo TikTok hay Facebook quý này?"],
         "content": {"skill": (
             "Khi anh hỏi về một quyết định (nên/không nên, chọn A hay B, có làm không):\n"
             "1. Phân loại: quyết định đảo ngược được (cửa hai chiều) hay không (cửa một chiều). Cửa hai chiều thì khuyến khích quyết nhanh.\n"
@@ -138,6 +138,7 @@ def _mk(src: dict, creator: dict, status: str) -> dict:
             "color": src.get("color") or COLORS[sum(map(ord, lid)) % len(COLORS)], "creator": creator, "status": status,
             "version": "1.0", "whats_new": _clean(src.get("whats_new") or "Phát hành lần đầu.", 600),
             "content": src.get("content") or {}, "reviews": [], "installs": 0, "interest": 0,
+            "examples": [_clean(e, 120) for e in (src.get("examples") or [])][:3], "billing": "monthly" if src.get("billing") == "monthly" else "once",
             "created": _now(), "updated": _now()}
 
 
@@ -171,6 +172,79 @@ def _contents_preview(x: dict) -> list[str]:
     if x["type"] == "workflow":
         return [s.get("label") or f"{s.get('agent')}.{s.get('action')}" for s in (c.get("steps") or [])]
     return [ln.strip() for ln in (c.get("skill") or "").split("\n") if ln.strip()][:12]
+
+
+# ------------------------------------------------------------------ cấu phần hiển thị theo loại (App Store / Shopify / Zapier / Notion)
+CONNECT_LABEL = {"lich": ("Lịch", "Google Calendar hoặc lịch Lark"), "email": ("Gmail", "Hộp thư Gmail"), "lark": ("Lark", "Nhóm chat Lark"),
+                 "tin": ("Săn tin", "Không cần kết nối"), "brain": ("Second Brain", "Obsidian"), "hop": ("Họp", "Ghi âm trong app"),
+                 "viec": ("Việc", "Lark Task, Google Tasks"), "taichinh": ("Tài chính", "Sổ thu chi trong app"), "web": ("Web", "Không cần kết nối")}
+STEP_SECONDS = {"lich": 3, "email": 25, "lark": 20, "tin": 15, "web": 8}
+
+
+def _tool_label(agent: str, action: str) -> str:
+    try:
+        from core import registry
+        return registry.get_action(agent, action).label
+    except Exception:
+        return f"{agent}.{action}"
+
+
+def _skill_spec(x: dict) -> dict:
+    txt = (x.get("content") or {}).get("skill") or ""
+    lines = [ln.strip() for ln in txt.split("\n") if ln.strip()]
+    rules = [re.sub(r"^\d+[.)]\s*", "", ln) for ln in lines if re.match(r"^\d+[.)]", ln)]
+    trigger = next((ln for ln in lines if re.match(r"^(khi|mỗi khi|nếu|when)", ln, re.I)), "") or ("Khi bạn giao việc thuộc loại: " + ", ".join(x.get("tags") or [])[:120] if x.get("tags") else "Khi câu hỏi của bạn khớp với nội dung skill")
+    ex = x.get("examples") or []
+    if not ex:
+        ex = {"hop": ["Tóm tắt cuộc họp sáng nay và giao việc", "Viết biên bản cuộc họp vừa ghi âm"],
+              "ban-hang": ["Viết listing cho mẫu áo mới", "Phân tích đơn hàng tuần này"],
+              "noi-dung": ["Viết bài đăng cho fanpage về sản phẩm mới", "Lên kịch bản video 60 giây"],
+              "dieu-hanh": ["Có gì cần tôi quyết hôm nay?", "Nên mở thêm kho ở Hà Nội không?"],
+              "hoc": ["Hôm nay học gì?", "Ôn lại bài hôm qua"], "nang-suat": ["Lên lịch trình hôm nay giúp tôi", "Tôi nên làm gì trước?"]}.get(x.get("category"), ["Hỏi bất cứ việc gì thuộc chủ đề này"])
+    return {"kind": "skill", "trigger": trigger.rstrip(":"), "rules": rules[:8], "rule_count": len(rules), "examples": ex[:3],
+            "preview": lines[:6], "chars": len(txt), "permissions": ["Chỉ thay đổi cách trợ lý trả lời", "Không gửi, đăng hay xoá gì khi bạn chưa đồng ý"],
+            "compat": ["Trò chuyện trong app và Telegram", "Áp dụng ngay sau khi cài, tắt được bất cứ lúc nào"]}
+
+
+def _workflow_spec(x: dict) -> dict:
+    steps = (x.get("content") or {}).get("steps") or []
+    out, conns, secs = [], [], 0
+    for st in steps:
+        ag = st.get("agent", "")
+        out.append({"agent": ag, "action": st.get("action", ""), "label": st.get("label") or _tool_label(ag, st.get("action", "")),
+                    "tool": _tool_label(ag, st.get("action", "")), "connect": CONNECT_LABEL.get(ag, (ag, ""))[0]})
+        c = CONNECT_LABEL.get(ag)
+        if c and c[1] and "Không cần" not in c[1] and c[0] not in conns:
+            conns.append(c[0])
+        secs += STEP_SECONDS.get(ag, 10)
+    return {"kind": "workflow", "steps": out, "step_count": len(out), "connects": conns, "runtime": f"khoảng {max(5, secs)} giây" if secs < 60 else f"khoảng {round(secs / 60)} phút",
+            "how": "Bấm Chạy trong Marketplace › Đã cài, hoặc nhắn trợ lý: “chạy " + (x.get("name") or "workflow") + "”",
+            "output": "Một bản tổng hợp theo từng bước, đọc trong app hoặc sao chép.",
+            "permissions": ["Chỉ đọc và tổng hợp dữ liệu của bạn", "Không gửi thư, không đăng bài, không xoá"],
+            "compat": ["Cần đã kết nối: " + (", ".join(conns) if conns else "không cần kết nối thêm")]}
+
+
+def _brain_spec(x: dict) -> dict:
+    notes = (x.get("content") or {}).get("notes") or []
+    toc = [n["title"] for n in notes]
+    sample = notes[0]["md"][:700] if notes else ""
+    words = sum(len((n.get("md") or "").split()) for n in notes)
+    return {"kind": "brain", "toc": toc[:60], "note_count": len(notes), "words": words, "read_min": max(1, round(words / 200)),
+            "sample_title": notes[0]["title"] if notes else "", "sample": sample,
+            "where": "Second Brain (Obsidian) › 03 Resources › Marketplace › " + (x.get("name") or "")[:40],
+            "permissions": ["Ghi thêm ghi chú vào Second Brain của bạn", "Không sửa hay xoá ghi chú sẵn có"],
+            "compat": ["Trợ lý tra cứu được ngay khi trả lời", "Gỡ sản phẩm vẫn giữ ghi chú, bạn tự xoá trong Obsidian"]}
+
+
+def spec(x: dict) -> dict:
+    """Cấu phần hiển thị theo loại, kèm phần Thông tin chung (như App Store)."""
+    sp = {"skill": _skill_spec, "workflow": _workflow_spec, "brain": _brain_spec}[x["type"]](x)
+    sp["info"] = [("Phiên bản", x.get("version", "1.0")), ("Cập nhật", (x.get("updated") or "")[:10]), ("Phát hành", (x.get("created") or "")[:10]),
+                  ("Người tạo", (x.get("creator") or {}).get("name", "")), ("Danh mục", CATS.get(x.get("category"), "")),
+                  ("Giá", "Miễn phí" if not x.get("price") else f"{x['price']:,}đ".replace(",", ".") + (" một lần" if x.get("billing", "once") == "once" else "/tháng"))]
+    sp["billing"] = x.get("billing", "once")
+    sp["buy_label"] = ("Nhận miễn phí" if not x.get("price") else ("Mua " + f"{x['price']:,}đ".replace(",", ".")) + ("" if x.get("billing", "once") == "once" else "/tháng"))
+    return sp
 
 
 def catalog(q: str = "", cat: str = "", type: str = "") -> dict:
@@ -209,7 +283,7 @@ def item(lid: str) -> dict:
     return s | {"description": x.get("description", ""), "whats_new": x.get("whats_new", ""), "reviews": rv[-30:][::-1], "dist": dist,
                 "contents": _contents_preview(x), "skill_text": c.get("skill", "") if x["type"] == "skill" else "",
                 "submitter": x.get("submitter", {}), "review_note": x.get("review_note", ""),
-                "install": d["installs"].get(x["id"])}
+                "install": d["installs"].get(x["id"]), "spec": spec(x), "cloned_from": x.get("cloned_from"), "source_url": x.get("source_url", "")}
 
 
 # ------------------------------------------------------------------ cài / gỡ / bật tắt / chạy
@@ -450,6 +524,11 @@ def public_catalog() -> dict:
         s["contents"] = _contents_preview(x)[:12] if x["type"] != "skill" else []
         s["whats_new"] = x.get("whats_new", "")
         s["reviews"] = [{k: r[k] for k in ("name", "stars", "text", "at")} for r in (x.get("reviews") or [])[-5:]][::-1]
+        sp = spec(x)
+        if sp["kind"] == "skill":
+            sp["preview"] = sp["preview"][:4]
+            sp["rules"] = sp["rules"][:3]
+        s["spec"] = sp
         items.append(s)
     items.sort(key=lambda i: (i["installs"] + i["interest"], i["rating"]), reverse=True)
     return {"items": items, "cats": CATS, "types": TYPES}

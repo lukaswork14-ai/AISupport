@@ -821,6 +821,16 @@ html.macapp body.standalone{ padding-top:0 }
 .lbopt{ display:flex; gap:10px; align-items:flex-start; padding:7px 2px; font-size:14px; cursor:pointer } .lbopt input{ margin-top:3px }
 .lbprompt{ white-space:pre-wrap; font:12.5px/1.55 ui-monospace,Menlo,monospace; background:var(--fill); padding:14px; border-radius:14px; max-height:360px; overflow:auto }
 .lbways{ display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:10px; margin-top:12px } .lbways button{ text-align:left; display:flex; flex-direction:column; gap:6px } .lbways b{ display:flex; gap:8px; align-items:center }
+.mkspec{ display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:10px; margin-top:14px }
+.mkbox{ background:var(--fill); border-radius:16px; padding:12px 14px; display:flex; flex-direction:column; gap:6px; min-width:0 } .mkbox b{ font-size:14px } .mkbox p{ margin:0; font-size:14px; color:var(--muted) }
+.mkex{ text-align:left; font-size:14px; color:var(--jade); font-weight:600; padding:4px 0 } .mkex:hover{ text-decoration:underline }
+.mkflow{ margin:0; padding:0; list-style:none; display:flex; flex-direction:column; gap:0; counter-reset:f }
+.mkflow li{ position:relative; padding:8px 0 8px 34px; counter-increment:f } .mkflow li::before{ content:counter(f); position:absolute; left:0; top:8px; width:24px; height:24px; border-radius:50%; background:var(--jade); color:var(--jade-ink); font-size:12px; font-weight:700; display:grid; place-items:center }
+.mkflow li::after{ content:""; position:absolute; left:11px; top:34px; bottom:-6px; width:2px; background:var(--line) } .mkflow li:last-child::after{ display:none }
+.mkflow b{ display:block; font-size:14.5px } .mkflow span{ font-size:12.5px; color:var(--muted) }
+.mksample{ white-space:pre-line; font-size:13.5px !important; color:var(--text) !important; max-height:150px; overflow:hidden; -webkit-mask-image:linear-gradient(#000 70%, transparent) }
+.mktoc{ max-height:240px; overflow:auto; column-width:220px; column-gap:18px }
+.mkinfo{ display:grid; grid-template-columns:max-content 1fr; gap:6px 14px; margin:0; font-size:14px } .mkinfo dt{ color:var(--muted) } .mkinfo dd{ margin:0 }
 .sr{ position:absolute!important; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0) }
 </style>
 </head>
@@ -854,7 +864,7 @@ const notifyH = t => { try{ tg?.HapticFeedback?.notificationOccurred(t) }catch(e
 
 /* ---------- biểu tượng (nét mảnh, đồng bộ) */
 const P = {
-  bag:'<path d="M5 8h14l-1 12H6z"/><path d="M9 8a3 3 0 0 1 6 0"/>', factory:'<path d="M3 20V10l6 4v-4l6 4V5h4v15z"/><path d="M3 20h18"/>', users:'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14.5a6 6 0 0 1 3.5 5.5"/>',
+  download:'<path d="M12 4v11"/><path d="m7 10 5 5 5-5"/><path d="M4 20h16"/>', bag:'<path d="M5 8h14l-1 12H6z"/><path d="M9 8a3 3 0 0 1 6 0"/>', factory:'<path d="M3 20V10l6 4v-4l6 4V5h4v15z"/><path d="M3 20h18"/>', users:'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14.5a6 6 0 0 1 3.5 5.5"/>',
   home:'<path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',
   news:'<path d="M4 5h13v14H6a2 2 0 0 1-2-2zM17 9h3v8a2 2 0 0 1-2 2"/><path d="M7.5 9h6M7.5 12.5h6M7.5 16h4"/>',
   chat:'<path d="M4 5h16v11H9l-5 4z"/><path d="M8.5 10.5h.01M12 10.5h.01M15.5 10.5h.01"/>',
@@ -2603,18 +2613,32 @@ function mkInstalled(d){
     <div class="row">${x.type==='workflow'?`<button class="btn sm pri" onclick="mkRun('${x.id}')">${ico('play',15)} Chạy</button>`:''}${x.type==='skill'?`<button class="btn sm" onclick="mkToggle('${x.id}')">${x.enabled?'Tắt':'Bật'}</button>`:''}<button class="btn sm" onclick="mkUninstall('${x.id}')">Gỡ</button></div></div>`).join('')}</div>
     <p class="muted small" style="margin:12px 4px">Skill đang bật được superHuy áp dụng ngay trong câu trả lời. Workflow chỉ đọc và tổng hợp, không tự gửi hay đăng gì.</p>`;
 }
+function mkSpecBody(x){
+  const sp = x.spec||{}, k = sp.kind;
+  const perm = `<h3 class="mkh">Quyền và tương thích</h3><ul class="mkcontents">${(sp.permissions||[]).map(p=>`<li>${esc(p)}</li>`).join('')}${(sp.compat||[]).map(p=>`<li>${esc(p)}</li>`).join('')}</ul>`;
+  if(k==='skill') return `<div class="mkspec"><div class="mkbox"><b>Kích hoạt khi</b><p>${esc(sp.trigger||'')}</p></div><div class="mkbox"><b>Thử ngay bằng câu</b>${(sp.examples||[]).map(e=>`<button class="mkex" onclick="closeSheet();S.dockOpen=true;dock();$('#dIn')&&($('#dIn').value=${JSON.stringify(e)})">“${esc(e)}”</button>`).join('')}</div></div>
+    <h3 class="mkh">Skill này dạy trợ lý ${sp.rule_count?`${sp.rule_count} quy tắc`:'cách làm'}</h3><ol class="mkcontents">${(sp.rules?.length?sp.rules:sp.preview||[]).map(c=>`<li>${esc(c)}</li>`).join('')}</ol>${perm}`;
+  if(k==='workflow') return `<div class="mkspec"><div class="mkbox"><b>${sp.step_count} bước · ${esc(sp.runtime||'')}</b><p>${esc(sp.output||'')}</p></div><div class="mkbox"><b>Cần kết nối</b><p>${(sp.connects||[]).length?sp.connects.map(c=>`<span class="tag role" style="margin:2px 4px 2px 0">${esc(c)}</span>`).join(''):'Không cần kết nối thêm'}</p></div></div>
+    <h3 class="mkh">Các bước chạy liền nhau</h3><ol class="mkflow">${(sp.steps||[]).map(st=>`<li><b>${esc(st.label)}</b><span>${esc(st.tool)}${st.connect&&st.tool!==st.connect?` · ${esc(st.connect)}`:''}</span></li>`).join('')}</ol>
+    <p class="meta">Cách chạy: ${esc(sp.how||'')}</p>${perm}`;
+  if(k==='brain') return `<div class="mkspec"><div class="mkbox"><b>${sp.note_count} ghi chú · đọc ${sp.read_min} phút</b><p>Lưu vào ${esc(sp.where||'')}</p></div><div class="mkbox"><b>Xem thử: ${esc(sp.sample_title||'')}</b><p class="mksample">${esc((sp.sample||'').replace(/^# .*\n/,'').trim().slice(0,400))}${(sp.sample||'').length>400?'…':''}</p></div></div>
+    <h3 class="mkh">Mục lục</h3><ol class="mkcontents mktoc">${(sp.toc||[]).map(c=>`<li>${esc(c)}</li>`).join('')}</ol>${perm}`;
+  return '';
+}
 async function mkOpen(id){
   sheet(`<div class="empty">Đang mở…</div>`);
   let x; try{ x = await run('market','xem',{lid:id},'',true); }catch(e){ return sheet(`<div class="empty">${esc(e.message)}</div>`); }
-  const tot = Object.values(x.dist||{}).reduce((a,b)=>a+b,0)||1;
-  sheet(`<div class="mkdet">${mkIcon(x,84)}<div class="grow"><h2 style="font-size:21px">${esc(x.name)}</h2><div class="meta">${mkBy(x)}</div><div class="meta">${esc(x.tagline||'')}</div>
-      <div class="row" style="margin-top:10px">${x.installed?`<button class="btn" onclick="mkUninstall('${x.id}')">Gỡ</button>${x.type==='workflow'?`<button class="btn pri" onclick="mkRun('${x.id}')">${ico('play',15)} Chạy</button>`:''}`:`<button class="btn pri" onclick="mkInstall('${x.id}')">${x.price>0?`Nhận · ${vnd(x.price)}`:'Nhận miễn phí'}</button>`}
-      <button class="btn" onclick="lbClone('${x.id}')">${ico('layers',15)} Nhân bản vào Studio</button></div></div></div>
-    <div class="mkfacts"><div><b>${x.rating?String(x.rating).replace('.',','):'–'}</b><span>${x.rating_n} đánh giá</span></div><div><b>${esc(x.type_label)}</b><span>Loại</span></div><div><b>${esc(x.cat_label)}</b><span>Danh mục</span></div><div><b>${x.installs}</b><span>Lượt cài</span></div><div><b>${esc(x.version)}</b><span>Phiên bản</span></div></div>
+  const tot = Object.values(x.dist||{}).reduce((a,b)=>a+b,0)||1, sp = x.spec||{};
+  const cta = x.installed ? `<button class="btn" onclick="mkUninstall('${x.id}')">Gỡ</button>${x.type==='workflow'?`<button class="btn pri" onclick="mkRun('${x.id}')">${ico('play',15)} Chạy</button>`:x.type==='skill'?`<button class="btn pri" onclick="mkToggle('${x.id}')">${x.enabled?'Đang bật · Tắt':'Đang tắt · Bật'}</button>`:''}`
+    : `<button class="btn pri" onclick="mkInstall('${x.id}')">${ico('download',15)} ${esc(sp.buy_label||'Nhận')}</button>`;
+  sheet(`<div class="mkdet">${mkIcon(x,84)}<div class="grow"><span class="tag lo">${esc(x.type_label)}${x.featured?' · Nổi bật':''}</span><h2 style="font-size:21px;margin-top:6px">${esc(x.name)}</h2><div class="meta">${mkBy(x)} · ${esc(x.cat_label)}</div><div style="margin-top:4px">${esc(x.tagline||'')}</div>
+      <div class="row" style="margin-top:10px">${cta}<button class="btn" onclick="lbClone('${x.id}')">${ico('layers',15)} Nhân bản</button></div></div></div>
+    <div class="mkfacts"><div><b>${x.rating?String(x.rating).replace('.',','):'–'}</b><span>${x.rating_n} đánh giá</span></div><div><b>${x.installs}</b><span>Lượt cài</span></div><div><b>${x.type==='brain'?sp.note_count+' ghi chú':x.type==='workflow'?sp.step_count+' bước':(sp.rule_count||'')+' quy tắc'}</b><span>${x.type==='brain'?'Nội dung':x.type==='workflow'?'Chạy '+esc(sp.runtime||''):'Hướng dẫn'}</span></div><div><b>${esc(x.version)}</b><span>Phiên bản</span></div><div><b>${x.price>0?vnd(x.price):'0đ'}</b><span>${sp.billing==='monthly'?'Mỗi tháng':'Một lần'}</span></div></div>
+    ${mkSpecBody(x)}
     ${x.whats_new?`<h3 class="mkh">Có gì mới</h3><p>${esc(x.whats_new)}</p>`:''}
     <h3 class="mkh">Mô tả</h3><p style="white-space:pre-line">${esc(x.description||'')}</p>
-    <h3 class="mkh">${x.type==='brain'?`Gồm ${x.contents.length} ghi chú`:x.type==='workflow'?`Các bước (${x.contents.length})`:'Skill hướng dẫn superHuy'}</h3>
-    <ol class="mkcontents">${x.contents.slice(0,40).map(c=>`<li>${esc(c)}</li>`).join('')}</ol>
+    ${x.cloned_from?`<p class="meta">Nhân bản từ “${esc(x.cloned_from.name)}” của ${esc(x.cloned_from.creator||'')}.</p>`:''}${x.source_url?`<p class="meta">Nguồn tham khảo: ${esc(x.source_url)}</p>`:''}
+    <h3 class="mkh">Thông tin</h3><dl class="mkinfo">${(sp.info||[]).map(([k,v])=>`<dt>${esc(k)}</dt><dd>${esc(v||'–')}</dd>`).join('')}</dl>
     <h3 class="mkh">Đánh giá</h3>
     <div class="mkrate"><div><b>${x.rating?String(x.rating).replace('.',','):'–'}</b><span>trên 5</span></div><div class="grow">${Object.entries(x.dist||{}).map(([k,n])=>`<div class="mkbar"><span>${k}★</span><i><em style="width:${Math.round(n/tot*100)}%"></em></i></div>`).join('')}</div></div>
     ${(x.reviews||[]).map(r=>`<div class="card pad" style="margin-top:8px"><div class="row" style="justify-content:space-between"><b>${'★'.repeat(r.stars)}${'☆'.repeat(5-r.stars)}</b><span class="meta">${esc(r.name)} · ${esc(ago(r.at))}</span></div>${r.text?`<p style="margin:6px 0 0">${esc(r.text)}</p>`:''}</div>`).join('')}
