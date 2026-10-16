@@ -702,7 +702,7 @@ nav .ai.on span.orb{ transform:translateX(-50%) scale(1.06) }
 /* ================= Responsive: điện thoại · iPad · Mac/máy tính, toàn màn hình ================= */
 #side{ display:none }
 .hgrid{ display:flex; flex-direction:column }
-.blk > .sec:first-child{ margin-top:22px }
+.hb > .sec:first-child{ margin-top:22px } .hb{ display:block; min-width:0 }
 .b-hero{ order:1 } .b-apps{ order:2 } .b-today{ order:3 } .b-cal{ order:4 } .b-todo{ order:5 } .b-recent{ order:6 } .b-news{ order:7 }
 /* máy tính bảng dọc */
 @media (min-width:700px){
@@ -742,7 +742,7 @@ nav .ai.on span.orb{ transform:translateX(-50%) scale(1.06) }
   #app, .composer, #ptr{ margin-left:var(--side-w) }
   .wrap{ max-width:1180px; padding:calc(26px + var(--mac-top,0px)) 40px 24px }
   body::before{ left:var(--side-w) }
-  .htop .orb{ display:none }
+  .htop .orb, .htop .who b{ display:none } .htop .who div{ font-size:13px }
   /* trang chủ 2 cột */
   .hgrid{ display:grid; grid-template-columns:minmax(0,1.55fr) minmax(300px,1fr); gap:0 28px; align-items:start;
     grid-template-areas:"hero hero" "cal today" "cal apps" "todo recent" "news recent" }
@@ -965,34 +965,34 @@ function vHome(){
   <div class="htop"><span class="orb"><img class="brandimg" src="/icons/huy-128.png?v=3" alt=""></span><div class="who"><b>superHuy</b><div>${esc(viDate(now))}</div></div>
     <button class="iconbtn" aria-label="Tình trạng hệ thống" onclick="openQC()">${ico('check',19)}</button>
     <button class="iconbtn" aria-label="Tất cả tiện ích và cài đặt" onclick="go('more')">${ico('more',19)}</button></div>
-  <div class="hgrid"><section class="blk b-hero">
+  <div class="hgrid"><section class="hb b-hero">
   <div class="hero"><h1>${hi}${S.first?', '+esc(S.first):''}</h1><p>${sum || 'superHuy đang chuẩn bị ngày của anh…'}</p></div>
   <form class="hask" onsubmit="event.preventDefault();homeAsk($('#hq').value)"><input id="hq" placeholder="Hỏi hoặc nhờ superHuy bất cứ điều gì…" autocomplete="off" enterkeyhint="send">
     <button type="button" class="mic" aria-label="Ghi âm cuộc họp" onclick="go('meet');setTimeout(recStart,200)">${ico('mic',20)}</button><button class="go" aria-label="Gửi">${ico('arrow',20)}</button></form>
   <div class="qa">${QA.map(([l,i,c,f])=>`<button onclick="${f}"><i style="--c:${c}">${ico(i,16)}</i>${l}</button>`).join('')}</div>
   </section>
 
-  <section class="blk b-apps"><div class="sec"><h2>Tiện ích</h2></div>
+  <section class="hb b-apps"><div class="sec"><h2>Tiện ích</h2></div>
   <div class="apps">${appsGrid()}</div></section>
 
-  <section class="blk b-today"><div class="sec"><h2>Hôm nay</h2></div>
+  <section class="hb b-today"><div class="sec"><h2>Hôm nay</h2></div>
   <div class="hstat" id="hstat">${homeStats()}</div></section>
-  <section class="blk b-cal">
+  <section class="hb b-cal">
 
   <div class="sec"><h2>Lịch <button class="addlink" onclick="openAddEvent()" style="margin-left:8px">${ico('plus',16)}Thêm</button></h2><div class="seg" role="tablist"><button class="${S.calDay==='today'?'on':''}" onclick="setDay('today')">Hôm nay</button><button class="${S.calDay==='tomorrow'?'on':''}" onclick="setDay('tomorrow')">Ngày mai</button></div></div>
   <div class="card" id="cal"><div class="tl"><div class="skel" style="width:70%"></div><div class="skel" style="width:50%"></div></div></div>
   <div id="invWrap">${invSection()}</div></section>
-  <section class="blk b-todo">
+  <section class="hb b-todo">
 
   <div class="sec"><h2>Cần anh xử lý</h2><button class="link" id="dgBtn" style="color:var(--jade);font-weight:600;font-size:14px;display:inline-flex;gap:5px;align-items:center" onclick="liveDigests(true)">${S.dgBusy?'<span class="spin" style="width:14px;height:14px"></span> Đang cập nhật':`${ico('refresh',15)} ${lastScan?'Cập nhật '+esc(fmtTime(lastScan)):'Cập nhật'}`}</button></div>
   <div class="card ${todo.length?'urgent':''}">${todo.length ? todo.map(x=>{ const m = x.t.match(/^\[(CEO|Tăng trưởng|AI)\]\s*/); return `<div class="todo"><span class="src ${x.k}">${x.k==='lark'?'Lark':'Email'}</span><div class="grow">${m?`<span class="tag role" style="margin-right:6px">${esc(m[1])}</span>`:''}${esc(m?x.t.slice(m[0].length):x.t)}</div></div>`; }).join('')
      : `<div class="empty">Chưa có việc gấp. superHuy quét email và Lark theo lịch; việc cần anh xử lý sẽ hiện ở đây.</div>`}</div>
 
   </section>
-  <section class="blk b-recent"><div class="sec"><h2>Gần đây</h2><button class="link" onclick="go('studio')">Thư viện</button></div>
+  <section class="hb b-recent"><div class="sec"><h2>Gần đây</h2><button class="link" onclick="go('studio')">Thư viện</button></div>
   <div class="masonry" id="recent">${recentCards()}</div></section>
 
-  ${cqNew.length ? `<section class="blk b-news">` : ''}${cqNew.length ? `<div class="sec"><h2>Chờ duyệt nội dung</h2><button class="link" onclick="go('news')">Duyệt nhanh</button></div>
+  ${cqNew.length ? `<section class="hb b-news">` : ''}${cqNew.length ? `<div class="sec"><h2>Chờ duyệt nội dung</h2><button class="link" onclick="go('news')">Duyệt nhanh</button></div>
   <div class="rail">${cqNew.map(n=>`
     <article class="card pad news"><div class="row" style="gap:6px"><span class="trk ${n.track}">${esc(TRK[n.track]||n.track)}</span><span class="topic">${esc(n.topic)}</span></div><h3>${esc(n.headline_vi)}</h3>
       <p class="why">${esc(n.why_hot||'')}</p>
