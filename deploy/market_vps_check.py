@@ -25,6 +25,11 @@ try:
     print("market_public:", st, len(d["items"]), [i["name"][:28] for i in d["items"]][:6])
 except Exception as e:
     print("market_public lỗi:", st, str(e)[:120])
+from agents import pay  # noqa: E402
+cfg = pay.config()
+print("pay_setup:", {k: cfg[k] for k in ("vietqr_ready", "webhook_ready", "payos_ready", "mail_ready", "fee_pct")})
+st, b = get(base + "/api/pay/status?o=khong")
+print("pay_status_route:", st)
 from agents import factory as f  # noqa: E402
 for src, kw in (("ios", {"country": "vn", "chart": "free", "genre": "6007"}), ("mac", {"country": "us", "chart": "free"}), ("github", {}), ("ph", {})):
     try:
