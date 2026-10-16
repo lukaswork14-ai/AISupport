@@ -3,9 +3,6 @@ name: App macOS
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths: ["desktop/mac/**", ".github/workflows/mac-app.yml"]
 
 permissions:
   contents: write

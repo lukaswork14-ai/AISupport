@@ -5,8 +5,9 @@ set -e
 cd "$(dirname "$0")/.."
 echo "=== Chuyển superHuy lên VPS ==="
 # Giá trị mặc định (Enter để dùng). Có thể đặt sẵn bằng biến môi trường VPS_IP, VPS_USER, VPS_PORT, APP_DOMAIN, VAULT_REMOTE.
-D_IP="${VPS_IP:-14.225.253.170}"; D_U="${VPS_USER:-root}"; D_P="${VPS_PORT:-22}"; D_DOMAIN="${APP_DOMAIN:-app.roimaxxhub.com}"
+D_IP="${VPS_IP:-}"; D_U="${VPS_USER:-root}"; D_P="${VPS_PORT:-22}"; D_DOMAIN="${APP_DOMAIN:-app.roimaxxhub.com}"
 IP=$D_IP; U=$D_U; P=$D_P; DOMAIN=$D_DOMAIN; VAULT="${VAULT_REMOTE:-}"
+[ -z "$D_IP" ] && read -r -p "IP của VPS: " D_IP && IP=$D_IP
 if [ "${ASK:-0}" = 1 ]; then  # ASK=1 để nhập tay các giá trị khác mặc định
   read -r -p "IP của VPS [$D_IP]: " x; IP=${x:-$IP}
   read -r -p "User SSH [$D_U]: " x; U=${x:-$U}

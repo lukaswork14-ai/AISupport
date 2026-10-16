@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Cài superHuy</title><link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<title>Cài superHuy</title><link rel="apple-touch-icon" sizes="180x180" href="/icons/huy-180.png?v=3">
 <style>
 :root{ --bg:#0E0E10; --text:#F4F1F8; --muted:#A49CB2; --line:rgba(255,255,255,.1); --aura:linear-gradient(135deg,#7B5CF0,#C13F96) }
 *{ box-sizing:border-box } body{ margin:0; min-height:100vh; background:var(--bg); color:var(--text); font:16px/1.55 -apple-system,BlinkMacSystemFont,"Be Vietnam Pro",sans-serif;
@@ -11,14 +11,20 @@ h1{ margin:0; font-size:28px; letter-spacing:-.02em } p.lead{ color:var(--muted)
 a.btn{ display:block; padding:16px; border-radius:16px; background:var(--aura); color:#fff; font-weight:700; text-decoration:none; font-size:17px }
 ol{ text-align:left; margin:26px 0 0; padding:18px 18px 18px 38px; border:1px solid var(--line); border-radius:18px; color:var(--muted) }
 ol li{ margin:6px 0 } ol b{ color:var(--text) } .alt{ margin-top:18px; font-size:14px; color:var(--muted) } .alt a{ color:#E58BD0 }
+.warn{ background:rgba(229,139,208,.14); border:1px solid rgba(229,139,208,.4); color:#F4D3EC; padding:12px 14px; border-radius:14px; margin:0 0 14px; text-align:left; font-size:14.5px }
+.old{ margin:18px 0 0; font-size:14px; color:var(--muted); text-align:left; padding:12px 14px; border-radius:14px; background:rgba(255,255,255,.04) } .old b{ color:var(--text) }
 </style></head><body><main>
-<img src="/icons/icon-512.png" alt="Biểu tượng superHuy">
+<img src="/icons/huy-512.png?v=3" alt="Biểu tượng superHuy">
 <h1>superHuy</h1><p class="lead">Trợ lý riêng của anh Huy, mở toàn màn hình như app.</p>
-<a class="btn" href="/install/superHuy.mobileconfig">Cài superHuy lên iPhone</a>
+<div id="warn" class="warn" hidden>Anh đang mở trong trình duyệt của Telegram/Zalo/Facebook. iPhone chỉ cài được từ <b>Safari</b>: bấm <b>⋯</b> rồi chọn <b>Mở trong Safari</b>, hoặc chép link <b>app.roimaxxhub.com/install</b> dán vào Safari.</div>
+<a class="btn" href="/install/superHuy.mobileconfig?v=3">Cài superHuy lên iPhone</a>
+<p class="old"><b>Đã có biểu tượng superHuy cũ?</b> Nhấn giữ biểu tượng cũ › Xoá ứng dụng/Xoá khỏi Màn hình chính trước, rồi cài lại để thấy biểu tượng mới.</p>
 <ol>
 <li>Mở trang này bằng <b>Safari</b>, bấm nút cài ở trên, chọn <b>Cho phép</b>.</li>
 <li>Vào <b>Cài đặt</b>, bấm <b>Đã tải về hồ sơ</b> ở đầu trang, rồi bấm <b>Cài đặt</b> (nhập mật mã iPhone).</li>
 <li>Biểu tượng superHuy xuất hiện trên Màn hình chính. Mở ra và nhập <b>mã PIN</b> của superHuy.</li>
 </ol>
 <p class="alt">Không muốn cài hồ sơ? Mở <a href="/app">app.roimaxxhub.com/app</a> trong Safari, bấm Chia sẻ › Thêm vào Màn hình chính.</p>
-</main></body></html>
+</main><script>
+if(/Telegram|FBAN|FBAV|Zalo|Instagram|Line\//i.test(navigator.userAgent) || (window.Telegram && window.Telegram.WebApp)) document.getElementById('warn').hidden = false;
+</script></body></html>

@@ -3,9 +3,6 @@ name: Chẩn đoán VPS
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths: [deploy/diag_vps.sh]
 
 permissions:
   contents: write
@@ -38,7 +35,8 @@ jobs:
       - name: Ghi vào nhánh diag
         run: |
           git config user.name "superHuy CI"; git config user.email "ci@superhuy.local"
-          git fetch origin diag 2>/dev/null && git checkout -B diag origin/diag || git checkout --orphan diag
-          git rm -rq --cached . 2>/dev/null || true
+          # chỉ giữ 1 bản mới nhất (không lưu lịch sử chẩn đoán)
+          git checkout --orphan diag-tmp && git rm -rq --cached . 2>/dev/null || true
+          find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
           cp /tmp/status.txt status.txt
-          git add status.txt && git commit -qm "chẩn đoán $(date -Is)" && git push -q origin diag
+          git add status.txt && git commit -qm "chẩn đoán $(date -Is)" && git push -qf origin HEAD:diag

@@ -4,8 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
 <title>superHuy</title>
-<link rel="manifest" href="/manifest.webmanifest">
-<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/manifest.webmanifest?v=3">
+<link rel="apple-touch-icon" sizes="180x180" href="/icons/huy-180.png?v=3">
+<link rel="icon" type="image/png" href="/icons/huy-128.png?v=3">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="superHuy">
@@ -693,6 +694,10 @@ body.unlocking #lock{ animation:lockOut .5s var(--ease-out) forwards; display:fl
   #app.enter, #app.enter > *, nav .ai span.orb, #lock::before, #lock::after, #lock .mark, .skel, #toast.in{ animation:none!important }
   .sheet, nav .pill{ transition:none }
 }
+.brandimg{ width:100%; height:100%; object-fit:cover; display:block; border-radius:inherit }
+.orb:has(.brandimg), #lock .mark:has(.brandimg){ overflow:hidden; padding:0 }
+#lock .mark{ border-radius:22px; width:76px; height:76px }
+nav .ai.on span.orb{ transform:translateX(-50%) scale(1.06) }
 </style>
 </head>
 <body>
@@ -803,7 +808,7 @@ function copyText(t){
 const TABS = [['home','Hôm nay','home'],['tasks','Việc','tasks'],['ai','superHuy','spark'],['meet','Họp','mic'],['growth','Phát triển','sprout']];
 function nav(){
   const n = $('#nav'); n.hidden = false;
-  n.innerHTML = TABS.map(([id,l,i]) => id==='ai' ? `<button data-t="ai" class="ai ${S.dockOpen||S.tab==='chat'?'on':''}" aria-label="Trò chuyện với superHuy"><span class="orb">${ico('spark',26)}</span><em>${l}</em></button>`
+  n.innerHTML = TABS.map(([id,l,i]) => id==='ai' ? `<button data-t="ai" class="ai ${S.dockOpen||S.tab==='chat'?'on':''}" aria-label="Trò chuyện với superHuy"><span class="orb"><img class="brandimg" src="/icons/huy-192.png?v=3" alt=""></span><em>${l}</em></button>`
     : `<button data-t="${id}" class="${S.tab===id?'on':''}" aria-label="${l}">${ico(i)}<span>${l}</span></button>`).join('');
   n.querySelectorAll('button').forEach(b => b.onclick = () => b.dataset.t==='ai' ? aiToggle() : go(b.dataset.t));
   // viên nền trượt theo tab đang mở + biểu tượng nảy khi vừa chuyển tab
@@ -863,7 +868,7 @@ function vHome(){
     ['Tạo việc','tasks','#2a78d6',"go('tasks');setTimeout(()=>window.openAddTask&&openAddTask(),250)"],['Ghi chi tiêu','wallet','#d95926',"go('money');setTimeout(()=>window.openAddMoney&&openAddMoney(),250)"],
     ['Check-in thói quen','sprout','#199e70',"go('growth')"],['Săn tin & reels','film','#C13F96',"go('news')"]];
   return `
-  <div class="htop"><span class="orb">${ico('spark',20)}</span><div class="who"><b>superHuy</b><div>${esc(viDate(now))}</div></div>
+  <div class="htop"><span class="orb"><img class="brandimg" src="/icons/huy-128.png?v=3" alt=""></span><div class="who"><b>superHuy</b><div>${esc(viDate(now))}</div></div>
     <button class="iconbtn" aria-label="Tình trạng hệ thống" onclick="openQC()">${ico('check',19)}</button>
     <button class="iconbtn" aria-label="Tất cả tiện ích và cài đặt" onclick="go('more')">${ico('more',19)}</button></div>
   <div class="hero"><h1>${hi}${S.first?', '+esc(S.first):''}</h1><p>${sum || 'superHuy đang chuẩn bị ngày của anh…'}</p></div>
@@ -3247,7 +3252,7 @@ function setSub(t, err){ const e = $('#lockSub'); e.textContent = t; e.classList
 function showLock(a){
   LOCK.len = a.pin_len||6; LOCK.pre = a.pre; LOCK.buf = ''; LOCK.busy = false;
   try{ closeSheet(); }catch(e){}
-  $('#lockMark').innerHTML = ico('lock', 28);
+  $('#lockMark').innerHTML = '<img class="brandimg" src="/icons/huy-192.png?v=3" alt="">';
   $('#keys').innerHTML = [1,2,3,4,5,6,7,8,9].map(n=>`<button data-k="${n}" aria-label="Số ${n}">${n}</button>`).join('')
     + `${IN_TG?'<button class="ghost" data-k="x">Đóng</button>':'<span></span>'}<button data-k="0" aria-label="Số 0">0</button><button class="ghost" data-k="del" aria-label="Xóa">${ico('del',26)}</button>`;
   $('#keys').querySelectorAll('button:not(.ghost)').forEach(b => b.insertAdjacentHTML('beforeend','<span class="rip"></span>'));

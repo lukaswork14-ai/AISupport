@@ -1,10 +1,10 @@
-# Giám sát từ bên ngoài: 30 phút/lần gọi /health của Mini App; nếu VPS sập thì nhắn Telegram cho anh Huy.
+# Giám sát từ bên ngoài: 1 giờ/lần gọi /health của Mini App; nếu VPS sập thì nhắn Telegram cho anh Huy.
 # Cần: biến APP_URL; secrets TELEGRAM_TOKEN, OWNER_CHAT_ID.
 name: Giám sát superHuy
 
 on:
   schedule:
-    - cron: "7,37 * * * *"
+    - cron: "7 * * * *"
   workflow_dispatch:
 
 jobs:

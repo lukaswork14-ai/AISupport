@@ -5034,8 +5034,6 @@
 			TGJ2xA6EBDVFrLThTb1gjTc57olPkVxHtNk9737Ki4IlnPGOPdVi
 			P0H/H0/5w0Whl9WtAAAAAElFTkSuQmCC
 			</data>
-			<key>IgnoreManifestScope</key>
-			<false/>
 			<key>IsRemovable</key>
 			<true/>
 			<key>Label</key>
@@ -5047,13 +5045,13 @@
 			<key>PayloadType</key>
 			<string>com.apple.webClip.managed</string>
 			<key>PayloadUUID</key>
-			<string>7082B213-4FCB-4DFA-A4DF-C32755A378DD</string>
+			<string>0CE9A84C-FAFB-492D-BBF7-1787AEE3ABAE</string>
 			<key>PayloadVersion</key>
 			<integer>1</integer>
 			<key>Precomposed</key>
 			<true/>
 			<key>URL</key>
-			<string>https://app.roimaxxhub.com/app?src=profile</string>
+			<string>https://app.roimaxxhub.com/app?src=profile&amp;v=3</string>
 		</dict>
 	</array>
 	<key>PayloadDescription</key>
@@ -5069,7 +5067,7 @@
 	<key>PayloadType</key>
 	<string>Configuration</string>
 	<key>PayloadUUID</key>
-	<string>32D29B1D-0D79-4807-A9C2-AE8E9A7A5366</string>
+	<string>5F6EC8BB-D1B8-4623-9B1F-9A975E743924</string>
 	<key>PayloadVersion</key>
 	<integer>1</integer>
 </dict>

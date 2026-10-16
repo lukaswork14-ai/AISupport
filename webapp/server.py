@@ -97,7 +97,9 @@ def check_pre(pre: str) -> bool:
 # ------------------------------------------------------------------ app iPhone (PWA)
 APP_FILES = {"/manifest.webmanifest": "manifest.webmanifest", "/sw.js": "sw.js", "/icons/icon-180.png": "icons/icon-180.png",
              "/icons/icon-192.png": "icons/icon-192.png", "/icons/icon-512.png": "icons/icon-512.png",
-             "/icons/icon-maskable-512.png": "icons/icon-maskable-512.png", "/apple-touch-icon.png": "icons/icon-180.png",
+             "/icons/icon-maskable-512.png": "icons/icon-maskable-512.png", "/apple-touch-icon.png": "icons/huy-180.png",
+             "/apple-touch-icon-precomposed.png": "icons/huy-180.png", "/favicon.ico": "icons/huy-128.png",
+             **{f"/icons/huy-{n}.png": f"icons/huy-{n}.png" for n in ("128", "180", "192", "512", "maskable-512")},
              "/install": "install/index.html", "/install/": "install/index.html", "/install/superHuy.mobileconfig": "install/superHuy.mobileconfig"}
 _HELLO: dict[str, list[float]] = {}
 
@@ -241,7 +243,15 @@ def start_chat(text: str) -> str:
 
 # ------------------------------------------------------------------ HTTP
 class Handler(BaseHTTPRequestHandler):
-    server_version = "AgentArmy/1.0"
+    server_version = "superHuy"
+    sys_version = ""
+
+    def end_headers(self):  # header bảo mật cho mọi phản hồi
+        self.send_header("Strict-Transport-Security", "max-age=31536000")
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("Referrer-Policy", "same-origin")
+        self.send_header("Permissions-Policy", "camera=(), geolocation=(), microphone=(self)")
+        super().end_headers()
 
     def log_message(self, fmt, *args):  # không ghi log mỗi request (tránh lộ query)
         pass

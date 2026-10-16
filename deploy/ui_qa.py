@@ -282,7 +282,7 @@ def main():
             ap.route("https://telegram.org/js/telegram-web-app.js", lambda r: r.fulfill(status=200, content_type="text/javascript",
                      body="window.Telegram={WebApp:{initData:'',initDataUnsafe:{},ready(){},expand(){},onEvent(){},HapticFeedback:{impactOccurred(){},notificationOccurred(){}}}};"))
             ap.on("pageerror", lambda e: errs.append(f"[app pageerror] {e}"))
-            for r_ in ("/manifest.webmanifest", "/sw.js", "/apple-touch-icon.png", "/install", "/install/superHuy.mobileconfig"):
+            for r_ in ("/manifest.webmanifest", "/sw.js", "/apple-touch-icon.png", "/icons/huy-180.png", "/install", "/install/superHuy.mobileconfig"):
                 import urllib.request
                 with urllib.request.urlopen("http://127.0.0.1:8787" + r_) as rr:
                     report.append(f"app file {r_}: {rr.status} {rr.headers.get('Content-Type')}")
