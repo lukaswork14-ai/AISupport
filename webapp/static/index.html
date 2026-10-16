@@ -3347,7 +3347,7 @@ function showLock(a){
   $('#keys').innerHTML = [1,2,3,4,5,6,7,8,9].map(n=>`<button data-k="${n}" aria-label="Số ${n}">${n}</button>`).join('')
     + `${IN_TG?'<button class="ghost" data-k="x">Đóng</button>':'<span></span>'}<button data-k="0" aria-label="Số 0">0</button><button class="ghost" data-k="del" aria-label="Xóa">${ico('del',26)}</button>`;
   $('#keys').querySelectorAll('button:not(.ghost)').forEach(b => b.insertAdjacentHTML('beforeend','<span class="rip"></span>'));
-  $('#lockHint').innerHTML = (!IN_TG && !STANDALONE) ? `Cài lên iPhone: trong Safari bấm <b>Chia sẻ</b> rồi <b>Thêm vào Màn hình chính</b>. Lần sau chỉ cần mở biểu tượng superHuy và nhập PIN.` : '';
+  $('#lockHint').innerHTML = (!IN_TG && !STANDALONE && /iPhone|iPad/.test(navigator.userAgent)) ? `Cài lên iPhone: trong Safari bấm <b>Chia sẻ</b> rồi <b>Thêm vào Màn hình chính</b>. Lần sau chỉ cần mở biểu tượng superHuy và nhập PIN.` : '';
   paintDots();
   setSub(a.wait ? `Tạm khóa do nhập sai nhiều lần. Thử lại sau ${Math.ceil(a.wait/60)} phút.` : 'Nhập mã PIN để mở', !!a.wait);
   document.body.classList.add('locked');
