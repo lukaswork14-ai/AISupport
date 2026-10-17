@@ -160,7 +160,7 @@ function buyRow(it){
   if(it.receipt) act += '<a class="btn sm ghost" href="'+esc(it.receipt)+'" target="_blank" rel="noopener">Hoá đơn</a>';
   if(it.can_complain) act += '<button class="btn sm ghost" data-cp="'+esc(it.id)+'">Khiếu nại</button>';
   var foot = '';
-  if(it.complaint) foot = '<span class="by">Đã khiếu nại '+dmy(it.complaint.at)+' · '+(it.complaint.status==='moi' ? 'chủ sàn đang xử lý, phản hồi qua email trong 2 ngày làm việc' : esc(it.complaint.status))+(it.complaint.reply ? '<br>Phản hồi: '+esc(it.complaint.reply) : '')+'</span>';
+  if(it.complaint) foot = '<span class="by">Đã khiếu nại '+dmy(it.complaint.at)+' · '+({moi:'chủ sàn đang xử lý, phản hồi trong 2 ngày làm việc', da_hoan:'đã chấp nhận, superYou hoàn tiền cho bạn', tu_choi:'chưa được chấp nhận'}[it.complaint.status] || esc(it.complaint.status))+(it.complaint.reply ? '<br>Phản hồi: '+esc(it.complaint.reply) : '')+'</span>';
   else if(it.refundable) foot = '<span class="by">Có thể yêu cầu hoàn tiền đến '+dmy(it.refund_until)+'</span>';
   return '<div class="rowi" style="flex-wrap:wrap;align-items:flex-start" id="o-'+esc(it.id)+'"><span style="flex:1;min-width:180px"><b>'+esc(it.name)+'</b> '+st+'<br><span class="by">'+meta+'</span>'+(foot ? '<br>'+foot : '')+'</span>'
     + '<span style="display:flex;gap:6px;flex-wrap:wrap">'+act+'</span><div class="cpbox" style="flex-basis:100%"></div><p class="msg" style="flex-basis:100%;margin:0" role="status"></p></div>';

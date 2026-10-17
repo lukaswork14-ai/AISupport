@@ -612,6 +612,14 @@ def refund(oid: str, note: str = "") -> dict:
                             "fee": -int(o.get("fee", 0)), "seller_amount": -int(o.get("seller_amount", 0)), "seller": o["seller"], "lid": o["lid"], "name": o["name"]})
         d["entitlements"].get(o["email"], {}).pop(o["lid"], None)
         _save(d)
+    if o.get("kind") == "plan":  # hoàn tiền gói -> về Miễn phí ngay (giữ dữ liệu)
+        try:
+            from core import accounts
+            u = accounts.get(o["uid"]) if o.get("uid") else accounts.by_email(o["email"])
+            if u and u.get("plan") == o.get("plan"):
+                accounts.admin_set(u["id"], plan="free", note=f"hoàn tiền đơn {o['code']}")
+        except Exception:
+            pass
     return {"text": f"Đã ghi hoàn tiền đơn {o['code']} ({vnd(o['amount'])}). Anh chuyển khoản trả khách theo tài khoản họ cung cấp."}
 
 
@@ -825,6 +833,109 @@ def account_complain(uid: str, email: str, oid: str, reason_key: str, detail: st
     if reason_key == "khac" and len(detail) < 10:
         raise ValueError("Bạn mô tả vấn đề cụ thể hơn (ít nhất 10 ký tự).")
     return complain(o["id"], o["email"], base + (": " + detail if detail else "") + " [từ Tài khoản]")
+
+
+# ------------------------------------------------------------------ quản trị khiếu nại và hoàn tiền (chủ sàn)
+COMPLAINT_STATUS = {"moi": "Mới", "da_hoan": "Đã hoàn tiền", "tu_choi": "Đã từ chối"}
+
+
+def complaints_overview() -> dict:
+    """HQ › Marketplace › Quản trị › Khiếu nại: đơn bị khiếu nại, người bán liên quan, email mua đang khoá."""
+    from agents import market
+    d = _load()
+    creators = market._load().get("creators", {})
+    since = _iso(_now() - dt.timedelta(days=30))
+    by_seller = {}
+    for q in d["orders"].values():
+        c = q.get("complaint")
+        if c and c["at"] >= since:
+            sid = (q.get("seller") or {}).get("id") or ""
+            by_seller[sid] = by_seller.get(sid, 0) + 1
+    blocked = d.get("blocked", {})
+    items = []
+    for o in d["orders"].values():
+        c = o.get("complaint")
+        if not c:
+            continue
+        sel = o.get("seller") or {}
+        cr = creators.get(sel.get("id") or "") or {}
+        items.append({"id": o["id"], "code": o["code"], "name": o["name"], "email": o["email"], "amount": o["amount"], "amount_text": vnd(o["amount"]),
+                      "status": o["status"], "status_text": STATUS.get(o["status"], o["status"]), "paid_at": o.get("paid_at") or o["created"],
+                      "kind": o.get("kind", "product"), "reason": c.get("reason", ""), "at": c["at"], "c_status": c.get("status", "moi"),
+                      "c_status_text": COMPLAINT_STATUS.get(c.get("status", "moi"), c.get("status", "")), "reply": c.get("reply", ""), "resolved_at": c.get("resolved_at", ""),
+                      "seller": {"id": sel.get("id", ""), "name": sel.get("name", ""), "official": bool(sel.get("official")),
+                                 "status": cr.get("status", "active") if cr else "", "complaints_30d": by_seller.get(sel.get("id") or "", 0)},
+                      "buyer_blocked": o["email"] in blocked, "can_refund": o["status"] in ("paid", "delivered") and o["amount"] > 0,
+                      "in_window": (o.get("paid_at") or o["created"]) >= _iso(_now() - dt.timedelta(days=REFUND_DAYS))})
+    items.sort(key=lambda x: x["at"], reverse=True)
+    items.sort(key=lambda x: x["c_status"] != "moi")  # khiếu nại mới lên đầu, trong mỗi nhóm mới nhất trước
+    return {"items": items[:300], "kpi": {"new": sum(1 for x in items if x["c_status"] == "moi"), "refunded": sum(1 for x in items if x["c_status"] == "da_hoan"),
+                                          "rejected": sum(1 for x in items if x["c_status"] == "tu_choi"), "blocked": len(blocked)},
+            "blocked": [{"email": e, **v} for e, v in sorted(blocked.items(), key=lambda kv: kv[1].get("at", ""), reverse=True)],
+            "statuses": COMPLAINT_STATUS, "refund_days": REFUND_DAYS, "suspend_after": COMPLAINTS_TO_SUSPEND, "mail_ready": _mail_ready()}
+
+
+def complaint_resolve(oid: str, decision: str, note: str = "") -> dict:
+    """Chủ sàn xử lý khiếu nại: decision 'hoan' (chấp nhận, ghi hoàn tiền) hoặc 'tu_choi' (bắt buộc ghi lý do, gửi cho khách)."""
+    note = (note or "").strip()[:500]
+    with _LOCK:
+        d = _load()
+        o = d["orders"].get(oid)
+        if not o or not o.get("complaint"):
+            raise ValueError("Không tìm thấy khiếu nại")
+        if o["complaint"].get("status", "moi") != "moi":
+            raise ValueError("Khiếu nại này đã xử lý")
+    if decision == "hoan":
+        if o["status"] in ("paid", "delivered") and o["amount"] > 0:
+            refund(oid, note or "Chấp nhận khiếu nại")
+        reply = note or f"superYou chấp nhận khiếu nại và hoàn {vnd(o['amount'])} cho đơn {o['code']}."
+        status = "da_hoan"
+    elif decision == "tu_choi":
+        if len(note) < 5:
+            raise ValueError("Cần ghi lý do từ chối (khách sẽ nhận được lý do này).")
+        reply, status = note, "tu_choi"
+    else:
+        raise ValueError("Quyết định không hợp lệ")
+    with _LOCK:
+        d = _load()
+        c = d["orders"][oid]["complaint"]
+        c.update({"status": status, "reply": reply, "resolved_at": _iso()})
+        _save(d)
+    sent = _email_complaint_reply(o, status, reply)
+    try:
+        from agents import market
+        with market._LOCK:
+            md = market._load()
+            market._log(md, "Huy (quản trị)", f"{COMPLAINT_STATUS[status]} khiếu nại đơn {o['code']} ({o['email']})")
+            market._save(md)
+    except Exception:
+        pass
+    txt = f"{COMPLAINT_STATUS[status]} khiếu nại đơn {o['code']}."
+    if status == "da_hoan" and o["amount"]:
+        txt += f" Anh chuyển khoản trả khách {vnd(o['amount'])}."
+    txt += " Đã email cho khách." if sent else " Chưa gửi được email (chưa kết nối mail), khách thấy phản hồi trong Tài khoản."
+    return {"text": txt}
+
+
+def _email_complaint_reply(o: dict, status: str, reply: str) -> bool:
+    if not _mail_ready():
+        return False
+    try:
+        from agents import mailbox
+        platform = "gmail" if mailbox.gmail_ready() else "lark"
+        head = "đã được chấp nhận và hoàn tiền" if status == "da_hoan" else "chưa được chấp nhận"
+        mailbox.send(platform, o["email"], f"[superYou] Khiếu nại đơn {o['code']} {head}",
+                     f"Khiếu nại của bạn cho đơn {o['code']} ({o['name']}) {head}.\n\nPhản hồi của superYou: {reply}\n\n"
+                     "Xem lại tại https://app.roimaxxhub.com/account#buys. Cần trao đổi thêm, bạn trả lời email này.\n\nsuperYou · Roimaxx")
+        return True
+    except Exception:
+        import logging
+        logging.getLogger("pay").exception("Gửi email phản hồi khiếu nại lỗi")
+        return False
+
+
+def admin_block_buyer(email: str, on: str = "1", note: str = "") -> dict:
+    return block_buyer(email, str(on).lower() not in ("0", "false", "mo", "off", ""), note)
 
 
 def price_reco(x: dict) -> dict:

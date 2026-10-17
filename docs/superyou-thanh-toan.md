@@ -29,6 +29,11 @@ Anh Huy duyệt ngày 17/10/2026.
 - Quản trị › Giao dịch: tổng bán, về sàn, tháng này, đơn chờ, nợ người bán, hoàn tiền, ghi đã trả (kèm mã giao dịch ngân hàng).
 - Console người bán › Doanh thu: số dư, tháng này, lượt bán, lịch sử, tài khoản nhận tiền, kỳ trả tiếp theo.
 
+## Khiếu nại và hoàn tiền
+- Khách khiếu nại từ Tài khoản › Sản phẩm đã mua (lý do có sẵn) hoặc trang công khai (email + mã đơn). Người bán bị 3 khiếu nại/30 ngày tự bị khoá.
+- Anh xử lý ở HQ › Marketplace › Quản trị › **Khiếu nại**: chấp nhận (ghi hoàn tiền, sổ cái ghi dòng âm, gỡ quyền sở hữu; đơn gói thì tài khoản về Miễn phí) hoặc từ chối (bắt buộc ghi lý do, khách nhận được). Mở/khoá người bán, khoá/mở email mua ngay trên thẻ khiếu nại.
+- Phản hồi gửi email cho khách khi mail đã kết nối; luôn hiện trong Tài khoản của khách. Tiền hoàn anh chuyển khoản thủ công.
+
 ## Anh cần làm (không ai làm thay được)
 1. Điền vào `/opt/superhuy/shared/.env` trên VPS: `BANK_ID` (mã ngân hàng VietQR, ví dụ MB, VCB, TCB), `BANK_ACCOUNT`, `BANK_ACCOUNT_NAME`, rồi khởi động lại superHuy.
 2. Đăng ký Casso (casso.vn) hoặc SePay (sepay.vn), nối tài khoản ngân hàng, tạo webhook trỏ về `https://app.roimaxxhub.com/api/pay/webhook`, đặt token và điền `PAY_WEBHOOK_TOKEN`.
