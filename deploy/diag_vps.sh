@@ -5,6 +5,20 @@ echo "time: $(date -Is)"
 echo "service: $(systemctl is-active superhuy 2>/dev/null)"
 echo "current: $(basename "$(readlink -f /opt/superhuy/current)")"
 echo "health: $(curl -fsS -m 5 http://127.0.0.1:8787/health 2>/dev/null || echo FAIL)"
+echo "--- perf ---"
+# Đo kích thước/thời gian tải công khai, có và không có nén (không in nội dung). Chỉ là số liệu.
+for P in / /landing /market /login /sw.js /brand/tokens.css; do
+  RAW=$(curl -s -o /dev/null -w "%{http_code} %{size_download}B %{time_total}s" -m 15 "https://app.roimaxxhub.com$P")
+  GZ=$(curl -s -o /dev/null -D /tmp/perf_h.txt -H 'Accept-Encoding: gzip, br' -w "%{size_download}B %{time_total}s" -m 15 "https://app.roimaxxhub.com$P")
+  ENC=$(grep -i '^content-encoding:' /tmp/perf_h.txt | tr -d '\r' | cut -d' ' -f2); CC=$(grep -i '^cache-control:' /tmp/perf_h.txt | tr -d '\r' | cut -d' ' -f2-)
+  ET=$(grep -qi '^etag:' /tmp/perf_h.txt && echo etag || echo -)
+  echo "perf $P: thô $RAW | nén ${ENC:-none} $GZ | cache: ${CC:--} | $ET"
+done
+rm -f /tmp/perf_h.txt
+echo "perf_local_ttfb /health: $(curl -s -o /dev/null -w '%{time_starttransfer}s' -m 5 http://127.0.0.1:8787/health)"
+echo "proxy: nginx=$(systemctl is-active nginx 2>/dev/null) caddy=$(systemctl is-active caddy 2>/dev/null) gzip_proxied=$(grep -rhoE '^\s*gzip_proxied[^;]*' /etc/nginx/nginx.conf /etc/nginx/conf.d 2>/dev/null | head -1 | tr -s ' ' || echo -)"
+echo "tenants: $(systemctl list-units --all --plain --no-legend 'superyou@*' 2>/dev/null | awk '{print $1"="$4}' | tr '\n' ' ')"
+echo "--- end perf ---"
 echo "--- marketplace ---"; (cd /opt/superhuy/current && SUPERHUY_HOME=$S timeout 240 /opt/superhuy/venv/bin/python -u deploy/market_vps_check.py 2>&1 | tail -24)
 echo "landing_public: $(curl -s -o /dev/null -w "%{http_code} %{size_download}" -m 10 https://app.roimaxxhub.com/landing)"
 echo "env_keys: $(grep -oE '^[A-Z_]+=' $S/.env 2>/dev/null | tr -d '=' | tr '\n' ' ')"

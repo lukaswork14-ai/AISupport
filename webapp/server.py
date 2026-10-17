@@ -1,6 +1,7 @@
 """Server cho Telegram Mini App, chỉ dùng thư viện chuẩn (không cần cài thêm).
 - Xác thực: Telegram initData (HMAC với token bot) + chỉ chủ nhân (OWNER_CHAT_ID) được dùng.
 - API: /api/auth, /api/bootstrap, /api/run, /api/job, /media (ảnh/video trong data/)."""
+import gzip
 import hashlib
 import html
 import hmac
@@ -319,6 +320,56 @@ def start_chat(text: str) -> str:
     return jid
 
 
+# ------------------------------------------------------------------ nén + cache (Nền tảng & DevOps)
+# Nén gzip khi trình duyệt chấp nhận (Accept-Encoding), chỉ cho loại văn bản; bản nén giữ trong bộ nhớ theo (file, mtime, size).
+# ETag yếu theo mtime+size: mở lại app chỉ tốn 304 thay vì tải lại ~500 KB.
+_GZ_TYPES = ("text/", "application/javascript", "application/json", "application/manifest+json", "image/svg+xml", "application/xml")
+_GZ_MIN = 1024
+_GZ_MAX_FILE = 4_000_000
+_GZ_CACHE: dict = {}
+_GZ_LOCK = threading.Lock()
+
+
+def _accepts_gzip(header: str | None) -> bool:
+    for part in (header or "").lower().split(","):
+        name, _, params = part.strip().partition(";")
+        if name.strip() in ("gzip", "*"):
+            q = params.strip()
+            return not (q.startswith("q=") and q[2:].strip() in ("0", "0.0", "0.00", "0.000"))
+    return False
+
+
+def _gz_type(ctype: str) -> bool:
+    return ctype.startswith(_GZ_TYPES)
+
+
+def _gz_file(path: Path, st) -> bytes:
+    key = (str(path), st.st_mtime_ns, st.st_size)
+    with _GZ_LOCK:
+        hit = _GZ_CACHE.get(key)
+    if hit is not None:
+        return hit
+    data = gzip.compress(path.read_bytes(), compresslevel=6, mtime=0)
+    with _GZ_LOCK:
+        for k in [k for k in _GZ_CACHE if k[0] == key[0]]:  # bỏ bản cũ của cùng file
+            _GZ_CACHE.pop(k, None)
+        if len(_GZ_CACHE) >= 64:
+            _GZ_CACHE.pop(next(iter(_GZ_CACHE)), None)
+        _GZ_CACHE[key] = data
+    return data
+
+
+def _etag(st) -> str:
+    return f'W/"{st.st_mtime_ns:x}-{st.st_size:x}"'
+
+
+def _cache_control(path: str, query: str, cache: bool) -> str:
+    """File có phiên bản (?v=...) dưới /brand/, /icons/: giữ 1 năm. File cache khác: 1 ngày. Còn lại: hỏi lại (ETag)."""
+    if cache and path.startswith(("/brand/", "/icons/")) and re.search(r"(^|&)v=", query or ""):
+        return "public, max-age=31536000, immutable"
+    return "private, max-age=86400" if cache else "no-cache"
+
+
 # ------------------------------------------------------------------ HTTP
 class Handler(BaseHTTPRequestHandler):
     server_version = "superHuy"
@@ -336,9 +387,15 @@ class Handler(BaseHTTPRequestHandler):
 
     def _json(self, code: int, data):
         body = json.dumps(data, ensure_ascii=False).encode()
+        gz = len(body) >= 2048 and _accepts_gzip(self.headers.get("Accept-Encoding"))
+        if gz:
+            body = gzip.compress(body, compresslevel=5, mtime=0)
         self.send_response(code)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Cache-Control", "no-store")
+        if gz:
+            self.send_header("Content-Encoding", "gzip")
+            self.send_header("Vary", "Accept-Encoding")
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
@@ -838,9 +895,41 @@ class Handler(BaseHTTPRequestHandler):
     def _file(self, path: Path, cache: bool, download: str = ""):
         if not path.is_file():
             return self._json(404, {"error": "not found"})
-        size = path.stat().st_size
+        st = path.stat()
+        size = st.st_size
         ctype = mimetypes.guess_type(str(path))[0] or "application/octet-stream"
+        u = urlparse(self.path)
+        cc = _cache_control(u.path, u.query, cache)
+        etag = _etag(st)
         rng = self.headers.get("Range")
+        gz = (not rng and not download and _GZ_MIN <= size <= _GZ_MAX_FILE and _gz_type(ctype)
+              and _accepts_gzip(self.headers.get("Accept-Encoding")))
+        if not rng and not download and etag in [t.strip() for t in (self.headers.get("If-None-Match") or "").split(",")]:
+            self.send_response(304)
+            self.send_header("ETag", etag)
+            self.send_header("Cache-Control", cc)
+            if _gz_type(ctype):
+                self.send_header("Vary", "Accept-Encoding")
+            self.end_headers()
+            return
+        if gz:
+            try:
+                body = _gz_file(path, st)
+            except OSError:
+                return self._json(404, {"error": "not found"})
+            self.send_response(200)
+            self.send_header("Content-Type", ctype + ("; charset=utf-8" if ctype.startswith("text/") else ""))
+            self.send_header("Content-Encoding", "gzip")
+            self.send_header("Vary", "Accept-Encoding")
+            self.send_header("ETag", etag)
+            self.send_header("Content-Length", str(len(body)))
+            self.send_header("Cache-Control", cc)
+            self.end_headers()
+            try:
+                self.wfile.write(body)
+            except (BrokenPipeError, ConnectionResetError):
+                pass
+            return
         start, end = 0, size - 1
         if rng and rng.startswith("bytes="):  # cho phép tua video
             a, _, b = rng[6:].partition("-")
@@ -853,7 +942,11 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", ctype + ("; charset=utf-8" if ctype.startswith("text/") else ""))
         self.send_header("Accept-Ranges", "bytes")
         self.send_header("Content-Length", str(end - start + 1))
-        self.send_header("Cache-Control", "private, max-age=86400" if cache else "no-cache")
+        self.send_header("Cache-Control", cc)
+        if not download:
+            self.send_header("ETag", etag)
+            if _gz_type(ctype):
+                self.send_header("Vary", "Accept-Encoding")
         if download:
             self.send_header("Content-Disposition", f"attachment; filename=\"video.mp4\"; filename*=UTF-8''{quote(download)}")
         self.end_headers()
@@ -869,7 +962,6 @@ class Handler(BaseHTTPRequestHandler):
                 except (BrokenPipeError, ConnectionResetError):
                     return
                 left -= len(chunk)
-
 
 def serve(port: int) -> ThreadingHTTPServer:
     httpd = ThreadingHTTPServer(("127.0.0.1", port), Handler)
