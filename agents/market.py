@@ -576,6 +576,50 @@ def _content_from(type: str, body: str) -> dict:
     raise ValueError("Loại sản phẩm không hợp lệ")
 
 
+def pack_content(skill: str, steps: str = "", notes: str = "", roles: str = "") -> dict:
+    """Phòng ban AI của người bán: skill (bắt buộc) + workflow (tuỳ chọn, cùng luật an toàn với workflow) + ghi chú (tuỳ chọn) + vai."""
+    out = {"skill": _content_from("skill", skill)["skill"], "steps": [], "notes": []}
+    if (steps or "").strip():
+        out["steps"] = _content_from("workflow", steps)["steps"]
+    if (notes or "").strip():
+        out["notes"] = _content_from("brain", notes)["notes"]
+    out["roles"] = [r.strip()[:40] for r in re.split(r"[,\n]", roles or "") if r.strip()][:8]
+    return out
+
+
+def pack_fields(c: dict) -> dict:
+    """Ngược lại pack_content: tách nội dung gói thành các ô để người bán sửa."""
+    return {"pack_steps": "\n".join(f"{s['agent']}.{s['action']}: {s.get('label', '')}" for s in c.get("steps") or []),
+            "pack_notes": "\n".join(n["md"].strip() for n in c.get("notes") or []), "pack_roles": ", ".join(c.get("roles") or [])}
+
+
+def _seller_content(t: str, data: dict, body: str) -> dict:
+    if t == "pack":
+        return pack_content(body, str(data.get("pack_steps") or "")[:6000], str(data.get("pack_notes") or "")[:40000], str(data.get("pack_roles") or "")[:400])
+    return _content_from(t, body)
+
+
+def creator_preview(c: dict, data: dict) -> dict:
+    """Xem trước trang chi tiết theo đúng loại (skill / workflow / gói tri thức / phòng ban) trước khi lưu."""
+    t = data.get("type") if data.get("type") in TYPES else ""
+    if not t:
+        raise ValueError("Chọn loại sản phẩm")
+    body = str(data.get("body") or "")[:20000]
+    try:
+        content = _seller_content(t, data, body) if body.strip() else {}
+        err = ""
+    except ValueError as e:
+        content, err = {}, str(e)
+    x = {"type": t, "name": _clean(data.get("name"), 80) or "Sản phẩm chưa đặt tên", "content": content, "version": "1.0", "category": data.get("category"),
+         "creator": {"name": c.get("name", "")}, "price": max(0, int(data.get("price") or 0)), "billing": "once", "created": _now(), "updated": _now(),
+         "description": _clean(data.get("description"), 4000), "tagline": _clean(data.get("tagline"), 160)}
+    try:
+        sp = spec(x)
+    except Exception:
+        sp = {}
+    return {"spec": sp, "error": err, "contents": _contents_preview(x) if content else []}
+
+
 def create(type: str, name: str, tagline: str, description: str, body: str, category: str = "nang-suat", price: int = 0,
            tags: str = "", publish: bool = True) -> dict:
     """Chủ nhân tạo sản phẩm của mình (lên kệ ngay hoặc lưu nháp)."""
@@ -754,7 +798,7 @@ def _validate(p: dict) -> list[str]:
         _content_from(p.get("type", ""), p.get("body", ""))
     except ValueError as e:
         issues.append(str(e))
-    if re.search(r"(api[_-]?key|password|mật khẩu|token)\s*[:=]\s*\S{8,}", p.get("body", ""), re.I):
+    if re.search(r"(api[_-]?key|password|mật khẩu|token)\s*[:=]\s*\S{8,}", p.get("body", "") + "\n" + p.get("extra", ""), re.I):
         issues.append("Nội dung có vẻ chứa khoá hoặc mật khẩu. Hãy xoá trước khi gửi.")
     return issues
 
@@ -1034,6 +1078,8 @@ def creator_get(c: dict, lid: str) -> dict:
     if not x or x["creator"].get("id") != c["id"]:
         raise ValueError("Không tìm thấy sản phẩm")
     r = studio_body(lid)
+    if x["type"] == "pack":
+        r.update(pack_fields(x.get("content") or {}))
     r["own"] = True
     r["review_note"] = x.get("review_note", "")
     return r
@@ -1045,13 +1091,14 @@ def creator_save(c: dict, data: dict) -> dict:
     if not t:
         raise ValueError("Chọn loại sản phẩm")
     p = {"type": t, "name": _clean(data.get("name"), 80), "tagline": _clean(data.get("tagline"), 160),
-         "description": _clean(data.get("description"), 4000), "body": str(data.get("body") or "")[:20000]}
+         "description": _clean(data.get("description"), 4000), "body": str(data.get("body") or "")[:20000],
+         "extra": (str(data.get("pack_steps") or "") + "\n" + str(data.get("pack_notes") or ""))[:50000] if t == "pack" else ""}
     submit = bool(data.get("submit"))
     if submit:
         issues = _validate(p)
         if issues:
             raise ValueError("Chưa gửi duyệt được: " + " ".join(issues))
-    content = _content_from(t, p["body"]) if p["body"].strip() else {}
+    content = _seller_content(t, data, p["body"]) if p["body"].strip() else {}
     status = "review" if submit else "draft"
     lid = _clean(data.get("lid"), 20)
     with _LOCK:
