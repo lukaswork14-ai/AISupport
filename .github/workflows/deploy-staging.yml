@@ -1,0 +1,91 @@
+# Triển khai một nhánh (thường là nhánh PR) lên STAGING để xem trước trước khi gộp vào main.
+# Chạy tay: Actions › "Triển khai staging" › Run workflow › nhập tên nhánh.
+# Chỉ chép vào /opt/superhuy-staging (cài một lần bằng deploy/staging_vps.sh). Không bao giờ đụng bản chính.
+name: Triển khai staging
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: "Tên nhánh cần xem trước (vd product/devops-nen-gzip)"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-staging
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Kiểm tra nhánh
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Kiểm tên nhánh
+        env:
+          BR: ${{ inputs.branch }}
+        run: '[[ "$BR" =~ ^[A-Za-z0-9._/-]{1,100}$ ]] || { echo "::error::Tên nhánh không hợp lệ"; exit 1; }'
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.branch }}
+          fetch-depth: 0
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Test + JavaScript của app
+        run: |
+          pip install -q -r requirements.txt pytest
+          python -m compileall -q .
+          python -m pytest -q tests
+          python -m webapp.appbuild --js /tmp/app.js && node --check /tmp/app.js
+      - name: Quét khoá bí mật (gitleaks)
+        run: |
+          curl -sSfL https://github.com/gitleaks/gitleaks/releases/download/v8.21.2/gitleaks_8.21.2_linux_x64.tar.gz | tar -xz gitleaks
+          ./gitleaks dir --no-banner --redact .
+
+  deploy:
+    name: Chép lên staging
+    needs: test
+    runs-on: ubuntu-24.04
+    environment: staging
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.branch }}
+      - name: Khoá SSH
+        env:
+          KEY: ${{ secrets.VPS_SSH_KEY }}
+          HOST: ${{ secrets.VPS_HOST }}
+          PORT: ${{ secrets.VPS_PORT || '22' }}
+        run: |
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          K=$(printf '%s\n' "$KEY" | tr -d '\r' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | sed '/^$/d')
+          if [ "$(printf '%s\n' "$K" | wc -l)" -le 2 ]; then
+            BODY=$(printf '%s' "$K" | sed 's/-----[A-Z ]*-----//g' | tr -d ' \n')
+            K=$(printf -- '-----BEGIN OPENSSH PRIVATE KEY-----\n%s\n-----END OPENSSH PRIVATE KEY-----' "$(printf '%s' "$BODY" | fold -w 70)")
+          fi
+          printf '%s\n' "$K" > ~/.ssh/deploy && chmod 600 ~/.ssh/deploy
+          ssh-keyscan -p "$PORT" -H "$HOST" >> ~/.ssh/known_hosts 2>/dev/null
+      - name: Kiểm staging đã cài chưa
+        env:
+          HOST: ${{ secrets.VPS_HOST }}
+          USER: ${{ secrets.VPS_USER || 'superhuy' }}
+          PORT: ${{ secrets.VPS_PORT || '22' }}
+        run: |
+          ssh -i ~/.ssh/deploy -p "$PORT" "$USER@$HOST" 'test -f /opt/superhuy-staging/shared/STAGING' \
+            || { echo "::error::Staging chưa cài trên VPS: anh chạy bằng root: sudo bash deploy/staging_vps.sh <tên-miền>"; exit 1; }
+      - name: Chép code và khởi động staging
+        env:
+          HOST: ${{ secrets.VPS_HOST }}
+          USER: ${{ secrets.VPS_USER || 'superhuy' }}
+          PORT: ${{ secrets.VPS_PORT || '22' }}
+          BR: ${{ inputs.branch }}
+        run: |
+          SHA=$(git rev-parse HEAD)
+          rsync -az --delete --exclude .git --exclude .github \
+            -e "ssh -i ~/.ssh/deploy -p $PORT" ./ "$USER@$HOST:/opt/superhuy-staging/releases/$SHA/"
+          ssh -i ~/.ssh/deploy -p "$PORT" "$USER@$HOST" "bash /opt/superhuy-staging/releases/$SHA/deploy/release_staging.sh $SHA '$BR'"
+          echo "### Staging đang chạy \`$BR\` (\`${SHA:0:7}\`)" >> "$GITHUB_STEP_SUMMARY"
