@@ -140,7 +140,7 @@ if IS_TENANT:  # instance khách: app cài lên điện thoại mang tên và ic
     APP_FILES.update({"/manifest.webmanifest": "manifest-superyou.webmanifest", "/apple-touch-icon.png": "brand/icon-180.png",
                       "/apple-touch-icon-precomposed.png": "brand/icon-180.png", "/favicon.ico": "brand/icon-128.png"})
 # Nhận diện superYou cho app trên instance khách: icon, tên và bảng màu superYou (superHuy của anh Huy giữ nguyên giao diện riêng).
-# Dùng <style> nội tuyến vì CSP chỉ cho phép style inline. Sinh 1 lần, tự làm lại khi index.html đổi.
+# Dùng <style> nội tuyến vì CSP chỉ cho phép style inline. Sinh 1 lần, tự làm lại khi nguồn webapp/app/ đổi.
 SUPERYOU_APP_THEME = (
     ":root{--bg:#FFF8E7;--surface:#FFFFFF;--text:#14111A;--muted:#6E6553;"
     "--line:color-mix(in srgb,#14111A 10%,transparent);--fill:color-mix(in srgb,#14111A 6%,transparent);"
@@ -150,14 +150,20 @@ SUPERYOU_APP_THEME = (
     "--jade:#FFD23F;--jade-ink:#14111A;--jade-soft:color-mix(in srgb,#FFD23F 16%,transparent)}")
 
 
+_APP_VER = {"tenant": ""}
+
+
 def _app_index() -> Path:
-    src = STATIC / "index.html"
+    """Trang app được ráp từ webapp/app/ (webapp/appbuild.py). Chủ nhân: bản gốc; khách: bản superYou."""
+    from webapp import appbuild
+    src = appbuild.write_to(DATA_DIR / "app-owner.html")
     if not IS_TENANT:
         return src
     out = DATA_DIR / "app-superyou.html"
     try:
-        if not out.exists() or out.stat().st_mtime < src.stat().st_mtime:
-            s = src.read_text(encoding="utf-8")
+        if not out.exists() or _APP_VER["tenant"] != appbuild.version():
+            _APP_VER["tenant"] = appbuild.version()
+            s = appbuild.build()
             s = re.sub(r"/icons/huy-(128|180|192|512)\.png(\?v=\d+)?", lambda m: f"/brand/icon-{m.group(1)}.png", s)
             s = s.replace("<title>superHuy</title>", "<title>superYou</title>", 1)
             s = s.replace('content="#F4F1F8"', 'content="#FFF8E7"').replace('content="#131019"', 'content="#14111A"')

@@ -1,0 +1,57 @@
+/* ---------- Marketplace, Sản phẩm số, Khách đăng ký */
+.mkicon{ display:grid; place-items:center; flex:none; border-radius:28%; color:#fff; background:linear-gradient(145deg, color-mix(in srgb, var(--c) 78%, #fff), var(--c)); box-shadow:inset 0 0 0 1px rgba(255,255,255,.18) }
+.mkstars{ color:var(--amber); font-weight:600 } .mkstars i{ color:var(--muted); font-style:normal; font-weight:500 } .mkstars.none{ color:var(--muted); font-weight:500 }
+.mkoff{ font-size:11px; font-weight:700; padding:2px 7px; border-radius:7px; background:var(--jade-soft); color:var(--jade); vertical-align:1px }
+.mkbadge{ font-style:normal; font-size:11px; background:var(--danger); color:#fff; border-radius:9px; padding:0 6px; margin-left:2px }
+.mkfeat{ display:grid; grid-auto-flow:column; grid-auto-columns:minmax(260px, 1fr); gap:12px; overflow-x:auto; padding:12px 2px 4px; scroll-snap-type:x mandatory; scrollbar-width:none }
+.mkfeat::-webkit-scrollbar{ display:none }
+.mkhero{ scroll-snap-align:start; min-height:190px; padding:18px; border-radius:var(--r-card); display:flex; flex-direction:column; gap:6px; cursor:pointer; color:#fff;
+  background:radial-gradient(120% 90% at 100% 0%, color-mix(in srgb, var(--c) 55%, #fff) 0%, transparent 60%), var(--c) }
+.mkhero h3{ margin:0; font-size:22px; line-height:1.2; letter-spacing:-.02em; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden } .mkhero p{ margin:0; opacity:.92; font-size:14px; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden }
+.mkkick{ font-size:12px; font-weight:700; opacity:.85 } .mkby{ font-size:13px; opacity:.9 } .mkhero .mkoff{ background:rgba(255,255,255,.22); color:#fff }
+.mkhero .mkget{ background:#fff; color:var(--c) }
+.mkcols{ display:grid; grid-template-columns:minmax(0,1fr); gap:0 18px }
+@media (min-width:900px){ .mkcols{ grid-template-columns:repeat(2,minmax(0,1fr)) } }
+.mklist > .mkrow{ display:flex; gap:12px; align-items:center; padding:12px 14px; border-top:1px solid var(--line); cursor:pointer; text-align:left }
+.mklist > .mkrow:first-child{ border-top:0 }
+.mkrow .row{ flex-wrap:nowrap }
+@media (max-width:640px){ .mklist > .mkrow:has(> .row){ flex-wrap:wrap } .mklist > .mkrow > .grow{ min-width:170px } .mklist > .mkrow > .row{ margin-left:auto } } .mkrank{ width:18px; font-weight:700; color:var(--muted); font-variant-numeric:tabular-nums; flex:none }
+.mkget{ flex:none; padding:7px 16px; border-radius:999px; font-weight:700; font-size:13.5px; background:var(--fill); color:var(--jade) }
+.mkget.on{ color:var(--muted) }
+.clamp1{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap } .clamp2{ overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical }
+.mkdet{ display:flex; gap:14px; align-items:flex-start }
+.mkfacts{ display:grid; grid-template-columns:repeat(auto-fit,minmax(90px,1fr)); gap:8px; margin:16px 0; padding:12px 0; border-top:1px solid var(--line); border-bottom:1px solid var(--line) }
+.mkfacts div{ display:flex; flex-direction:column; align-items:center; text-align:center; min-width:0 } .mkfacts b{ font-size:15px; overflow-wrap:anywhere } .mkfacts span{ font-size:11.5px; color:var(--muted) }
+.mkh{ font-size:16px; margin:18px 0 6px }
+.mkcontents{ margin:0; padding-left:20px; display:flex; flex-direction:column; gap:3px; font-size:14px }
+.mkrate{ display:flex; gap:16px; align-items:center } .mkrate > div:first-child{ display:flex; flex-direction:column; align-items:center } .mkrate b{ font-size:36px; line-height:1 } .mkrate span{ font-size:12px; color:var(--muted) }
+.mkbar{ display:flex; gap:8px; align-items:center; font-size:11px; color:var(--muted) } .mkbar i{ flex:1; height:5px; border-radius:3px; background:var(--fill); overflow:hidden } .mkbar em{ display:block; height:100%; background:var(--amber) }
+.mkstar{ font-size:26px; color:var(--line); padding:2px 4px } .mkstar.on{ color:var(--amber) }
+.mkkpis{ grid-template-columns:repeat(2,minmax(0,1fr)) }
+@media (min-width:700px){ .mkkpis{ grid-template-columns:repeat(4,minmax(0,1fr)) } }
+.mkq{ display:flex; gap:12px; margin-bottom:10px }
+.lbbar{ display:flex; flex-direction:column; gap:10px } .lbbar .seg{ flex-wrap:wrap } .lbbar select, .mkrow select{ font:inherit; font-size:13.5px; padding:7px 10px; border-radius:11px; border:1px solid var(--line); background:var(--surface); color:var(--text) }
+.lbgrid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:10px }
+.lbcard{ position:relative; display:flex; flex-direction:column; align-items:flex-start; gap:4px; padding:14px; text-align:left; min-width:0 }
+.lbcard img{ width:56px; height:56px; border-radius:28%; object-fit:cover; background:var(--fill) } .lbcard b{ font-size:14px; line-height:1.3 }
+.lbcard.cloned{ box-shadow:0 0 0 2px var(--danger) }
+.lbtag{ position:absolute; top:8px; right:8px; font-size:10.5px; font-weight:700; background:var(--danger); color:#fff; border-radius:7px; padding:2px 6px }
+.lbicon{ width:72px; height:72px; border-radius:28%; object-fit:cover; flex:none } .lbmini{ width:40px; height:40px; border-radius:28%; object-fit:cover; flex:none }
+.lbtabs{ margin-top:14px; display:flex; overflow-x:auto; max-width:100% } .lbtabs button{ white-space:nowrap }
+.lbshots{ display:flex; gap:10px; overflow-x:auto; padding-bottom:6px } .lbshots img{ height:360px; max-width:none; border-radius:16px; flex:none; background:var(--fill) }
+.lbtargets{ display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:8px }
+.lbt{ display:flex; gap:8px; align-items:center; padding:10px 12px; border-radius:12px; box-shadow:0 0 0 1px var(--line); cursor:pointer; font-size:13.5px }
+.lbt:has(input:checked){ box-shadow:0 0 0 2px var(--jade); background:var(--jade-soft) }
+.lbopt{ display:flex; gap:10px; align-items:flex-start; padding:7px 2px; font-size:14px; cursor:pointer } .lbopt input{ margin-top:3px }
+.lbprompt{ white-space:pre-wrap; font:12.5px/1.55 ui-monospace,Menlo,monospace; background:var(--fill); padding:14px; border-radius:14px; max-height:360px; overflow:auto }
+.lbways{ display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:10px; margin-top:12px } .lbways button{ text-align:left; display:flex; flex-direction:column; gap:6px } .lbways b{ display:flex; gap:8px; align-items:center }
+.mkspec{ display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:10px; margin-top:14px }
+.mkbox{ background:var(--fill); border-radius:16px; padding:12px 14px; display:flex; flex-direction:column; gap:6px; min-width:0 } .mkbox b{ font-size:14px } .mkbox p{ margin:0; font-size:14px; color:var(--muted) }
+.mkex{ text-align:left; font-size:14px; color:var(--jade); font-weight:600; padding:4px 0 } .mkex:hover{ text-decoration:underline }
+.mkflow{ margin:0; padding:0; list-style:none; display:flex; flex-direction:column; gap:0; counter-reset:f }
+.mkflow li{ position:relative; padding:8px 0 8px 34px; counter-increment:f } .mkflow li::before{ content:counter(f); position:absolute; left:0; top:8px; width:24px; height:24px; border-radius:50%; background:var(--jade); color:var(--jade-ink); font-size:12px; font-weight:700; display:grid; place-items:center }
+.mkflow li::after{ content:""; position:absolute; left:11px; top:34px; bottom:-6px; width:2px; background:var(--line) } .mkflow li:last-child::after{ display:none }
+.mkflow b{ display:block; font-size:14.5px } .mkflow span{ font-size:12.5px; color:var(--muted) }
+.mksample{ white-space:pre-line; font-size:13.5px !important; color:var(--text) !important; max-height:150px; overflow:hidden; -webkit-mask-image:linear-gradient(#000 70%, transparent) }
+.mktoc{ max-height:240px; overflow:auto; column-width:220px; column-gap:18px }
+.mkinfo{ display:grid; grid-template-columns:max-content 1fr; gap:6px 14px; margin:0; font-size:14px } .mkinfo dt{ color:var(--muted) } .mkinfo dd{ margin:0 }

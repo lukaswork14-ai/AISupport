@@ -1,0 +1,68 @@
+/* ================= App iPhone: chuyển động, hiệu ứng, tương tác ================= */
+:root{ --spring:cubic-bezier(.22,1.2,.36,1); --ease-out:cubic-bezier(.16,1,.3,1); --safe-t:env(safe-area-inset-top) }
+body.standalone{ padding-top:var(--safe-t) }
+body.standalone .sheet{ max-height:calc(100vh - var(--safe-t) - 12px) }
+/* chuyển tab: nội dung trượt nhẹ + các thẻ xuất hiện so le */
+@keyframes viewIn{ from{ opacity:0; transform:translateY(14px) } to{ opacity:1; transform:none } }
+@keyframes cardIn{ from{ opacity:0; transform:translateY(18px) scale(.985) } to{ opacity:1; transform:none } }
+#app.enter{ animation:viewIn .34s var(--ease-out) both }
+#app.enter > .card, #app.enter > .sec, #app.enter > .cldocs, #app.enter > .stack, #app.enter > .gmhead, #app.enter > .seg, #app.enter > .chips{ animation:cardIn .5s var(--ease-out) both }
+#app.enter > :nth-child(2){ animation-delay:.03s } #app.enter > :nth-child(3){ animation-delay:.06s } #app.enter > :nth-child(4){ animation-delay:.09s }
+#app.enter > :nth-child(5){ animation-delay:.12s } #app.enter > :nth-child(6){ animation-delay:.15s } #app.enter > :nth-child(n+7){ animation-delay:.18s }
+/* bấm: co nhẹ như nút iOS */
+.btn, .chip, .iconbtn, .seg button, .card.list > button, .round, .rpopt, nav button{ transition:transform .18s var(--spring), background-color .2s, color .2s, box-shadow .2s }
+.btn:active, .chip:active, .iconbtn:active, .seg button:active, .round:active{ transform:scale(.95) }
+.card.list > button:active{ transform:scale(.985); background:var(--fill) }
+/* thanh điều hướng: viên nền trượt theo tab, biểu tượng nảy */
+nav{ backdrop-filter:saturate(1.6) blur(18px); -webkit-backdrop-filter:saturate(1.6) blur(18px) }
+nav .pill{ position:absolute; top:8px; height:48px; border-radius:18px; background:var(--jade-soft); transition:left .42s var(--spring), width .42s var(--spring), opacity .2s; pointer-events:none }
+nav button{ position:relative; z-index:1 }
+@keyframes pop{ 0%{ transform:scale(1) } 40%{ transform:scale(1.22) translateY(-2px) } 100%{ transform:scale(1) } }
+nav button.on.pop svg{ animation:pop .45s var(--spring) }
+nav .ai span.orb{ transition:transform .35s var(--spring), box-shadow .3s }
+nav .ai:active span.orb{ transform:translateX(-50%) scale(.9) }
+nav .ai.on span.orb{ transform:translateX(-50%) rotate(45deg) }
+@keyframes breathe{ 0%,100%{ box-shadow:0 10px 24px color-mix(in srgb,#9B3FC0 45%,transparent), 0 0 0 5px var(--bg) } 50%{ box-shadow:0 12px 30px color-mix(in srgb,#9B3FC0 65%,transparent), 0 0 0 5px var(--bg) } }
+nav .ai span.orb{ animation:breathe 3.2s ease-in-out infinite }
+/* tấm trượt: lò xo, kéo xuống để đóng */
+.sheet{ transition:transform .42s var(--spring) } .sheet.drag{ transition:none }
+.sheet .grab{ cursor:grab; touch-action:none; padding:8px 0; background-clip:content-box; height:21px; margin:-4px auto 6px; width:60px; position:relative }
+.sheet .grab::after{ content:""; position:absolute; left:10px; right:10px; top:8px; height:5px; border-radius:9px; background:var(--line) }
+.scrim{ backdrop-filter:blur(2px); -webkit-backdrop-filter:blur(2px) }
+/* thông báo nổi */
+#toast{ transition:none } #toast.in{ animation:toastIn .45s var(--spring) both }
+@keyframes toastIn{ from{ opacity:0; transform:translate(-50%,16px) scale(.96) } to{ opacity:1; transform:translate(-50%,0) } }
+/* khung xương có ánh sáng chạy */
+.skel{ background:linear-gradient(90deg, var(--fill) 0%, color-mix(in srgb,var(--text) 11%,transparent) 50%, var(--fill) 100%); background-size:200% 100%; animation:shimmer 1.3s linear infinite }
+@keyframes shimmer{ from{ background-position:200% 0 } to{ background-position:-200% 0 } }
+/* kéo để làm mới (app iPhone) */
+#ptr{ position:fixed; left:50%; top:calc(var(--safe-t) + 6px); z-index:15; width:38px; height:38px; margin-left:-19px; border-radius:50%; background:var(--surface);
+  box-shadow:var(--sh); display:grid; place-items:center; color:var(--jade); transform:translateY(-70px); opacity:0; pointer-events:none }
+#ptr svg{ width:20px; height:20px; transition:transform .1s } #ptr.spin svg{ animation:rot .8s linear infinite } @keyframes rot{ to{ transform:rotate(360deg) } }
+/* màn khoá: nền ánh sáng chuyển động, phím gợn sóng, mở khoá mượt */
+#lock{ overflow:hidden; background:var(--bg) }
+#lock::before, #lock::after{ content:""; position:absolute; width:120vmax; height:120vmax; border-radius:50%; z-index:-1; filter:blur(60px); opacity:.55 }
+#lock::before{ left:-70vmax; top:-80vmax; background:radial-gradient(circle, #7B5CF0 0%, transparent 60%); animation:drift 14s ease-in-out infinite alternate }
+#lock::after{ right:-70vmax; bottom:-85vmax; background:radial-gradient(circle, #C13F96 0%, transparent 60%); animation:drift 17s ease-in-out infinite alternate-reverse }
+#lock{ isolation:isolate }
+@keyframes drift{ from{ transform:translate(0,0) } to{ transform:translate(14vmax,10vmax) } }
+#lock .mark{ background:var(--aura); color:#fff; box-shadow:0 14px 34px color-mix(in srgb,#9B3FC0 40%,transparent); animation:markIn .7s var(--spring) both }
+@keyframes markIn{ from{ transform:scale(.6) rotate(-25deg); opacity:0 } to{ transform:none; opacity:1 } }
+.keys button{ position:relative; overflow:hidden; transition:transform .16s var(--spring), background-color .2s }
+.keys button .rip{ position:absolute; inset:0; border-radius:50%; background:var(--aura); opacity:.0; transform:scale(.2); pointer-events:none }
+.keys button.hit .rip{ animation:rip .45s var(--ease-out) }
+@keyframes rip{ 0%{ opacity:.45; transform:scale(.2) } 100%{ opacity:0; transform:scale(1.25) } }
+.dots i{ transition:background .15s, border-color .15s, transform .25s var(--spring) } .dots i.on{ transform:scale(1.18); background:var(--aura); border-color:transparent }
+body.unlocking #lock{ animation:lockOut .5s var(--ease-out) forwards; display:flex }
+@keyframes lockOut{ to{ opacity:0; transform:scale(1.06); filter:blur(6px) } }
+#lock .hint{ margin-top:22px; font-size:12.5px; color:var(--muted); text-align:center; max-width:300px; line-height:1.5 }
+#lock .hint b{ color:var(--text) }
+@media (prefers-reduced-motion:reduce){
+  #app.enter, #app.enter > *, nav .ai span.orb, #lock::before, #lock::after, #lock .mark, .skel, #toast.in{ animation:none!important }
+  .sheet, nav .pill{ transition:none }
+}
+.brandimg{ width:100%; height:100%; object-fit:cover; display:block; border-radius:inherit }
+.orb:has(.brandimg), #lock .mark:has(.brandimg){ overflow:hidden; padding:0 }
+#lock .mark{ border-radius:22px; width:76px; height:76px }
+nav .ai.on span.orb{ transform:translateX(-50%) scale(1.06) }
+

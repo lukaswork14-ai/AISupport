@@ -1,0 +1,173 @@
+/* =================================================================== superHuy aura (giao diện super app) */
+:root{
+  --bg:#F4F1F8; --surface:#FFFFFF; --text:#1B1724; --muted:#7A7387;
+  --line:color-mix(in srgb, #2A1A45 9%, transparent); --fill:color-mix(in srgb, #4A2C7A 7%, transparent);
+  --jade:#A2338C; --jade-ink:#FFFFFF; --jade-soft:color-mix(in srgb, #A2338C 11%, transparent);
+  --aura:linear-gradient(135deg,#7B5CF0 0%,#C13F96 100%);
+  --sh:0 1px 2px rgba(40,20,70,.05), 0 8px 24px rgba(70,35,120,.07);
+  --r-card:24px; --r-ctl:16px; --r-sheet:28px; --nav-h:76px;
+}
+html[data-scheme="dark"]{
+  --bg:#131019; --surface:#1E1A26; --text:#F2EEF7; --muted:#9C94AA;
+  --line:color-mix(in srgb, #FFFFFF 9%, transparent); --fill:color-mix(in srgb, #FFFFFF 7%, transparent);
+  --jade:#EA7CC8; --jade-ink:#2A0B21; --jade-soft:color-mix(in srgb, #EA7CC8 14%, transparent);
+  --sh:0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.25);
+}
+html,body{ background:var(--bg) }
+body::before{ content:""; position:fixed; inset:0 0 auto 0; height:420px; z-index:-1; pointer-events:none;
+  background:radial-gradient(60% 70% at 12% 0%, color-mix(in srgb,#7B5CF0 16%,transparent), transparent 70%),
+             radial-gradient(55% 60% at 92% 4%, color-mix(in srgb,#C13F96 14%,transparent), transparent 72%) }
+body{ padding-bottom:calc(var(--nav-h) + var(--safe-b) + 28px) }
+.card, .ask, .chip, .src, .askbar, .recpad, .spk, .pick, .iconbtn, .sug button{ box-shadow:var(--sh) }
+.card{ border-radius:var(--r-card) }
+.chip{ box-shadow:0 0 0 1px var(--line) } .chip.on{ background:var(--aura); color:#fff }
+.seg{ border-radius:14px } .seg button{ border-radius:11px }
+.btn{ border-radius:14px } .btn.pri{ background:var(--aura); color:#fff }
+.iconbtn{ border-radius:14px; box-shadow:var(--sh) }
+h1{ letter-spacing:-.025em }
+.sec{ margin:28px 4px 12px } .sec h2{ font-size:18px }
+
+/* thanh điều hướng nổi + nút superHuy ở giữa */
+nav{ left:14px; right:14px; bottom:calc(10px + var(--safe-b)); height:64px; padding:0 6px; border-radius:26px; border:0;
+  background:color-mix(in srgb, var(--surface) 88%, transparent); box-shadow:0 10px 30px rgba(50,25,90,.14), 0 0 0 1px var(--line); max-width:560px; margin:0 auto }
+nav button{ font-size:10.5px; gap:2px } nav button svg{ width:22px; height:22px }
+nav button.on{ color:var(--jade) }
+nav .ai{ flex:0 0 74px; position:relative }
+nav .ai span.orb{ position:absolute; left:50%; top:-14px; transform:translateX(-50%); width:58px; height:58px; border-radius:50%; background:var(--aura); color:#fff;
+  display:grid; place-items:center; box-shadow:0 10px 24px color-mix(in srgb,#9B3FC0 45%,transparent), 0 0 0 5px var(--bg) }
+nav .ai span.orb svg{ width:26px; height:26px }
+nav .ai em{ position:absolute; bottom:7px; left:0; right:0; font-style:normal; text-align:center; font-size:10.5px; color:var(--muted) }
+nav .ai.on em{ color:var(--jade) }
+.composer{ bottom:calc(var(--nav-h) + var(--safe-b) + 8px); background:transparent; backdrop-filter:none; -webkit-backdrop-filter:none }
+.chat{ padding-bottom:120px }
+.msg.me{ background:var(--aura)!important; color:#fff!important }
+
+/* trang chủ super app */
+.htop{ display:flex; align-items:center; gap:10px; margin:2px 0 18px }
+.orb{ width:38px; height:38px; border-radius:50%; background:var(--aura); color:#fff; display:grid; place-items:center; flex:none }
+.htop .who{ flex:1; min-width:0; line-height:1.25 } .htop .who b{ font-size:15px } .htop .who div{ font-size:12.5px; color:var(--muted) }
+.hero{ text-align:center; margin:6px 0 18px }
+.hero h1{ font-size:28px; margin:0 0 6px } .hero p{ margin:0; color:var(--muted); font-size:14px }
+.hero p b{ color:var(--text); font-weight:600 }
+.hask{ display:flex; align-items:center; gap:8px; padding:8px 8px 8px 18px; border-radius:22px; background:var(--surface); box-shadow:var(--sh), 0 0 0 1px var(--line) }
+.hask input{ flex:1; min-width:0; border:0; outline:none; background:transparent; color:var(--text); font:inherit; font-size:15.5px; padding:10px 0 }
+.hask .mic{ width:40px; height:40px; border-radius:14px; display:grid; place-items:center; color:var(--muted) }
+.hask .go{ width:44px; height:44px; border-radius:15px; background:var(--aura); color:#fff; display:grid; place-items:center; flex:none }
+.qa{ display:flex; gap:8px; overflow-x:auto; padding:14px 2px 4px; scrollbar-width:none } .qa::-webkit-scrollbar{ display:none }
+.qa button{ flex:none; display:flex; align-items:center; gap:8px; padding:7px 14px 7px 7px; border-radius:999px; background:var(--surface); box-shadow:var(--sh), 0 0 0 1px var(--line); font-size:13.5px; font-weight:600; white-space:nowrap }
+.qa i, .apps i{ display:grid; place-items:center; color:#fff; background:var(--c) }
+.qa i{ width:30px; height:30px; border-radius:50% } .qa i svg{ width:16px; height:16px }
+.apps{ display:grid; grid-template-columns:repeat(4,1fr); gap:14px 6px; padding:16px 10px; border-radius:var(--r-card); background:var(--surface); box-shadow:var(--sh) }
+.apps button{ display:flex; flex-direction:column; align-items:center; gap:7px; font-size:12px; font-weight:500; position:relative; text-align:center; line-height:1.2 }
+.apps i{ width:50px; height:50px; border-radius:17px; background:color-mix(in srgb,var(--c) 14%,transparent); color:var(--c) }
+html[data-scheme="dark"] .apps i{ background:color-mix(in srgb,var(--c) 22%,transparent); filter:brightness(1.25) }
+.apps i svg{ width:24px; height:24px }
+.apps .bd{ position:absolute; top:-4px; right:calc(50% - 32px); min-width:19px; height:19px; padding:0 5px; border-radius:10px; background:var(--jade); color:var(--jade-ink); font-size:11px; font-weight:700; display:grid; place-items:center; box-shadow:0 0 0 2px var(--surface) }
+.masonry{ columns:2; column-gap:12px } .masonry > *{ break-inside:avoid; margin-bottom:12px; display:block; width:100%; text-align:left }
+.rc{ padding:14px; border-radius:20px; background:var(--surface); box-shadow:var(--sh) }
+.rc .k{ display:flex; gap:6px; align-items:center; font-size:11.5px; font-weight:600; color:var(--muted); margin-bottom:6px }
+.rc .k i{ width:22px; height:22px; border-radius:8px; display:grid; place-items:center; background:color-mix(in srgb,var(--c) 14%,transparent); color:var(--c) }
+.rc .k i svg{ width:13px; height:13px }
+.rc h4{ margin:0; font-size:14.5px; line-height:1.35; font-weight:600 } .rc p{ margin:6px 0 0; font-size:13px; color:var(--muted); line-height:1.45 }
+.rc img{ width:100%; border-radius:14px; margin-top:8px; display:block; aspect-ratio:4/5; object-fit:cover }
+.hstat .mini{ border-radius:20px }
+/* cửa sổ chat superHuy (mở từ nút giữa) */
+#dock{ right:12px; left:12px; bottom:calc(var(--nav-h) + var(--safe-b) + 8px); display:flex; justify-content:flex-end }
+.dpanel{ width:min(420px, 100%); height:min(600px, calc(100vh - var(--nav-h) - var(--safe-b) - 70px)); border-radius:26px; animation:pop .2s ease }
+@keyframes pop{ from{ opacity:0; transform:translateY(14px) scale(.98) } }
+.dhead .dav{ background:var(--aura); color:#fff; border-radius:50% }
+.dsug{ display:flex; flex-direction:column; gap:6px; margin-top:8px } .dsug button{ text-align:left; padding:10px 12px; border-radius:14px; background:var(--surface); box-shadow:0 0 0 1px var(--line); font-size:13.5px }
+.dform .send{ background:var(--aura); color:#fff }
+
+.shgrid{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:6px }
+.shgrid button{ display:flex; flex-direction:column; align-items:center; gap:6px; padding:12px 6px; border-radius:14px; background:var(--surface); box-shadow:0 0 0 1px var(--line); font-size:13px; font-weight:500; text-align:center }
+.shgrid i{ width:40px; height:40px; border-radius:12px; display:grid; place-items:center; color:var(--c); background:color-mix(in srgb,var(--c) 13%,transparent) }
+.shlink{ margin-top:12px } .shlink .url{ font-weight:600; word-break:break-all; font-size:14px }
+.brstat{ grid-template-columns:repeat(4,1fr) } .brstat>div{ display:flex; flex-direction:column; gap:2px; background:var(--surface); border-radius:14px; padding:10px 12px; box-shadow:0 0 0 1px var(--line) } .brstat b{ font-size:20px } .brstat span{ font-size:12px; color:var(--muted) }
+.dot{ width:10px; height:10px; border-radius:50%; background:var(--muted); flex:none } .dot.ok{ background:#199e70; box-shadow:0 0 0 4px color-mix(in srgb,#199e70 18%,transparent) }
+.savebtn{ align-self:flex-start; display:inline-flex; gap:6px; align-items:center; font-size:12.5px; font-weight:600; color:var(--jade); padding:4px 2px; margin:-4px 0 6px }
+.savebtn[disabled]{ color:var(--muted) }
+.gemcode{ font:700 26px/1 ui-monospace,SFMono-Regular,Menlo,monospace; letter-spacing:.12em; padding:12px 14px; border-radius:12px; background:var(--fill) }
+.trk.roimaxx{ background:color-mix(in srgb,#1F7AE0 14%,transparent); color:#1F7AE0 } html[data-scheme="dark"] .trk.roimaxx{ color:#7DB6FF }
+.trk.leversphere{ background:color-mix(in srgb,#199e70 15%,transparent); color:#13805F } html[data-scheme="dark"] .trk.leversphere{ color:#4FD1A5 }
+.itype{ font-size:11.5px; font-weight:700; padding:3px 8px; border-radius:7px; background:var(--fill); color:var(--text) }
+.rpstack{ height:min(440px,54vh); min-height:390px }
+.stars{ display:inline-flex; align-items:center; gap:3px; white-space:nowrap }
+.itype{ display:inline-flex; align-items:center; gap:4px }
+.vd{ font-size:11.5px; font-weight:700; padding:3px 8px; border-radius:7px; background:var(--fill); color:var(--text) }
+.vd.ap_dung{ background:var(--jade-soft); color:var(--jade) } .vd.thu_nghiem{ background:color-mix(in srgb,#1F7AE0 14%,transparent); color:#1F7AE0 }
+html[data-scheme="dark"] .vd.thu_nghiem{ color:#7DB6FF } .vd.bo_qua{ color:var(--muted) }
+.fit{ font-size:11.5px; font-weight:600; color:var(--muted) }
+.rpname{ margin:2px 0 0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+.rpcard .rpsum{ -webkit-line-clamp:4; color:var(--text) }
+.rpprops{ display:flex; flex-direction:column; gap:6px }
+.rpprop{ display:flex; align-items:center; gap:8px; font-size:13.5px; padding:7px 10px; border-radius:10px; background:var(--fill) }
+.rpprop .grow{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap } .rpprop .pk{ font-size:11px; font-weight:700; color:var(--muted); white-space:nowrap }
+.rpprop.nang_cap .pk{ color:var(--amber) }
+.rpopt{ display:flex; gap:12px; align-items:flex-start; padding:12px 14px; border-bottom:1px solid var(--line); cursor:pointer }
+.rpopt:last-child{ border-bottom:0 } .rpopt input{ width:20px; height:20px; margin-top:2px; accent-color:var(--jade); flex:none }
+.bn{ font-size:11px; font-weight:600; padding:2px 7px; border-radius:6px; background:var(--jade-soft); color:var(--jade) }
+.tkst{ font-size:11.5px; font-weight:700; padding:3px 8px; border-radius:7px; background:var(--fill); white-space:nowrap }
+.tkst.moi{ background:var(--amber-soft); color:var(--amber) } .tkst.dang_lam{ background:color-mix(in srgb,#1F7AE0 14%,transparent); color:#1F7AE0 }
+.tkst.xong{ background:var(--jade-soft); color:var(--jade) } .tkst.bo{ color:var(--muted) }
+.relpill{ font-size:11.5px; font-weight:600; color:var(--muted); white-space:nowrap }
+.caobox{ background:var(--fill); border-radius:14px; padding:10px 12px; margin:8px 0 6px; font-size:14px }
+.caobox p{ margin:0; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden }
+.cldocs{ display:grid; gap:12px; grid-template-columns:1fr; margin-bottom:8px }
+@media (min-width:640px){ .cldocs{ grid-template-columns:1fr 1fr } }
+.cldoc{ display:flex; flex-direction:column; gap:8px } .cldoc h3{ margin:4px 0 0; font-size:17px; line-height:1.3 } .cldoc p{ margin:0; color:var(--muted); font-size:14px }
+.clamp3{ display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden }
+.mdbody{ font-size:15px; line-height:1.6 } .mdh{ margin:18px 0 6px; line-height:1.3 } .mdp{ margin:6px 0 } .mdli{ display:flex; gap:8px; margin:4px 0 } .mdli>span:first-child{ color:var(--muted); min-width:14px }
+.mdq{ border-left:3px solid var(--jade); padding:6px 10px; margin:8px 0; background:var(--fill); border-radius:0 10px 10px 0 }
+.mdtable{ overflow-x:auto; margin:10px 0; -webkit-overflow-scrolling:touch } .mdtable table{ border-collapse:collapse; font-size:13.5px; min-width:100% }
+.mdtable th,.mdtable td{ border-bottom:1px solid var(--line); padding:8px 10px; text-align:left; vertical-align:top } .mdtable th{ font-weight:700; background:var(--fill) }
+.vwrap{ position:relative } .vchap{ display:flex; gap:8px; overflow-x:auto; padding:2px 0 10px; -webkit-overflow-scrolling:touch }
+.vchap button{ flex:none; max-width:220px; text-align:left; padding:8px 11px; border-radius:12px; background:var(--surface); box-shadow:0 0 0 1px var(--line); font-size:13px; line-height:1.3 }
+.vchap button span{ display:block; font-size:11.5px; font-weight:700; color:var(--jade); margin-bottom:2px }
+.vacts{ display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px }
+.rptbox{ margin:14px 0 4px; padding:12px; border-radius:18px; background:var(--surface); box-shadow:0 0 0 1px var(--line) }
+.rptav{ width:28px; height:28px; border-radius:50%; display:grid; place-items:center; color:#fff; background:var(--aura, var(--jade)); flex:none }
+.rptform{ display:flex; gap:8px; align-items:center; background:var(--fill); border-radius:14px; padding:4px 4px 4px 12px }
+.rptform input{ flex:1; border:0; background:transparent; color:var(--text); font:inherit; font-size:15px; padding:8px 0; min-width:0 }
+.rptform input:focus{ outline:none } .rptform .send{ width:38px; height:38px; border-radius:12px; display:grid; place-items:center; background:var(--jade); color:var(--jade-ink); flex:none }
+.rptthread{ display:flex; flex-direction:column; gap:12px } .rq{ align-self:flex-end; max-width:85%; background:var(--jade); color:var(--jade-ink); padding:10px 13px; border-radius:16px 16px 4px 16px; font-size:15px }
+.ra{ background:var(--fill); border-radius:16px 16px 16px 4px; padding:12px 14px }
+.rsrc{ display:flex; flex-direction:column; gap:6px; margin-top:10px } .rsrc button{ text-align:left; font-size:12.5px; color:var(--muted); display:flex; gap:6px; align-items:flex-start }
+.ccard .chip{ font-size:12.5px }
+.lcourse{ display:flex; flex-direction:column; gap:8px; margin-bottom:12px } .lcourse h3{ margin:0; font-size:18px; line-height:1.3 }
+.lnext{ display:flex; align-items:center; gap:12px; text-align:left; padding:12px; border-radius:14px; background:var(--fill); margin-top:4px }
+.lday{ flex:none; font-weight:800; font-size:13px; padding:8px 10px; border-radius:10px; background:var(--jade); color:var(--jade-ink) }
+.ldot{ width:30px; height:30px; flex:none; border-radius:50%; display:grid; place-items:center; font-size:12.5px; font-weight:700; background:var(--fill); color:var(--muted) }
+.ldot.on{ background:var(--jade); color:var(--jade-ink) } .ldot.half{ box-shadow:inset 0 0 0 2px var(--jade); color:var(--jade) }
+.lq{ padding:10px 0; border-bottom:1px solid var(--line) } .lq:last-child{ border-bottom:0 } .lqq{ font-weight:600; margin:2px 0 8px }
+.lqo{ display:flex; gap:10px; align-items:flex-start; padding:8px 10px; border-radius:10px; margin:4px 0; background:var(--fill); font-size:14.5px }
+.lqo.right{ box-shadow:inset 0 0 0 2px #199e70 } .lqo.wrong{ box-shadow:inset 0 0 0 2px var(--danger) }
+.lgrade{ margin-top:12px } .mdcode{ background:var(--fill); border-radius:12px; padding:10px 12px; overflow-x:auto; font-size:12.5px; line-height:1.5; margin:8px 0 }
+.segscroll{ overflow-x:auto; max-width:100%; -webkit-overflow-scrolling:touch; scrollbar-width:none } .segscroll::-webkit-scrollbar{ display:none } .segscroll button{ white-space:nowrap; flex:none }
+.stwrap video.media.reel{ max-height:46vh }
+.stvers{ display:flex; gap:8px; overflow-x:auto; padding:2px 0 10px; -webkit-overflow-scrolling:touch }
+.stvers button{ flex:none; text-align:left; padding:8px 11px; border-radius:12px; background:var(--surface); box-shadow:0 0 0 1px var(--line); display:flex; flex-direction:column; gap:1px; min-width:120px; font-size:13px }
+.stvers button.on{ box-shadow:0 0 0 2px var(--jade) } .stvers button span{ color:var(--muted); font-size:12px } .stvers button em{ font-style:normal; color:var(--muted); font-size:11.5px; max-width:150px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+.stprog{ margin-bottom:12px } .stprog .pbar.big{ margin-top:10px } .stprog.err{ box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--danger) 40%,transparent) }
+.stquick{ margin-bottom:6px } .stscene{ margin-bottom:10px }
+.stbar{ display:grid; grid-template-columns:1.25fr 1fr 1fr; gap:8px; margin:0 0 12px } .stbar .btn{ justify-content:center; white-space:nowrap }
+.chip[disabled]{ opacity:.5 }
+.pbar i{ display:block; height:100%; background:var(--jade); border-radius:3px; transition:width .6s ease }
+.gmhead{ display:flex; align-items:center; gap:12px; width:100%; text-align:left; padding:12px 14px; border-radius:18px; margin:4px 0 12px;
+  background:linear-gradient(135deg, color-mix(in srgb,#7B5CF0 16%,var(--surface)), color-mix(in srgb,#C13F96 12%,var(--surface))); box-shadow:0 0 0 1px var(--line) }
+.gmlv{ flex:none; width:52px; height:52px; border-radius:16px; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#fff; background:var(--aura, var(--jade)); box-shadow:0 6px 16px color-mix(in srgb,#7B5CF0 35%,transparent) }
+.gmlv b{ font-size:22px; line-height:1 } .gmlv i{ font-style:normal; font-size:10px; opacity:.85 } .gmlv.big{ width:64px; height:64px } .gmlv.big b{ font-size:28px }
+.gmtitle{ font-weight:800; letter-spacing:-.01em } .gmbar{ display:block; height:8px; border-radius:6px; background:color-mix(in srgb,var(--text) 10%,transparent); overflow:hidden; margin-top:6px }
+.gmbar i{ display:block; height:100%; border-radius:6px; background:linear-gradient(90deg,#FFB020,#FF7A1A) } .gmgold{ flex:none; font-weight:800; font-size:15px }
+.gmboost{ font-size:11px; font-weight:800; color:#fff; background:#E5484D; padding:2px 6px; border-radius:6px }
+.gmhero{ display:flex; gap:14px; align-items:center } .gmq{ width:40px; height:40px; flex:none; border-radius:12px; display:grid; place-items:center; font-weight:800; font-size:13px; background:var(--fill) }
+.gmq.on{ background:var(--jade); color:var(--jade-ink) } .gmitem{ width:40px; height:40px; flex:none; display:grid; place-items:center; font-size:24px }
+.gmbadges{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px } .gmbadge{ display:flex; flex-direction:column; align-items:center; text-align:center; gap:4px; padding:12px 6px; border-radius:16px; background:var(--surface); box-shadow:0 0 0 1px var(--line); filter:grayscale(1); opacity:.55 }
+.gmbadge.on{ filter:none; opacity:1; box-shadow:0 0 0 2px color-mix(in srgb,#FFB020 70%,transparent) } .gmbadge span{ font-size:30px } .gmbadge b{ font-size:13px } .gmbadge em{ font-style:normal; font-size:11px; color:var(--muted) }
+.gminp{ padding:11px 13px; border-radius:12px; border:0; background:var(--fill); color:var(--text); font:inherit; min-width:0 }
+.xppop{ position:fixed; left:50%; top:18%; transform:translateX(-50%); z-index:99; display:flex; flex-direction:column; align-items:center; gap:3px; padding:14px 20px; border-radius:20px;
+  background:linear-gradient(135deg,#7B5CF0,#C13F96); color:#fff; box-shadow:0 18px 50px rgba(80,30,120,.35); animation:xpin .45s cubic-bezier(.2,1.4,.4,1); text-align:center; max-width:86vw; transition:opacity .5s, transform .5s }
+.xppop b{ font-size:26px; letter-spacing:-.02em } .xppop span{ font-size:13px; opacity:.9 } .xppop em{ font-style:normal; font-size:13px; font-weight:600 } .xppop strong{ font-size:15px; margin-top:4px }
+.xppop.out{ opacity:0; transform:translate(-50%,-20px) } @keyframes xpin{ from{ transform:translate(-50%,20px) scale(.8); opacity:0 } to{ transform:translate(-50%,0) scale(1); opacity:1 } }
+@media (prefers-reduced-motion: reduce){ .xppop{ animation:none; transition:none } }
+

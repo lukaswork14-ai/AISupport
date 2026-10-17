@@ -194,7 +194,7 @@ def test_assistant_cannot_share_transcript_or_audio(owner):
 
 
 def test_tenant_app_shows_three_features_only():
-    page = (ROOT / "webapp" / "static" / "index.html").read_text(encoding="utf-8")
+    page = "".join(f.read_text(encoding="utf-8") for f in sorted((ROOT / "webapp" / "app" / "js").glob("*.js")))  # app ráp từ webapp/app/
     assert "const TENANT_TABS = ['home','meet','chat','me','more'];" in page
     srv = (ROOT / "webapp" / "server.py").read_text(encoding="utf-8")
     assert "window.SUPERYOU_TENANT=true" in srv

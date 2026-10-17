@@ -61,8 +61,8 @@ def _app_index(tenant: bool, tmp_path) -> str:
 
 
 def test_tenant_app_is_superyou_branded(tmp_path):
-    owner = Path(_app_index(False, tmp_path / "o"))
-    assert owner == STATIC / "index.html"                      # superHuy của anh Huy giữ giao diện riêng
+    owner = Path(_app_index(False, tmp_path / "o")).read_text(encoding="utf-8")
+    assert "<title>superHuy</title>" in owner and 'id="superyou-brand"' not in owner  # superHuy của anh Huy giữ giao diện riêng
     page = Path(_app_index(True, tmp_path / "t")).read_text(encoding="utf-8")
     assert "<title>superYou</title>" in page and 'id="superyou-brand"' in page
     assert "/icons/huy-" not in page and "/brand/icon-192.png" in page

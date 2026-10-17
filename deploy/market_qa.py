@@ -56,7 +56,7 @@ def fake_sources():
 
 def seed_market():
     import os
-    os.environ.update(BANK_ID="MB", BANK_ACCOUNT="0123456789", BANK_ACCOUNT_NAME="ROIMAXX", PAY_WEBHOOK_TOKEN="qa-token")
+    os.environ.update(BANK_ID="MB", BANK_ACCOUNT="0123456789", BANK_ACCOUNT_NAME="ROIMAXX", PAY_WEBHOOK_TOKEN="qa-token", SUPERYOU_PAYMENTS="1")  # QA giả lập luồng mua có thanh toán
     from agents import leads, market, pay
     market.catalog()
     s = market.creator_signup("Lan Nguyễn", "lan@shop.vn", "Bán áo POD")
@@ -194,7 +194,7 @@ def main():
             pub.wait_for_timeout(1200)
             pub.screenshot(path=str(OUT / f"{tag}-24-login-signup.png"), full_page=True)
             try:
-                pub.fill("#sn", "Minh Trần"); pub.fill("#se", f"minh-{tag}@congty.vn"); pub.fill("#sp", "matkhau-rat-manh-1"); pub.select_option("#spl", "trial")
+                pub.fill("#sn", "Minh Trần"); pub.fill("#se", f"minh-{tag}@congty.vn"); pub.fill("#sp", "matkhau-rat-manh-1"); pub.check("#sag")
                 pub.click("#sf button")
                 pub.wait_for_timeout(1800)
                 pub.screenshot(path=str(OUT / f"{tag}-25-account-home.png"), full_page=True)

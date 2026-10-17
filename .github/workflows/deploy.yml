@@ -49,12 +49,10 @@ jobs:
           PY
       - name: Kiểm tra JavaScript của Mini App
         run: |
-          python - <<'PY'
-          import re, pathlib
-          s = pathlib.Path("webapp/static/index.html").read_text(encoding="utf-8")
-          pathlib.Path("/tmp/app.js").write_text("\n".join(re.findall(r"<script>(.*?)</script>", s, re.S)), encoding="utf-8")
-          PY
+          # App được ráp từ webapp/app/ (shell.html + css/*.css + js/*.js), xem webapp/appbuild.py
+          python -m webapp.appbuild --js /tmp/app.js
           node --check /tmp/app.js
+          python -m webapp.appbuild > /tmp/app.html && grep -q "<!doctype html>" /tmp/app.html
       - name: Kiểm tra script triển khai
         run: bash -n deploy/setup_vps.sh && bash -n deploy/release.sh && bash -n deploy/import_data.sh && bash -n deploy/tenant_vps.sh
       - name: Test cách ly khách superYou + chặn lộ khoá

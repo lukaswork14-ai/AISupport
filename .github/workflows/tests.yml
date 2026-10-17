@@ -25,6 +25,11 @@ jobs:
         run: python -m compileall -q .
       - name: Test cách ly khách + an toàn
         run: python -m pytest -q tests
+      - name: Ráp app và kiểm tra JavaScript (webapp/app/)
+        run: |
+          python -m webapp.appbuild --js /tmp/app.js
+          node --check /tmp/app.js
+          python -m webapp.appbuild > /tmp/app.html && grep -q "<!doctype html>" /tmp/app.html
 
   secrets:
     name: Quét khoá bí mật (gitleaks)

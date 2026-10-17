@@ -7,7 +7,7 @@ import os
 import re
 
 import targets as targets_mod
-from agents import (workspace, board, cfo, sales, ops, pay, factory, market, leads, calendar_agent, content_agent, content_hub, strategy, learning, reel_studio, game, repo_radar, web_tools, gemini_notebook, knowledge_sources, meeting, meeting_share, email_agent, fb_connect, gcal_bridge, imagecard, lark_agent, mailbox, news_agent, publisher,
+from agents import (workspace, calendar_agent, content_agent, content_hub, strategy, learning, reel_studio, game, repo_radar, web_tools, gemini_notebook, knowledge_sources, meeting, meeting_share, email_agent, fb_connect, gcal_bridge, imagecard, lark_agent, mailbox, news_agent, publisher,
                     reel_video, second_brain)
 from config import CARD_HANDLE, DATA_DIR
 from core import digests, notify, store
@@ -585,127 +585,8 @@ register(Agent("noidung", "Nội dung", "🎬", "Săn tin theo chủ đề + cas
 ]))
 
 
-# ================================================================ Marketplace: skill, gói Second Brain, workflow
-register(Agent("market", "Marketplace", "🛍", "Khám phá, cài và bán skill, gói Second Brain, workflow cho superHuy", order=59, actions=[
-    Action("ds", "Khám phá Marketplace", market.catalog, hidden=True, llm=True,
-           desc="Xem sản phẩm trên superHuy Marketplace (skill, gói Second Brain, workflow), tìm theo từ khoá, xem anh đã cài gì.",
-           params=[Param("q", "Từ khoá"), Param("cat", "Danh mục"), Param("type", "Loại")]),
-    Action("xem", "Chi tiết sản phẩm", market.item, hidden=True, params=[Param("lid", "ID", required=True)]),
-    Action("cai", "Cài sản phẩm", market.install, hidden=True, long=True, params=[Param("lid", "ID", required=True)]),
-    Action("go", "Gỡ sản phẩm", market.uninstall, hidden=True, params=[Param("lid", "ID", required=True)]),
-    Action("batat", "Bật/tắt sản phẩm đã cài", market.toggle, hidden=True, params=[Param("lid", "ID", required=True)]),
-    Action("chay", "Chạy workflow", market.run_workflow, hidden=True, long=True, llm=True,
-           desc="Chạy một workflow đã cài từ Marketplace (ví dụ 'Bàn giao buổi sáng'). Truyền name = tên workflow hoặc lid = ID.",
-           params=[Param("lid", "ID"), Param("name", "Tên workflow")]),
-    Action("danhgia", "Đánh giá sản phẩm", market.review, hidden=True,
-           params=[Param("lid", "ID", required=True), Param("stars", "Số sao", "number", default=5), Param("text", "Nhận xét", "textarea")]),
-    Action("tao", "Đăng sản phẩm lên Marketplace", market.create, hidden=True,
-           params=[Param("type", "Loại", required=True), Param("name", "Tên", required=True), Param("tagline", "Mô tả ngắn"),
-                   Param("description", "Mô tả", "textarea"), Param("body", "Nội dung", "textarea", required=True),
-                   Param("category", "Danh mục", default="nang-suat"), Param("price", "Giá (đồng)", "number", default=0),
-                   Param("tags", "Thẻ (cách nhau dấu phẩy)"), Param("publish", "Lên kệ ngay", "bool", default=True)]),
-    Action("sua", "Cập nhật sản phẩm", market.update, hidden=True,
-           params=[Param("lid", "ID", required=True), Param("version", "Phiên bản"), Param("whats_new", "Có gì mới", "textarea"),
-                   Param("body", "Nội dung", "textarea"), Param("tagline", "Mô tả ngắn"), Param("description", "Mô tả", "textarea"),
-                   Param("price", "Giá", "number"), Param("status", "Trạng thái")]),
-    Action("cuatoi", "Sản phẩm của tôi", market.mine, hidden=True),
-    # Phòng Phát triển sản phẩm số (chỉ chủ nhân)
-    Action("donggoi", "AI đóng gói tài sản số", market.pack, hidden=True, long=True,
-           params=[Param("raw", "Nguyên liệu", "textarea"), Param("hint_type", "Loại"), Param("source_url", "Link nguồn"),
-                   Param("clone", "Dựng từ nguồn", "bool", default=False)]),
-    Action("studio_luu", "Lưu sản phẩm trong Studio", market.studio_save, hidden=True,
-           params=[Param("type", "Loại", required=True), Param("name", "Tên", required=True), Param("tagline", "Mô tả ngắn"),
-                   Param("description", "Mô tả", "textarea"), Param("body", "Nội dung", "textarea", required=True),
-                   Param("category", "Danh mục", default="nang-suat"), Param("price", "Giá", "number", default=0), Param("tags", "Thẻ"),
-                   Param("publish", "Lên kệ", "bool", default=False), Param("featured", "Nổi bật", "bool", default=False),
-                   Param("source_url", "Nguồn"), Param("lid", "ID")]),
-    Action("studio_xem", "Nội dung gốc sản phẩm", market.studio_body, hidden=True, params=[Param("lid", "ID", required=True)]),
-    Action("nhanban", "Nhân bản sản phẩm", market.clone, hidden=True, params=[Param("lid", "ID", required=True)]),
-    # Quản trị cao nhất (chủ App Store)
-    Action("quantri", "Quản trị Marketplace", market.admin_overview, hidden=True, llm=True,
-           desc="Bảng quản trị Marketplace (chỉ chủ nhân): số sản phẩm, người tạo, lượt cài, lượt quan tâm, hàng chờ duyệt, nhật ký."),
-    Action("qt_sua", "Quản trị: đổi trạng thái/giá/nổi bật", market.admin_set, hidden=True,
-           params=[Param("lid", "ID", required=True), Param("field", "Trường", required=True), Param("value", "Giá trị"), Param("note", "Ghi chú", "textarea")]),
-    Action("qt_nguoitao", "Quản trị người tạo", market.admin_creator, hidden=True,
-           params=[Param("cid", "ID", required=True), Param("action", "Thao tác", required=True)]),
-    Action("qt_duyet_gia", "Duyệt lên kệ kèm giá", market.approve_publish, hidden=True,
-           params=[Param("lid", "ID", required=True), Param("price", "Giá", "number"), Param("billing", "Chu kỳ"), Param("featured", "Nổi bật", "bool"), Param("note", "Ghi chú", "textarea")]),
-    Action("goi_y_gia", "Gợi ý giá", market.price_suggest, hidden=True, params=[Param("lid", "ID", required=True)]),
-    # Thanh toán và sổ cái (chỉ chủ nhân)
-    Action("gd", "Giao dịch và doanh thu", pay.admin_overview, hidden=True, llm=True,
-           desc="Doanh thu Marketplace: tổng bán, phí sàn, đơn chờ thanh toán, số còn nợ người bán, cấu hình thanh toán."),
-    Action("gd_nhan", "Xác nhận đã nhận tiền", pay.confirm_manual, hidden=True, params=[Param("oid", "ID đơn", required=True), Param("note", "Ghi chú")]),
-    Action("gd_hoan", "Hoàn tiền", pay.refund, hidden=True, params=[Param("oid", "ID đơn", required=True), Param("note", "Lý do", "textarea")]),
-    Action("gd_tra", "Ghi trả tiền người bán", pay.payout_mark, hidden=True,
-           params=[Param("sid", "ID người bán", required=True), Param("amount", "Số tiền", "number"), Param("ref", "Mã giao dịch")]),
-    Action("duyet", "Duyệt sản phẩm gửi lên", market.moderate, hidden=True,
-           params=[Param("lid", "ID", required=True), Param("decision", "Quyết định", required=True), Param("note", "Ghi chú", "textarea")]),
-]))
-
-
-# ================================================================ Xưởng sản phẩm số (Clone Factory, chỉ chủ nhân)
-register(Agent("xuong", "Xưởng sản phẩm số", "🏭", "Quét app/repo đang thắng thị trường, clone thành sản phẩm của riêng anh", order=59, actions=[
-    Action("quet", "Quét thị trường", factory.scan, hidden=True, long=True, llm=True,
-           desc="Quét bảng xếp hạng App Store (iPhone/Mac, theo nước và danh mục), GitHub Trending, Product Hunt; hoặc tìm theo từ khoá. src=ios|mac|github|ph.",
-           params=[Param("src", "Nguồn", default="ios"), Param("country", "Nước", default="vn"), Param("chart", "Bảng", default="free"),
-                   Param("genre", "Danh mục"), Param("q", "Từ khoá"), Param("limit", "Số lượng", "number", default=50)]),
-    Action("xem", "Chi tiết sản phẩm gốc", factory.detail, hidden=True, long=True,
-           params=[Param("key", "Mã", required=True), Param("country", "Nước", default="vn")]),
-    Action("theodoi", "Theo dõi sản phẩm", factory.star, hidden=True, params=[Param("key", "Mã", required=True)]),
-    Action("ghichu", "Lưu ghi chú clone", factory.save_note, hidden=True, params=[Param("text", "Ghi chú", "textarea", required=True)]),
-    Action("clone", "Clone thành bản thiết kế", factory.clone, hidden=True, long=True,
-           params=[Param("key", "Mã", required=True), Param("target", "Nền tảng đích", default="web"), Param("options", "Tuỳ chọn"),
-                   Param("notes", "Ghi chú", "textarea"), Param("project", "Tên dự án"), Param("country", "Nước", default="vn")]),
-    Action("duan_ds", "Dự án trong xưởng", factory.projects, hidden=True),
-    Action("duan", "Chi tiết dự án", factory.project, hidden=True, params=[Param("pid", "ID", required=True)]),
-    Action("duan_sua", "Đổi trạng thái dự án", factory.project_set, hidden=True,
-           params=[Param("pid", "ID", required=True), Param("status", "Trạng thái"), Param("note", "Ghi chú", "textarea")]),
-    Action("duan_xoa", "Xoá dự án", factory.project_delete, hidden=True, params=[Param("pid", "ID", required=True)]),
-    Action("len_cho", "Đưa dự án lên Marketplace", factory.to_market, hidden=True,
-           params=[Param("pid", "ID", required=True), Param("publish", "Lên kệ", "bool", default=False), Param("price", "Giá", "number", default=0)]),
-    Action("goi_y_gia", "Gợi ý giá cho dự án", factory.price_reco, hidden=True, params=[Param("pid", "ID", required=True)]),
-]))
-
-
-# ================================================================ Phòng ban (đề xuất -> anh duyệt -> giao việc)
-register(Agent("phongban", "Phòng ban", "🏢", "Các phòng ban superYou đề xuất, anh duyệt, việc tự giao về phòng phụ trách", order=59, actions=[
-    Action("bang", "Bảng phòng ban", board.overview, hidden=True, llm=True,
-           desc="Đề xuất của các phòng ban (Product, GTM, Sản phẩm số, Tài chính, Bán hàng, Vận hành): cái nào chờ anh duyệt, cái nào đang làm.",
-           params=[Param("status", "Lọc trạng thái")]),
-    Action("de_xuat", "Đưa đề xuất", board.propose, hidden=True, llm=True,
-           desc="Ghi một đề xuất lên bảng phòng ban để anh duyệt. dept: product|gtm|so|finance|sales|ops.",
-           params=[Param("dept", "Phòng", required=True), Param("title", "Tiêu đề", required=True), Param("summary", "Nội dung", "textarea", required=True),
-                   Param("why", "Vì sao"), Param("impact", "Tác động"), Param("cost", "Chi phí, thời gian"), Param("needs", "Cần phòng khác"),
-                   Param("priority", "Ưu tiên", default="vua"), Param("by", "Người đề xuất"), Param("auto_assign_to", "Giao cho"), Param("key", "Khoá chống trùng")]),
-    Action("quyet", "Anh quyết định", board.decide, hidden=True,
-           params=[Param("iid", "ID", required=True), Param("decision", "duyet|lam_ro|tu_choi", required=True), Param("note", "Ghi chú", "textarea"), Param("due_days", "Hạn (ngày)", "number", default=7)]),
-    Action("tien_do", "Cập nhật tiến độ", board.progress, hidden=True,
-           params=[Param("iid", "ID", required=True), Param("status", "dang_lam|xong|can_lam_ro", required=True), Param("result", "Kết quả", "textarea"), Param("by", "Phòng")]),
-]))
-
-
-# ================================================================ Tài chính superYou (CFO ảo)
-register(Agent("cfo", "CFO superYou", "💼", "Finance OS: phân tích, dự báo, đề xuất hành động và bản tin tài chính mỗi sáng", order=59, actions=[
-    Action("tong_quan", "Tổng quan tài chính superYou", cfo.overview, hidden=True),
-    Action("phan_tich", "Analyst: bức tranh và cảnh báo", cfo.analyst, hidden=True, llm=True,
-           desc="Doanh thu Marketplace, phí sàn, hoàn tiền, tập trung doanh thu, chi phí cố định, tiền mặt, cảnh báo bất thường."),
-    Action("du_bao", "Forecaster: dự báo 3–6 tháng", cfo.forecast, hidden=True, llm=True,
-           desc="Dự báo doanh thu, chi phí, tiền mặt và runway; kịch bản what-if: 'mất khách lớn', 'tăng giá', 'thuê thêm người', 'chạy quảng cáo'.",
-           params=[Param("months", "Số tháng", "number", default=6), Param("scenario", "Kịch bản")]),
-    Action("de_xuat", "Strategist: hành động nên làm", cfo.strategist, hidden=True, long=True, llm=True,
-           desc="CFO xếp hạng 3–5 hành động tăng tiền mặt/doanh thu, cắt chi phí; anh duyệt thì thành việc trên bảng Phòng ban.",
-           params=[Param("auto_propose", "Tự đưa lên bảng", "bool", default=False)]),
-    Action("len_bang", "Đưa hành động lên bảng", cfo.to_board, hidden=True, params=[Param("action_id", "ID", required=True)]),
-    Action("ban_tin", "CFO brief một trang", cfo.brief, hidden=True, llm=True, desc="Bản tin tài chính một trang: tiền mặt, thay đổi, nghĩa vụ, 3 việc nên làm.",
-           params=[Param("save", "Lưu", "bool", default=True)]),
-    Action("chi_phi_them", "Thêm chi phí cố định", cfo.add_cost, hidden=True, llm=True,
-           desc="Ghi một chi phí vận hành cố định của superYou (VPS, tên miền, LLM, công cụ). Ví dụ: VPS 300k mỗi tháng.",
-           params=[Param("name", "Tên", required=True), Param("amount", "Số tiền", required=True), Param("period", "Chu kỳ", default="monthly"),
-                   Param("category", "Nhóm", default="ha_tang"), Param("note", "Ghi chú")]),
-    Action("chi_phi_xoa", "Xoá chi phí", cfo.remove_cost, hidden=True, params=[Param("cid", "ID", required=True)]),
-    Action("tien_mat", "Ghi tiền mặt hiện có", cfo.set_cash, hidden=True, llm=True, desc="Ghi số dư tiền mặt của superYou/Roimaxx để dự báo runway.",
-           params=[Param("amount", "Số tiền", required=True)]),
-]))
+# ================================================================ Mảng Thương mại và HQ: khai báo ở hubs/commerce.py, hubs/hq.py
+from hubs import commerce as _hub_commerce, hq as _hub_hq  # noqa: E402,F401
 
 
 # ================================================================ Không gian cá nhân: hồ sơ, cài đặt, workflow riêng, passkey, thử nghiệm
@@ -732,91 +613,6 @@ register(Agent("toi", "Không gian của tôi", "👤", "Hồ sơ, cài đặt g
            desc="Từ một câu mục tiêu, gợi ý chuỗi bước workflow để người dùng kéo thả chỉnh tiếp.", params=[Param("goal", "Mục tiêu", required=True)]),
     Action("tinh_nang", "Tính năng được bật", _flags.for_user, hidden=True),
     Action("su_kien", "Ghi sự kiện dùng", _flags.track, hidden=True, params=[Param("event", "Sự kiện", required=True)]),
-]))
-
-
-# ================================================================ Thử nghiệm và phân cấp (chỉ chủ nhân)
-register(Agent("thunghiem", "Thử nghiệm", "🧪", "Bật tính năng theo phạm vi (riêng anh, theo gói, tất cả), A/B testing, đề xuất nâng cấp", order=59, actions=[
-    Action("tong_quan", "Tính năng, thử nghiệm, gói", _flags.overview, hidden=True, llm=True,
-           desc="Trạng thái các tính năng (bật cho ai), thử nghiệm A/B đang chạy và kết quả, số người dùng theo gói."),
-    Action("bat", "Đặt phạm vi tính năng", _flags.set_flag, hidden=True,
-           params=[Param("key", "Mã", required=True), Param("scope", "Phạm vi", required=True), Param("tiers", "Gói"), Param("pct", "Phần trăm", "number", default=100), Param("name", "Tên"), Param("desc", "Mô tả")]),
-    Action("ab_tao", "Tạo thử nghiệm A/B", _flags.create_experiment, hidden=True,
-           params=[Param("key", "Mã", required=True), Param("name", "Tên", required=True), Param("hypothesis", "Giả thuyết", "textarea"), Param("variants", "Biến thể", default="A,B"), Param("split", "Tỷ lệ A", "number", default=50), Param("metric", "Chỉ số", default="convert")]),
-    Action("ab_trang_thai", "Chạy/dừng thử nghiệm", _flags.set_experiment, hidden=True, params=[Param("key", "Mã", required=True), Param("status", "Trạng thái", required=True), Param("result", "Kết luận", "textarea")]),
-    Action("ab_ket_qua", "Kết quả thử nghiệm", _flags.results, hidden=True, params=[Param("key", "Mã", required=True)]),
-    Action("nghien_cuu", "AI nghiên cứu, đề xuất nâng cấp", _flags.research_propose, hidden=True, long=True),
-]))
-
-
-# ================================================================ Người dùng, vai trò, gói (chỉ chủ sàn)
-from core import accounts as _accounts, plans as _plans  # noqa: E402
-# ================================================================ Bán hàng superYou (CSO ảo)
-register(Agent("sales", "Phòng Bán hàng (CSO)", "📈", "CSO ảo: chấm điểm khách tiềm năng, soạn thư theo đuổi chờ anh duyệt, phễu RevOps và kế hoạch tuần", order=60, actions=[
-    Action("tong_quan", "Tổng quan bán hàng", sales.overview, hidden=True),
-    Action("phieu", "RevOps: phễu bán hàng", sales.pipeline, hidden=True, llm=True,
-           desc="Phễu khách đăng ký → liên hệ → trao đổi → dùng thử → khách hàng; tỷ lệ chuyển đổi, dùng thử sắp hết hạn, khách bị bỏ quên, doanh thu."),
-    Action("nghien_cuu", "Nghiên cứu: điểm ICP một khách", sales.research, hidden=True, long=True, llm=True,
-           desc="Chấm điểm phù hợp (0–100), phân khúc (solopreneur/quản lý/doanh nghiệp) và bước tiếp theo cho một email khách.",
-           params=[Param("email", "Email khách", required=True), Param("refresh", "Chấm lại", "bool", default=False)]),
-    Action("soan", "Theo đuổi: soạn thư chờ duyệt", sales.draft, hidden=True, long=True, llm=True,
-           desc="Soạn nháp thư tiếng Việt cho khách (chào mừng, nhắc dùng thử, sắp hết hạn, nâng cấp, hỏi thăm). Chỉ lưu nháp, anh duyệt mới gửi.",
-           params=[Param("email", "Email khách", required=True),
-                   Param("kind", "Loại thư", "select", options=[{"value": k, "label": v} for k, v in sales.KINDS.items()], default="chao_mung"),
-                   Param("note", "Ý thêm", "textarea")]),
-    Action("nhap", "Danh sách nháp", sales.drafts, hidden=True,
-           params=[Param("status", "Trạng thái", "select", options=[""] + list(sales.DRAFT_STATUS), default="cho_duyet")]),
-    Action("duyet", "Duyệt và gửi thư", sales.approve, hidden=True, long=True, params=[
-        Param("did", "ID nháp", required=True), Param("send", "Gửi ngay", "bool", default=True),
-        Param("platform", "Nền tảng", "select", options=["", "lark", "gmail"], default="")]),
-    Action("tu_choi", "Bỏ nháp", sales.reject, hidden=True, params=[Param("did", "ID nháp", required=True), Param("note", "Lý do")]),
-    Action("theo_duoi_tu_dong", "Soạn nháp theo đuổi hôm nay", sales.auto_followups, hidden=True, long=True, llm=True,
-           desc="Quét khách mới chưa liên hệ và dùng thử sắp hết hạn, soạn nháp chờ anh duyệt (không tự gửi)."),
-    Action("bao_cao_tuan", "Kế hoạch bán hàng tuần", sales.weekly_report, hidden=True, long=True, llm=True,
-           desc="Tóm tắt phễu + 3 hành động đề xuất; đưa lên bảng Phòng ban nếu to_board.",
-           params=[Param("to_board", "Đưa lên bảng", "bool", default=True)]),
-]))
-
-
-# ================================================================ Vận hành superYou
-register(Agent("ops", "Vận hành superYou", "🛠", "Phòng Vận hành (AI): tenant, sức khỏe hệ thống, chi phí hạ tầng trên mỗi khách, cảnh báo theo ngưỡng", order=60, actions=[
-    Action("tong_quan", "Tổng quan vận hành", ops.overview, hidden=True),
-    Action("tenant", "Danh sách tenant", ops.tenants, hidden=True, llm=True,
-           desc="Các instance khách (systemd superyou@<slug>): trạng thái dịch vụ, dung lượng dữ liệu, log cuối; kèm instance chính."),
-    Action("suc_khoe", "Sức khỏe hệ thống", ops.system_health, hidden=True, llm=True,
-           desc="Tóm tắt kết quả QC, ổ đĩa, tải CPU, bộ nhớ bot."),
-    Action("chi_phi", "Ảnh chụp chi phí/khách", ops.cost_snapshot, hidden=True, llm=True,
-           desc="Chi phí hạ tầng cố định (từ CFO) chia cho số khách đang chạy + ước tính LLM; lưu theo ngày."),
-    Action("nguong", "Xem ngưỡng cảnh báo", ops.thresholds, hidden=True),
-    Action("dat_nguong", "Đặt ngưỡng cảnh báo", ops.set_threshold, hidden=True, llm=True,
-           desc="Ngưỡng: disk_pct (% ổ đĩa), qc_fails (số lượt lỗi QC), cost_per_customer (đ/khách/tháng), tenant_down (có báo tenant dừng).",
-           params=[Param("key", "Ngưỡng", required=True), Param("value", "Giá trị", required=True)]),
-    Action("canh_bao", "Kiểm tra cảnh báo", ops.check_alerts, hidden=True, llm=True,
-           desc="So sánh sức khỏe, chi phí, tenant với ngưỡng; vi phạm thì báo Telegram và đưa đề xuất lên bảng Phòng ban (giao Product).",
-           params=[Param("auto_propose", "Tự đưa lên bảng", "bool", default=True)]),
-    Action("bao_cao_tuan", "Báo cáo vận hành tuần", ops.weekly_report, hidden=True, long=True, llm=True,
-           desc="Báo cáo một trang: uptime, sự cố, chi phí/khách so với tuần trước, bảng tenant, ổ đĩa, 3 khuyến nghị.",
-           params=[Param("to_board", "Đưa lên bảng", "bool", default=True)]),
-]))
-
-
-register(Agent("nguoidung", "Người dùng & gói", "🪪", "Tài khoản, vai trò, gói, chính sách gói, nhật ký kiểm toán", order=59, actions=[
-    Action("ds", "Danh sách người dùng", _accounts.admin_list, hidden=True, llm=True, desc="Người dùng superYou theo vai trò và gói; nhật ký kiểm toán.",
-           params=[Param("q", "Tìm"), Param("role", "Vai"), Param("plan", "Gói")]),
-    Action("sua", "Đổi gói, trạng thái, vai", _accounts.admin_set, hidden=True,
-           params=[Param("uid", "ID", required=True), Param("plan", "Gói"), Param("status", "Trạng thái"), Param("roles", "Vai (phẩy)"), Param("note", "Ghi chú")]),
-    Action("goi", "Chính sách gói", _plans.all_plans, hidden=True, llm=True, desc="Ma trận gói: giá, tính năng, giới hạn."),
-    Action("goi_sua", "Sửa chính sách gói", _plans.update, hidden=True,
-           params=[Param("plan", "Gói", required=True), Param("price", "Giá", "number"), Param("tagline", "Mô tả ngắn"), Param("features", "Tính năng (mỗi dòng)", "textarea"), Param("limits", "Giới hạn (JSON)")]),
-]))
-
-
-# ================================================================ Khách đăng ký (landing page, Marketplace công khai)
-register(Agent("khach", "Khách đăng ký", "📇", "Email khách để lại trên landing page và Marketplace, theo dõi phễu liên hệ", order=59, actions=[
-    Action("ds", "Khách đăng ký", leads.overview, hidden=True, llm=True,
-           desc="Danh sách khách để lại email trên landing page / Marketplace, trạng thái liên hệ, nguồn đến, số đăng ký theo ngày."),
-    Action("trangthai", "Đổi trạng thái khách", leads.set_status, hidden=True,
-           params=[Param("email", "Email", required=True), Param("status", "Trạng thái", required=True), Param("note", "Ghi chú", "textarea")]),
 ]))
 
 
