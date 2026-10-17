@@ -80,3 +80,23 @@ Dữ liệu và khoá **không bao giờ** nằm trong repo. Chúng ở `/opt/su
   - Mỗi 6 giờ superHuy nạp tóm tắt, ghi chú và toàn văn các nguồn vào `shared/data/knowledge/gemini/`. superHuy tra cứu ở đây khi trả lời.
   - Mỗi notebook có thêm một ghi chú mục lục trong Obsidian: `03 Resources/Gemini Notebook/`.
 - **Thêm nguồn mới:** khai báo trong `agents/knowledge_sources.py` và ghi `.md` vào `data/knowledge/<nguồn>/`.
+
+## Staging: xem trước nhánh PR trước khi gộp
+
+Staging là một dịch vụ thứ hai `superhuy-staging` trên cùng VPS. Nó tách hẳn khỏi bản chính: mã, venv, dữ liệu (`/opt/superhuy-staging/shared`), `.env`, bot Telegram và cổng (8790) đều riêng. Staging không đẩy ghi chú vào vault thật và không đụng `/opt/superhuy`.
+
+**Cài một lần (root):**
+
+1. DNS: bản ghi `A staging.roimaxxhub.com` → IP VPS.
+2. `sudo bash deploy/staging_vps.sh staging.roimaxxhub.com`
+3. Tạo một bot Telegram **thử** qua BotFather. Anh tự điền token của bot đó vào `/opt/superhuy-staging/shared/.env` (cùng `OWNER_CHAT_ID`, `LLM_API_KEY`). Không dùng chung token với superHuy chính, nếu không hai bot sẽ tranh tin nhắn. Muốn xem giao diện khách superYou thì đặt `SUPERYOU_TENANT=1`.
+
+**Mỗi lần xem trước:** GitHub › Actions › **Triển khai staging** › Run workflow, nhập tên nhánh. Workflow chạy test + gitleaks, chép nhánh lên, khởi động lại staging và chờ `/health`. Diag hiện dòng `staging:` (trạng thái + nhánh đang chạy).
+
+| Việc | Lệnh trên VPS |
+|---|---|
+| Trạng thái | `systemctl status superhuy-staging` |
+| Tạm tắt (đỡ RAM) | `sudo systemctl stop superhuy-staging` |
+| Log | `journalctl -u superhuy-staging -f` |
+
+Giới hạn: `MemoryMax=600M`, `CPUQuota=60%`, nên staging không làm chậm bản chính.
