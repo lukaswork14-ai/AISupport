@@ -488,7 +488,8 @@ class Handler(BaseHTTPRequestHandler):
             try:
                 from agents import pay
                 if u.path == "/api/pay/order":
-                    return self._json(200, pay.create_order(str(data.get("lid", ""))[:20], str(data.get("email", "")), "public"))
+                    au = acc_user(self.headers.get("X-Account", ""))  # đang đăng nhập Tài khoản -> đơn gắn với tài khoản
+                    return self._json(200, pay.create_order(str(data.get("lid", ""))[:20], str(data.get("email", "")), "public", uid=au["id"] if au else ""))
                 if u.path == "/api/pay/resend":
                     return self._json(200, pay.resend(str(data.get("email", ""))))
                 if u.path == "/api/pay/complain":
@@ -714,10 +715,11 @@ class Handler(BaseHTTPRequestHandler):
                     activation.active_day("acc:" + au["id"])
                 except Exception:
                     pass
-                ent = pay.entitlements(au["email"])["items"] if au.get("email") else []
+                ent = pay.account_orders(au["id"], au.get("email") or "")["items"]
                 return self._json(200, {"user": au, "entitlements": ent, "plan": plans.PLANS.get(au.get("plan"), plans.PLANS["free"]),
                                         "plans": plans.all_plans(), "flags": flags.for_user(au["id"] if not au.get("owner") else OWNER_CHAT_ID),
-                                        "roles": accounts.ROLES, "has_owner_app": bool(au.get("owner")), "payments_open": pay.payments_open()})
+                                        "roles": accounts.ROLES, "has_owner_app": bool(au.get("owner")), "payments_open": pay.payments_open(),
+                                        "buys_mail": pay._mail_ready()})
             if path == "/api/account/try":  # thẻ 15: biên bản thử ngay sau đăng ký (chỉ văn bản, không lưu nội dung)
                 from agents import trial_minutes
                 return self._json(200, trial_minutes.make("acc:" + au["id"], str(data.get("text", ""))[:20000], data.get("sample") is True))
@@ -747,6 +749,18 @@ class Handler(BaseHTTPRequestHandler):
             if path == "/api/account/upgrade":
                 from agents import pay
                 return self._json(200, pay.create_plan_order(au["email"], str(data.get("plan", ""))[:20], au["id"]))
+            if path in ("/api/account/orders", "/api/account/redownload", "/api/account/resend", "/api/account/complain"):  # Tài khoản › Sản phẩm đã mua
+                from agents import pay
+                em, oid = au.get("email") or "", str(data.get("oid", ""))[:20]
+                if path == "/api/account/orders":
+                    return self._json(200, pay.account_orders(au["id"], em))
+                if not _hello_ok("accbuy:" + au["id"]):
+                    return self._json(429, {"error": "Thao tác quá nhanh, thử lại sau ít phút nhé."})
+                if path == "/api/account/redownload":
+                    return self._json(200, pay.account_redownload(au["id"], em, oid))
+                if path == "/api/account/resend":
+                    return self._json(200, pay.account_resend(au["id"], em, oid))
+                return self._json(200, pay.account_complain(au["id"], em, oid, str(data.get("reason", ""))[:20], str(data.get("detail", ""))))
             return self._json(404, {"error": "not found"})
         except PermissionError as e:
             return self._json(401, {"error": str(e)})

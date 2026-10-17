@@ -195,7 +195,7 @@ def _code() -> str:
     return "SY" + "".join(secrets.choice("ABCDEFGHJKLMNPQRSTUVWXYZ23456789") for _ in range(6))
 
 
-def create_order(lid: str, email: str, channel: str = "public") -> dict:
+def create_order(lid: str, email: str, channel: str = "public", uid: str = "") -> dict:
     from agents import leads, market
     email = (email or "").strip().lower()[:254]
     if not leads.EMAIL_RE.match(email):
@@ -224,14 +224,14 @@ def create_order(lid: str, email: str, channel: str = "public") -> dict:
             if o["email"] == email and o["lid"] == lid and o["status"] == "pending" and o["expires"] > _iso():
                 return {"owned": False, "order": _public_order(o)}
         if price == 0:
-            o = {"id": secrets.token_hex(6), "code": _code(), "lid": lid, "name": x["name"], "type": x["type"], "email": email, "amount": 0,
+            o = {"id": secrets.token_hex(6), "code": _code(), "lid": lid, "name": x["name"], "type": x["type"], "email": email, "amount": 0, "uid": uid,
                  "seller": _seller(x), "status": "paid", "channel": channel, "created": _iso(), "paid_at": _iso(), "expires": _iso(_now() + dt.timedelta(days=1))}
             d["orders"][o["id"]] = o
             _save(d)
         else:
             if price < MIN_PRICE:
                 price = MIN_PRICE
-            o = {"id": secrets.token_hex(6), "code": _code(), "lid": lid, "name": x["name"], "type": x["type"], "email": email, "amount": price,
+            o = {"id": secrets.token_hex(6), "code": _code(), "lid": lid, "name": x["name"], "type": x["type"], "email": email, "amount": price, "uid": uid,
                  "billing": x.get("billing", "once"), "seller": _seller(x), "status": "pending", "channel": channel, "created": _iso(),
                  "expires": _iso(_now() + dt.timedelta(hours=ORDER_TTL_H)), "method": "vietqr"}
             d["orders"][o["id"]] = o
@@ -498,9 +498,20 @@ def maybe_sweep(every: int = 3600) -> None:
         logging.getLogger("pay").exception("Quét hết hạn gói lỗi")
 
 
-def deliver(oid: str) -> dict:
-    from agents import market
+def _fresh_links(o: dict, x: dict) -> list[dict]:
+    """Đóng gói bản mới nhất của sản phẩm và ký link tải 7 ngày (gắn mã đơn để đếm lượt tải)."""
     from webapp import server
+    PKG_DIR.mkdir(parents=True, exist_ok=True)
+    fname, data = _package(x)
+    p = PKG_DIR / f"{x['id']}-{x.get('version', '1')}-{fname}"
+    p.write_bytes(data)
+    link = server.sign_download(str(p), fname, ttl=7 * 86400) + "&o=" + o["id"]
+    return [{"name": fname, "url": link, "expires": _iso(_now() + dt.timedelta(days=7))}]
+
+
+def deliver(oid: str, email: bool = True) -> dict:
+    """Giao hàng (lần đầu) hoặc cấp lại link mới (gửi lại). Chỉ lần giao đầu mới đếm lượt bán và ghi quyền sở hữu mới."""
+    from agents import market
     with _LOCK:
         d = _load()
         o = d["orders"].get(oid)
@@ -516,25 +527,24 @@ def deliver(oid: str) -> dict:
         x = market.get_listing(o["lid"])
         if not x:
             raise ValueError("Sản phẩm không còn")
-        PKG_DIR.mkdir(parents=True, exist_ok=True)
-        fname, data = _package(x)
-        p = PKG_DIR / f"{x['id']}-{x.get('version', '1')}-{fname}"
-        p.write_bytes(data)
-        link = server.sign_download(str(p), fname, ttl=7 * 86400) + "&o=" + o["id"]
-        o["downloads"] = [{"name": fname, "url": link, "expires": _iso(_now() + dt.timedelta(days=7))}]
+        first = not o.get("delivered_at")
+        o["downloads"] = _fresh_links(o, x)
         o["receipt"] = receipt_url(o)
         o["status"] = "delivered"
-        o["delivered_at"] = _iso()
-        d["entitlements"].setdefault(o["email"], {})[o["lid"]] = {"order": o["id"], "at": o["delivered_at"], "version": x.get("version")}
-        market.count_sale(o["lid"])
+        if first:
+            o["delivered_at"] = _iso()
+            d["entitlements"].setdefault(o["email"], {})[o["lid"]] = {"order": o["id"], "at": o["delivered_at"], "version": x.get("version")}
+            market.count_sale(o["lid"])
         _save(d)
-    _email_receipt(o, x)
-    try:
-        from core import security
-        security.alert_once(f"sale:{o['id']}", f"💰 Marketplace: {o['email']} đã mua “{o['name']}” {vnd(o['amount'])}"
-                            + ("" if o["seller"].get("official") else f" (người bán {o['seller']['name']} nhận {vnd(o.get('seller_amount', 0))})") + ".", every=10**9)
-    except Exception:
-        pass
+    if email:
+        _email_receipt(o, x)
+    if first:
+        try:
+            from core import security
+            security.alert_once(f"sale:{o['id']}", f"💰 Marketplace: {o['email']} đã mua “{o['name']}” {vnd(o['amount'])}"
+                                + ("" if o["seller"].get("official") else f" (người bán {o['seller']['name']} nhận {vnd(o.get('seller_amount', 0))})") + ".", every=10**9)
+        except Exception:
+            pass
     return {"text": "Đã giao hàng", "downloads": o["downloads"]}
 
 
@@ -678,21 +688,24 @@ def payout_mark(sid: str, amount: int, ref: str = "") -> dict:
 
 
 def entitlements(email: str) -> dict:
+    """Tra cứu công khai theo email (trang /market › Đơn của tôi): chỉ tên và ngày, KHÔNG trả link tải hay hoá đơn
+    (ai biết email cũng gọi được). Link tải xem trong Tài khoản hoặc qua email."""
     d = _load()
     email = (email or "").strip().lower()
     ent = d["entitlements"].get(email, {})
     out = []
     for lid, e in ent.items():
         o = d["orders"].get(e["order"]) or {}
-        out.append({"lid": lid, "name": o.get("name", ""), "at": e["at"], "downloads": o.get("downloads") or [], "receipt": o.get("receipt", "")})
-    return {"items": out}
+        out.append({"lid": lid, "name": o.get("name", ""), "at": e["at"], "code": o.get("code", "")})
+    return {"items": out, "mail_ready": _mail_ready()}
 
 
 def resend(email: str) -> dict:
-    """Khách bấm 'Gửi lại link tải' (giới hạn tần suất ở server)."""
-    from agents import market
+    """Khách bấm 'Gửi lại link tải' trên trang công khai: link mới chỉ đi qua email (giới hạn tần suất ở server)."""
     d = _load()
     email = (email or "").strip().lower()
+    if not _mail_ready():
+        return {"ok": False, "sent": 0, "text": "Hiện chưa gửi được email. Bạn đăng nhập Tài khoản bằng email này để tải lại sản phẩm."}
     ids = [e["order"] for e in d["entitlements"].get(email, {}).values()]
     n = 0
     for oid in ids:
@@ -701,7 +714,117 @@ def resend(email: str) -> dict:
             n += 1
         except Exception:
             pass
-    return {"ok": True, "sent": n}
+    return {"ok": True, "sent": n, "text": f"Đã gửi lại {n} link mới tới email." if n else "Không có đơn nào để gửi lại."}
+
+
+# ------------------------------------------------------------------ sản phẩm đã mua trong Tài khoản
+RESEND_PER_DAY = 3
+COMPLAINT_REASONS = {"khong_tai": "Không tải hoặc không cài được sản phẩm",
+                     "sai_mo_ta": "Sản phẩm không đúng như mô tả",
+                     "hoan_tien": "Tôi muốn hoàn tiền theo chính sách 7 ngày",
+                     "khac": "Vấn đề khác"}
+
+
+def _owns(o: dict, uid: str, email: str) -> bool:
+    return bool(o) and ((uid and o.get("uid") == uid) or (email and o.get("email") == email))
+
+
+def account_orders(uid: str, email: str) -> dict:
+    """Đơn của một tài khoản: theo uid (mua khi đã đăng nhập) hoặc email tài khoản (mua trước khi có tài khoản).
+    Lần đầu thấy đơn theo email thì gắn uid vào đơn, để sau này đơn vẫn thuộc tài khoản."""
+    email = (email or "").strip().lower()
+    now = _iso()
+    with _LOCK:
+        d = _load()
+        mine = [o for o in d["orders"].values() if _owns(o, uid, email) and o["status"] in ("paid", "delivered", "refunded")]
+        changed = False
+        for o in mine:
+            if uid and not o.get("uid"):
+                o["uid"] = uid
+                changed = True
+        if changed:
+            _save(d)
+    items = []
+    for o in sorted(mine, key=lambda q: q.get("paid_at") or q["created"], reverse=True):
+        paid = o.get("paid_at") or o["created"]
+        dls = [{"name": x["name"], "url": x["url"], "expires": x["expires"], "expired": x["expires"] < now} for x in (o.get("downloads") or [])]
+        refund_until = _iso(dt.datetime.fromisoformat(paid) + dt.timedelta(days=REFUND_DAYS))
+        c = o.get("complaint") or {}
+        items.append({"id": o["id"], "code": o["code"], "name": o["name"], "type": o.get("type", ""), "kind": o.get("kind", "product"),
+                      "amount": o["amount"], "amount_text": vnd(o["amount"]), "status": o["status"], "status_text": STATUS.get(o["status"], o["status"]),
+                      "paid_at": paid, "downloads": dls, "receipt": o.get("receipt", ""), "plan_until": o.get("plan_until", ""),
+                      "can_download": o["status"] == "delivered" and o.get("kind") != "plan",
+                      "refund_until": refund_until if o["amount"] and o["status"] == "delivered" else "",
+                      "refundable": bool(o["amount"]) and o["status"] == "delivered" and now <= refund_until,
+                      "complaint": {"status": c.get("status", ""), "at": c.get("at", ""), "reason": c.get("reason", ""), "reply": c.get("reply", "")} if c else None,
+                      "can_complain": o["status"] == "delivered" and not c})
+    return {"items": items, "mail_ready": _mail_ready(), "reasons": COMPLAINT_REASONS, "refund_days": REFUND_DAYS}
+
+
+def _account_order(uid: str, email: str, oid: str) -> dict:
+    o = _load()["orders"].get(oid)
+    if not _owns(o, uid, (email or "").strip().lower()):
+        raise ValueError("Không tìm thấy đơn trong tài khoản của bạn.")
+    return o
+
+
+def account_redownload(uid: str, email: str, oid: str) -> dict:
+    """Tải lại: cấp link mới ngay trên trang (không gửi email). Lượt tải vẫn bị giới hạn theo đơn."""
+    o = _account_order(uid, email, oid)
+    if o["status"] != "delivered" or o.get("kind") == "plan":
+        raise ValueError("Đơn này không có tệp để tải.")
+    if (o.get("dl") or {}).get("total", 0) >= DL_TOTAL:
+        raise ValueError("Đơn đã dùng hết lượt tải. Liên hệ hỗ trợ nếu bạn cần thêm.")
+    r = deliver(oid, email=False)
+    return {"text": "Đã tạo link tải mới, dùng trong 7 ngày.", "downloads": r["downloads"]}
+
+
+def account_resend(uid: str, email: str, oid: str) -> dict:
+    """Gửi lại link mới và hoá đơn qua email (tối đa RESEND_PER_DAY lần/ngày mỗi đơn)."""
+    o = _account_order(uid, email, oid)
+    if o["status"] != "delivered":
+        raise ValueError("Đơn chưa giao nên chưa gửi lại được.")
+    if not _mail_ready():
+        raise ValueError("Hiện chưa gửi được email. Bạn bấm Tải lại để lấy link ngay tại đây.")
+    with _LOCK:
+        d = _load()
+        oo = d["orders"][oid]
+        today = _iso()[:10]
+        rs = oo.setdefault("resend", {"day": today, "n": 0})
+        if rs["day"] != today:
+            rs.update({"day": today, "n": 0})
+        if rs["n"] >= RESEND_PER_DAY:
+            raise ValueError("Đơn này đã gửi lại nhiều lần hôm nay, thử lại vào ngày mai.")
+        rs["n"] += 1
+        _save(d)
+    if o.get("kind") == "plan":
+        _email_plan_receipt(o)
+    else:
+        deliver(oid, email=True)
+    return {"text": f"Đã gửi lại tới {o['email']}."}
+
+
+def _email_plan_receipt(o: dict):
+    try:
+        from agents import mailbox
+        platform = "gmail" if mailbox.gmail_ready() else "lark"
+        mailbox.send(platform, o["email"], f"[superYou] Hoá đơn {o['code']}: {o['name']}",
+                     f"Mã đơn: {o['code']}\nSố tiền: {vnd(o['amount'])}\nGói dùng đến hết: {o.get('plan_until', '')}\nHoá đơn: {o.get('receipt', '')}\n\nsuperYou · Roimaxx")
+    except Exception:
+        import logging
+        logging.getLogger("pay").exception("Gửi lại hoá đơn gói lỗi")
+
+
+def account_complain(uid: str, email: str, oid: str, reason_key: str, detail: str = "") -> dict:
+    """Khiếu nại một chạm từ Tài khoản: chọn lý do có sẵn, ghi thêm nếu muốn."""
+    o = _account_order(uid, email, oid)
+    base = COMPLAINT_REASONS.get(reason_key)
+    if not base:
+        raise ValueError("Chọn lý do khiếu nại.")
+    detail = (detail or "").strip()[:400]
+    if reason_key == "khac" and len(detail) < 10:
+        raise ValueError("Bạn mô tả vấn đề cụ thể hơn (ít nhất 10 ký tự).")
+    return complain(o["id"], o["email"], base + (": " + detail if detail else "") + " [từ Tài khoản]")
 
 
 def price_reco(x: dict) -> dict:
