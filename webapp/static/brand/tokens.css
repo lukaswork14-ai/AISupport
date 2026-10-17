@@ -1,0 +1,10 @@
+/* superYou brand v1 — biến màu và chữ dùng chung (đã duyệt 17/10/2026). */
+:root{
+  --sy-sun:#FFD23F;      /* Vàng nắng: chủ đạo, nút chính (chữ mực trên vàng) */
+  --sy-ink:#14111A;      /* Mực: chữ, nền tối, nét logo */
+  --sy-paper:#FFF8E7;    /* Kem giấy: nền sáng */
+  --sy-sand:#6B5F45;     /* Cát: chữ phụ trên nền kem */
+  --sy-coral:#FF6B4A;    /* San hô: nhấn, không dùng cho chữ nhỏ */
+  --sy-done:#17784B;     /* Xanh xong: trạng thái hoàn tất */
+  --sy-font:'Be Vietnam Pro',system-ui,sans-serif;
+}

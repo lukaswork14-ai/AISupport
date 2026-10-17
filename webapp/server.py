@@ -19,7 +19,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qsl, quote, urlparse
 
-from config import DATA_DIR, OWNER_CHAT_ID, TELEGRAM_TOKEN
+from config import DATA_DIR, IS_TENANT, OWNER_CHAT_ID, TELEGRAM_TOKEN
 from core import registry, security
 
 log = logging.getLogger("webapp")
@@ -102,7 +102,15 @@ APP_FILES = {"/manifest.webmanifest": "manifest.webmanifest", "/sw.js": "sw.js",
              **{f"/icons/huy-{n}.png": f"icons/huy-{n}.png" for n in ("128", "180", "192", "512", "maskable-512")},
              "/install": "install/index.html", "/install/": "install/index.html", "/install/superHuy.mobileconfig": "install/superHuy.mobileconfig",
              "/landing": "landing/index.html", "/landing/": "landing/index.html",
-             "/market": "market/index.html", "/market/": "market/index.html"}
+             "/market": "market/index.html", "/market/": "market/index.html",
+             # Nhận diện superYou v1 (logo, icon, ảnh chia sẻ, sticker Su, biến màu)
+             **{f"/brand/{n}": f"brand/{n}" for n in (
+                 "mark.svg", "mark-ink.svg", "app-icon.svg", "app-icon-maskable.svg", "bot-avatar.svg", "su.svg", "tokens.css",
+                 "icon-128.png", "icon-180.png", "icon-192.png", "icon-512.png", "icon-maskable-512.png", "bot-avatar-512.png", "og.png",
+                 *[f"stickers/su-{k}.{e}" for k in ("chao", "dang-nghe", "dang-lam", "xong-roi", "hoi-truoc") for e in ("svg", "png")])}}
+if IS_TENANT:  # instance khách: app cài lên điện thoại mang tên và icon superYou, không phải superHuy của anh Huy
+    APP_FILES.update({"/manifest.webmanifest": "manifest-superyou.webmanifest", "/apple-touch-icon.png": "brand/icon-180.png",
+                      "/apple-touch-icon-precomposed.png": "brand/icon-180.png", "/favicon.ico": "brand/icon-128.png"})
 _HELLO: dict[str, list[float]] = {}
 
 
@@ -284,7 +292,7 @@ class Handler(BaseHTTPRequestHandler):
         if u.path.startswith("/market/") and re.fullmatch(r"/market/[a-z0-9-]{1,80}", u.path):  # trang chi tiết sản phẩm công khai
             return self._file(STATIC / "market/index.html", cache=False)
         if u.path in APP_FILES:  # ứng dụng iPhone (PWA): manifest, service worker, biểu tượng
-            return self._file(STATIC / APP_FILES[u.path], cache=u.path.startswith("/icons/"))
+            return self._file(STATIC / APP_FILES[u.path], cache=u.path.startswith(("/icons/", "/brand/")))
         if u.path == "/health":
             return self._json(200, {"ok": True})
         if u.path == "/pay/receipt":  # hoá đơn (link ký)
