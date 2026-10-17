@@ -132,8 +132,15 @@ def _fail(key: str):
     _FAILS.setdefault(key, []).append(time.time())
 
 
-def signup(email: str, password: str, name: str, role: str = "member", company: str = "", plan: str = "free") -> dict:
+TERMS_VERSION = "2026-10-17-nhap"  # đổi khi điều khoản/chính sách có bản mới (sau khi luật sư rà)
+
+
+def signup(email: str, password: str, name: str, role: str = "member", company: str = "", plan: str = "free",
+           agree: bool = False, ip: str = "") -> dict:
+    """agree: người dùng tự tích ô đồng ý (không tích sẵn). Lưu phiên bản điều khoản, thời điểm, IP vào tài khoản và nhật ký."""
     from core import plans
+    if not agree:
+        raise ValueError("Bạn cần đọc và đồng ý Điều khoản và Quyền riêng tư để tạo tài khoản.")
     email = (email or "").strip().lower()[:254]
     if not EMAIL_RE.match(email):
         raise ValueError("Email chưa đúng")
@@ -150,14 +157,22 @@ def signup(email: str, password: str, name: str, role: str = "member", company: 
         if len(d["users"]) >= 50000:
             raise ValueError("Tạm dừng nhận đăng ký mới")
         uid = "m" + secrets.token_hex(5)
-        plan = plan if plan in plans.PLANS and plan not in ("enterprise",) else "free"
+        # Gói trả phí chỉ có sau khi thanh toán (pay._deliver_plan) hoặc chủ sàn đặt trong HQ; đăng ký chỉ nhận free/trial.
+        plan = plan if plan in ("free", "trial") and plan in plans.PLANS else "free"
         u = {"id": uid, "email": email, "name": name, "pw": _hash(password), "roles": list(dict.fromkeys(["member", role])), "plan": plan,
-             "status": "active", "created": _now(), "last_login": "", "last_role": role, "company": (company or "").strip()[:80]}
+             "status": "active", "created": _now(), "last_login": "", "last_role": role, "company": (company or "").strip()[:80],
+             "consent": {"terms": TERMS_VERSION, "at": _now(), "ip": (ip or "")[:45]}}
         if plan == "trial":
             u["trial_until"] = (dt.date.today() + dt.timedelta(days=plans.TRIAL_DAYS)).isoformat()
         d["users"][uid] = u
         audit(d, email, "Đăng ký", role)
+        audit(d, email, "Đồng ý điều khoản", TERMS_VERSION)
         _save(d)
+    try:
+        from core import activation
+        activation.signup("acc:" + uid)
+    except Exception:
+        pass
     if role == "seller":
         _link_seller(u)
     try:

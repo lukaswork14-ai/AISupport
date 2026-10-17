@@ -33,6 +33,7 @@ article{ display:none; min-width:0 } article.on{ display:block }
 article h2{ font-size:24px; letter-spacing:-.03em; margin:0 0 4px } article .upd{ color:var(--muted); font-size:14px; margin:0 0 18px }
 article h3{ font-size:17px; margin:22px 0 6px } article p,article li{ max-width:70ch } article ol,article ul{ padding-left:22px }
 .note{ background:var(--soft); border-radius:14px; padding:14px 16px; margin:14px 0 }
+.note.draft{ border:2px solid var(--yellow); max-width:760px }
 .card{ border:1.5px solid var(--line); border-radius:18px; padding:18px; margin-top:22px; max-width:560px }
 label.f{ display:flex; flex-direction:column; gap:6px; font-weight:700; font-size:14px; margin-top:10px }
 label.f input,label.f textarea{ padding:11px 12px; border-radius:12px; border:1.5px solid var(--line); background:var(--soft); font:inherit; color:var(--ink); width:100% }
@@ -47,7 +48,8 @@ footer{ border-top:1px solid var(--line); padding:18px 0; color:var(--muted); fo
   <a class="logo" href="/landing"><img src="/brand/mark.svg" alt="">superYou</a>
   <nav class="top"><a href="/market">Marketplace</a><a href="/login">Tài khoản</a></nav>
 </div></header>
-<section class="hero"><div class="wrap"><h1>Điều khoản và chính sách</h1><p>Cách superYou và Marketplace làm việc với bạn: rõ ràng, một trang mỗi chủ đề.</p></div></section>
+<section class="hero"><div class="wrap"><h1>Điều khoản và chính sách</h1><p>Cách superYou và Marketplace làm việc với bạn: rõ ràng, một trang mỗi chủ đề.</p>
+  <div class="note draft" role="note"><b>Bản nháp, chưa áp dụng.</b> Các trang này đang được luật sư rà soát và có thể thay đổi. Trong giai đoạn thử nghiệm, superYou tạm chưa nhận thanh toán cho gói trả phí và sản phẩm Marketplace có phí.</div></div></section>
 <div class="wrap layout">
   <nav class="side" id="side">
     <a href="/dieu-khoan" data-k="terms">Điều khoản sử dụng</a>
@@ -66,7 +68,7 @@ footer{ border-top:1px solid var(--line); padding:18px 0; color:var(--muted); fo
       <h3>3. Nội dung và AI</h3>
       <p>Câu trả lời của trợ lý là gợi ý, không phải tư vấn pháp lý, tài chính hay y tế. Bạn quyết định trước khi hành động. Trợ lý không gửi thư, đăng bài hay thanh toán thay bạn khi bạn chưa duyệt.</p>
       <h3>4. Thanh toán</h3>
-      <p>Gói trả phí và sản phẩm Marketplace thanh toán bằng chuyển khoản VietQR hoặc cổng thanh toán. Giá đã bao gồm phí sàn. Hoá đơn điện tử gửi qua email khi bạn cung cấp thông tin xuất hoá đơn.</p>
+      <p>Hiện tạm chưa nhận thanh toán. Khi mở bán, gói trả phí và sản phẩm Marketplace thanh toán bằng chuyển khoản VietQR hoặc cổng thanh toán; giá đã bao gồm phí sàn; hoá đơn điện tử gửi qua email khi bạn cung cấp thông tin xuất hoá đơn. Đơn vị bán và xuất hoá đơn sẽ được ghi rõ ở đây trước khi mở bán.</p>
       <h3>5. Chấm dứt</h3>
       <p>Bạn có thể ngừng dùng bất cứ lúc nào; dữ liệu trong Second Brain của bạn vẫn là của bạn và tải về được. Gói Doanh nghiệp có điều khoản riêng trong hợp đồng.</p>
       <h3>6. Liên hệ</h3>
@@ -75,12 +77,12 @@ footer{ border-top:1px solid var(--line); padding:18px 0; color:var(--muted); fo
     <article data-k="refund">
       <h2>Chính sách hoàn tiền</h2>
       <p class="upd">Cập nhật 17/10/2026 · Áp dụng cho sản phẩm Marketplace và gói Pro.</p>
-      <div class="note">Tóm tắt: sản phẩm số lỗi hoặc không đúng mô tả được hoàn 100% trong 7 ngày. Gói Pro hoàn phần chưa dùng trong 14 ngày đầu.</div>
+      <div class="note">Tóm tắt: trong 7 ngày, sản phẩm bạn chưa cài hoặc mới cài dưới 2 lần, hoặc không đúng mô tả, được hoàn 100%. Gói Pro hoàn phần chưa dùng trong 14 ngày đầu.</div>
       <h3>Sản phẩm Marketplace (skill, workflow, gói tri thức, phòng ban AI)</h3>
       <ol>
-        <li>Trong 7 ngày kể từ khi mua, nếu sản phẩm không cài được, không đúng mô tả hoặc không hoạt động như trang sản phẩm nêu, bạn gửi khiếu nại ở dưới và được hoàn 100%.</li>
+        <li>Trong 7 ngày kể từ khi mua, bạn được hoàn 100% nếu chưa cài sản phẩm hoặc mới cài dưới 2 lần, hoặc sản phẩm không cài được, không đúng mô tả, không hoạt động như trang sản phẩm nêu. Gửi khiếu nại ở dưới hoặc trả lời email hoá đơn.</li>
         <li>Chủ sàn phản hồi trong 2 ngày làm việc; nếu đúng, tiền hoàn về tài khoản bạn chuyển trong 5 ngày làm việc và quyền tải bị thu hồi.</li>
-        <li>Không hoàn tiền khi bạn đổi ý sau khi đã tải, hoặc sản phẩm miễn phí.</li>
+        <li>Không hoàn tiền với sản phẩm miễn phí, hoặc khi đã cài từ 2 lần trở lên và sản phẩm đúng mô tả.</li>
       </ol>
       <h3>Gói Pro</h3>
       <p>Trong 14 ngày đầu của chu kỳ trả phí đầu tiên, bạn được hoàn phần chưa dùng theo tỷ lệ ngày. Gói Dùng thử miễn phí nên không có hoàn tiền.</p>
@@ -99,9 +101,11 @@ footer{ border-top:1px solid var(--line); padding:18px 0; color:var(--muted); fo
       <h2>Quyền riêng tư</h2>
       <p class="upd">Cập nhật 17/10/2026</p>
       <h3>Dữ liệu chúng tôi giữ</h3>
-      <ul><li>Tài khoản: email, tên, công ty, gói, nhật ký đăng nhập.</li><li>Nội dung bạn tạo với trợ lý: ghi chú, biên bản, workflow, sản phẩm Marketplace.</li><li>Đơn hàng: sản phẩm, số tiền, mã giao dịch; không lưu số thẻ.</li></ul>
+      <ul><li>Tài khoản: email, tên, công ty, gói, nhật ký đăng nhập, thời điểm bạn đồng ý điều khoản.</li><li>Nội dung bạn tạo với trợ lý: ghi chú, biên bản, workflow, sản phẩm Marketplace.</li><li>Ghi âm cuộc họp (khi bạn dùng): tệp âm thanh, lời thoại tách theo người nói, và nhật ký xác nhận đồng ý ghi âm.</li><li>Đơn hàng: sản phẩm, số tiền, mã giao dịch; không lưu số thẻ.</li><li>Số liệu sử dụng: ngày bạn mở app, lần có kết quả đầu tiên; không gồm nội dung.</li></ul>
       <h3>AI xử lý ở đâu</h3>
-      <p>Gói thường dùng mô hình AI đám mây qua kết nối mã hoá; nội dung không dùng để huấn luyện. Gói Doanh nghiệp Private chạy AI tại chỗ trên máy chủ của bạn, dữ liệu không rời máy chủ.</p>
+      <p>Gói thường gửi văn bản bạn nhập, và âm thanh gốc của cuộc họp khi bạn dùng tính năng biên bản, tới mô hình AI đám mây qua OpenRouter bằng kết nối mã hoá. Máy chủ của nhà cung cấp mô hình có thể đặt ở nước ngoài. Danh sách nhà cung cấp và điều kiện xử lý dữ liệu sẽ được công bố trong bản chính thức. Gói Doanh nghiệp Private chạy AI tại chỗ trên máy chủ của bạn, dữ liệu không rời máy chủ.</p>
+      <h3>Ghi âm cuộc họp</h3>
+      <p>Trước mỗi bản ghi, bạn phải xác nhận đã thông báo cho mọi người tham gia và được họ đồng ý. Thiếu xác nhận thì superYou không chép lời. Liên kết chia sẻ biên bản mặc định không kèm lời thoại và âm thanh; muốn kèm, bạn phải chọn và xác nhận lại.</p>
       <h3>Quyền của bạn</h3>
       <p>Bạn xem, sửa, tải về hoặc yêu cầu xoá dữ liệu tài khoản bất cứ lúc nào trong Tài khoản › Hồ sơ hoặc qua email hỗ trợ. Mật khẩu được băm (scrypt), passkey lưu theo chuẩn WebAuthn.</p>
     </article>
@@ -113,7 +117,7 @@ footer{ border-top:1px solid var(--line); padding:18px 0; color:var(--muted); fo
       <h3>2. Duyệt và lên kệ</h3>
       <p>Chủ sàn duyệt trong 2 ngày làm việc; có thể yêu cầu sửa. Sản phẩm có thể bị gỡ khi có khiếu nại đúng.</p>
       <h3>3. Phí và thanh toán</h3>
-      <p>Sàn giữ 20% trên mỗi đơn, bạn nhận 80%. Doanh thu đối soát trong Console người bán; chuyển khoản vào tài khoản ngân hàng bạn khai báo vào ngày 5 hằng tháng khi số dư từ 200.000đ.</p>
+      <p>Sàn giữ 20% trên mỗi đơn, bạn nhận 80%. Doanh thu đối soát trong Console người bán; chuyển khoản vào tài khoản ngân hàng bạn khai báo vào ngày 10 hằng tháng khi số dư từ 200.000đ. Việc bán hàng có phí đang tạm đóng trong giai đoạn thử nghiệm.</p>
       <h3>4. Khiếu nại và khoá</h3>
       <p>Ba khiếu nại đúng trong 30 ngày thì tài khoản người bán tạm khoá và sản phẩm được gỡ cho tới khi xử lý xong. Hoàn tiền cho người mua trừ vào doanh thu của bạn.</p>
       <h3>5. Sở hữu</h3>

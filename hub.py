@@ -883,17 +883,19 @@ register(Agent("hoc", "Học tập", "📚", "Khoá học theo chủ đề: bài
 
 
 # ================================================================ Meeting Studio
-def hop_tao(upload_id: str, name: str = "", title: str = "", hint: str = "", started: str = "", source: str = "Tải file") -> dict:
+def hop_tao(upload_id: str, name: str = "", title: str = "", hint: str = "", started: str = "", source: str = "Tải file", consent: str = "") -> dict:
     if not re.fullmatch(r"[A-Za-z0-9_-]{6,40}", upload_id or ""):
         raise ValueError("Mã tải lên không hợp lệ")
+    # consent="1": người dùng vừa bấm [Ghi âm] trên màn xác nhận đồng ý (bản của khách bắt buộc, xem meeting.rec_policy)
+    cons = meeting.make_consent("web:" + (source or "Tải file")) if str(consent) == "1" else None
     part = meeting.INBOX / f"{upload_id}.part"
     if not part.exists() or part.stat().st_size < 2000:
         raise ValueError("Chưa nhận được file âm thanh, anh thử tải lại.")
     ext = (re.search(r"\.([A-Za-z0-9]{2,5})$", name or "") or [None, "bin"])[1].lower()
     raw = part.with_name(f"{upload_id}.{ext}")
     part.rename(raw)
-    m = meeting.create(str(raw), source or "Tải file", title or "", hint or "", started or "")
-    return {"id": m["id"], "text": "Đã nhận âm thanh. superHuy đang chép lời và biên tập, xong sẽ báo anh."}
+    m = meeting.create(str(raw), source or "Tải file", title or "", hint or "", started or "", consent=cons)
+    return {"id": m["id"], "text": "Đã nhận âm thanh. Trợ lý đang chép lời và biên tập, xong sẽ báo bạn."}
 
 
 def hop_danhsach() -> dict:
@@ -927,16 +929,52 @@ def hop_tu_dien(words: str) -> dict:
     return {"text": "Đã thêm vào từ điển chép lời: " + words}
 
 
+# Lời thoại và âm thanh gốc chỉ được kèm khi người dùng tự chọn trong app và bấm xác nhận (thẻ 15, họp 17/10/2026).
+# Đường gọi của trợ lý (llm=True) luôn bỏ hai phần này, nên trợ lý không thể tự ý công khai lời thoại/âm thanh.
+SHARE_SENSITIVE = ("transcript", "audio")
+SHARE_STRIPPED_NOTE = "\n\n(Liên kết chưa kèm lời thoại/âm thanh. Muốn kèm, mở app › Họp › Chia sẻ, chọn phần đó và xác nhận.)"
+
+
+def _share_parts(parts: str, allow_sensitive: bool) -> tuple[str | None, bool]:
+    xs = [p.strip() for p in (parts or "").split(",") if p.strip()]
+    if not xs:
+        return None, False
+    kept = xs if allow_sensitive else [p for p in xs if p not in SHARE_SENSITIVE]
+    return (",".join(kept) or None), len(kept) != len(xs)
+
+
+def _stripped(r: dict, stripped: bool) -> dict:
+    if stripped:
+        r = {**r, "text": (r.get("text") or "") + SHARE_STRIPPED_NOTE}
+    return r
+
+
 def hop_chia_se(mid: str, parts: str = "", days: int = 14, note: str = "") -> dict:
-    return meeting_share.share_text(mid, parts or None, days, note)
+    ps, cut = _share_parts(parts, False)
+    return _stripped(meeting_share.share_text(mid, ps, days, note), cut)
 
 
 def hop_chia_se_email(mid: str, to: str, parts: str = "", note: str = "", cc: str = "", platform: str = "gmail", days: int = 14) -> dict:
-    return meeting_share.send_email(mid, to, parts or None, days, note, platform, cc)
+    ps, cut = _share_parts(parts, False)
+    return _stripped(meeting_share.send_email(mid, to, ps, days, note, platform, cc), cut)
 
 
 def hop_chia_se_lark(mid: str, chat_id: str, parts: str = "", note: str = "", days: int = 14) -> dict:
-    return meeting_share.send_lark(mid, chat_id, parts or None, days, note)
+    ps, cut = _share_parts(parts, False)
+    return _stripped(meeting_share.send_lark(mid, chat_id, ps, days, note), cut)
+
+
+def hop_chia_se_ui(mid: str, channel: str = "web", parts: str = "", days: int = 14, note: str = "", to: str = "", cc: str = "",
+                   platform: str = "gmail", chat_id: str = "", confirm: str = "") -> dict:
+    """Chia sẻ từ màn Chia sẻ của app (người dùng bấm). Có lời thoại/âm thanh thì bắt buộc confirm=1 (app hỏi lại trước)."""
+    ps, _ = _share_parts(parts, True)
+    if any(p in SHARE_SENSITIVE for p in (ps or "").split(",")) and str(confirm) != "1":
+        raise ValueError("Liên kết có lời thoại hoặc âm thanh: cần xác nhận trước khi chia sẻ.")
+    if channel == "email":
+        return meeting_share.send_email(mid, to, ps, days, note, platform, cc)
+    if channel == "lark":
+        return meeting_share.send_lark(mid, chat_id, ps, days, note)
+    return meeting_share.share_text(mid, ps, days, note)
 
 
 def hop_lark_nhom() -> dict:
@@ -956,7 +994,8 @@ register(Agent("hop", "Họp", "🎙", "Meeting Studio: ghi âm, chép lời, bi
            params=[Param("question", "Câu hỏi", "textarea", required=True), Param("meeting_id", "ID cuộc họp (tuỳ chọn)")]),
     Action("tao", "Tạo cuộc họp từ file đã tải", hop_tao, hidden=True,
            params=[Param("upload_id", "Mã tải lên", required=True), Param("name", "Tên file"), Param("title", "Tiêu đề"),
-                   Param("hint", "Ghi chú bối cảnh"), Param("started", "Bắt đầu lúc"), Param("source", "Nguồn")]),
+                   Param("hint", "Ghi chú bối cảnh"), Param("started", "Bắt đầu lúc"), Param("source", "Nguồn"),
+                   Param("consent", "Đã xác nhận đồng ý ghi âm (1)")]),
     Action("doi_ten", "Đổi tên người nói", meeting.rename_speaker, hidden=True, llm=True, desc="Đặt tên thật cho người nói S1, S2... trong 1 cuộc họp.",
            params=[Param("mid", "ID cuộc họp", required=True), Param("spk", "Nhãn (S1...)", required=True), Param("name", "Tên", required=True)]),
     Action("nhan", "Sửa phân loại", hop_nhan, hidden=True, llm=True,
@@ -972,7 +1011,8 @@ register(Agent("hop", "Họp", "🎙", "Meeting Studio: ghi âm, chép lời, bi
     Action("chia_se", "Tạo liên kết chia sẻ biên bản", hop_chia_se, hidden=True, llm=True,
            desc="Tạo trang web chia sẻ biên bản 1 cuộc họp (tóm tắt, quyết định, ai làm gì, sơ đồ, dòng thời gian) + tin nhắn soạn sẵn "
                 "để anh dán vào Zalo/Telegram/Lark/Messenger. parts: các phần, cách nhau dấu phẩy, trong "
-                "summary,decisions,next_steps,mindmap,sections,open_questions,suggestions,transcript,audio (bỏ trống = mặc định, không gồm lời thoại/âm thanh).",
+                "summary,decisions,next_steps,mindmap,sections,open_questions,suggestions (bỏ trống = mặc định). Lời thoại/âm thanh KHÔNG chia sẻ được qua trợ lý: "
+                "người dùng tự chọn trong app › Họp › Chia sẻ.",
            params=[Param("mid", "ID cuộc họp", required=True), Param("parts", "Các phần", default=""),
                    Param("days", "Số ngày hiệu lực", "number", default=14), Param("note", "Lời nhắn kèm", default="")]),
     Action("chia_se_email", "Gửi biên bản qua email", hop_chia_se_email, hidden=True, llm=True,
@@ -985,6 +1025,11 @@ register(Agent("hop", "Họp", "🎙", "Meeting Studio: ghi âm, chép lời, bi
            params=[Param("mid", "ID cuộc họp", required=True), Param("chat_id", "ID nhóm Lark", required=True),
                    Param("parts", "Các phần", default=""), Param("note", "Lời nhắn kèm", default=""), Param("days", "Số ngày hiệu lực", "number", default=14)]),
     Action("lark_nhom", "Các nhóm Lark có bot", hop_lark_nhom, hidden=True, llm=True, desc="Danh sách nhóm Lark (id, tên) mà bot superHuy đang ở trong."),
+    Action("chia_se_ui", "Chia sẻ biên bản (từ app)", hop_chia_se_ui, hidden=True,
+           params=[Param("mid", "ID cuộc họp", required=True), Param("channel", "web|email|lark", default="web"), Param("parts", "Các phần", default=""),
+                   Param("days", "Số ngày hiệu lực", "number", default=14), Param("note", "Lời nhắn kèm", default=""), Param("to", "Email", default=""),
+                   Param("cc", "CC", default=""), Param("platform", "gmail hoặc lark", default="gmail"), Param("chat_id", "ID nhóm Lark", default=""),
+                   Param("confirm", "Đã xác nhận kèm lời thoại/âm thanh (1)", default="")]),
     Action("chia_se_ds", "Các liên kết đã chia sẻ", meeting_share.list_for, hidden=True, params=[Param("mid", "ID", required=True)]),
     Action("thu_hoi", "Thu hồi liên kết chia sẻ", meeting_share.revoke, hidden=True, llm=True,
            desc="Thu hồi 1 liên kết chia sẻ biên bản (người khác không mở được nữa).", params=[Param("token", "Mã liên kết", required=True)]),

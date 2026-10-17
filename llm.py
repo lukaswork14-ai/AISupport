@@ -4,8 +4,62 @@ from openai import OpenAI
 from config import LLM_API_KEY, LLM_BASE_URL
 
 
-def make_client() -> OpenAI:
-    return OpenAI(base_url=LLM_BASE_URL, api_key=LLM_API_KEY, timeout=90)
+def _record_usage(r, model: str):
+    """Ghi token + chi phí thật (OpenRouter trả usage.cost bằng USD) vào ops.json của chính instance này.
+    Mỗi khách superYou là một instance riêng (DATA_DIR riêng) nên số liệu đã tách theo khách. Lỗi ghi không làm hỏng lượt gọi."""
+    try:
+        u = getattr(r, "usage", None)
+        if not u:
+            return
+        cost = getattr(u, "cost", None)
+        if cost is None and isinstance(getattr(u, "model_extra", None), dict):
+            cost = u.model_extra.get("cost")
+        from agents import ops
+        ops.record_llm(getattr(u, "prompt_tokens", 0) or 0, getattr(u, "completion_tokens", 0) or 0, model or getattr(r, "model", "") or "",
+                       cost_usd=float(cost) if cost is not None else None)
+    except Exception:
+        pass
+
+
+class _Completions:
+    def __init__(self, inner):
+        self._inner = inner
+
+    def create(self, *a, **kw):
+        if not kw.get("stream") and "openrouter" in (LLM_BASE_URL or ""):
+            eb = dict(kw.get("extra_body") or {})
+            eb.setdefault("usage", {"include": True})  # OpenRouter: trả kèm chi phí thật của lượt gọi
+            kw["extra_body"] = eb
+        r = self._inner.create(*a, **kw)
+        if not kw.get("stream"):
+            _record_usage(r, kw.get("model", ""))
+        return r
+
+    def __getattr__(self, k):
+        return getattr(self._inner, k)
+
+
+class _Chat:
+    def __init__(self, inner):
+        self._inner = inner
+        self.completions = _Completions(inner.completions)
+
+    def __getattr__(self, k):
+        return getattr(self._inner, k)
+
+
+class _MeteredClient:
+    """Bọc OpenAI client: mọi lượt chat.completions.create đều được đo token và chi phí (thẻ 16, họp 17/10)."""
+    def __init__(self, inner: OpenAI):
+        self._inner = inner
+        self.chat = _Chat(inner.chat)
+
+    def __getattr__(self, k):
+        return getattr(self._inner, k)
+
+
+def make_client():
+    return _MeteredClient(OpenAI(base_url=LLM_BASE_URL, api_key=LLM_API_KEY, timeout=90))
 
 
 # Model suy luận (DeepSeek...) dễ "nghĩ" hết ngân sách token và trả lời rỗng: giới hạn mức suy luận.

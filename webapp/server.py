@@ -162,6 +162,9 @@ def _app_index() -> Path:
             s = s.replace("<title>superHuy</title>", "<title>superYou</title>", 1)
             s = s.replace('content="#F4F1F8"', 'content="#FFF8E7"').replace('content="#131019"', 'content="#14111A"')
             s = s.replace("</head>", f"<style id=\"superyou-brand\">{SUPERYOU_APP_THEME}</style>\n</head>", 1)
+            # thẻ 15: app khách chỉ Chat · Hôm nay · Biên bản (index.html đọc cờ này) và không còn chữ "superHuy"
+            s = s.replace("<head>", "<head>\n<script>window.SUPERYOU_TENANT=true</script>", 1)
+            s = re.sub(r"superHuy(?!Mac)", "superYou", s)
             tmp = out.with_suffix(".tmp")
             tmp.write_text(s, encoding="utf-8")
             tmp.replace(out)
@@ -680,7 +683,7 @@ class Handler(BaseHTTPRequestHandler):
                 if not _hello_ok("acc:" + ip):
                     return self._json(429, {"error": "Thao tác quá nhanh, thử lại sau ít phút."})
                 r = accounts.signup(str(data.get("email", "")), str(data.get("password", "")), str(data.get("name", "")), str(data.get("role", "member")),
-                                    str(data.get("company", "")), str(data.get("plan", "free")))
+                                    str(data.get("company", "")), str(data.get("plan", "free")), agree=data.get("agree") is True, ip=ip)
                 tok = make_acc_session(r["user"]["id"], r["user"]["last_role"])
                 return self._json(200, {"session": tok, "user": r["user"]})
             if path == "/api/account/login":
@@ -698,10 +701,18 @@ class Handler(BaseHTTPRequestHandler):
             if not au:
                 return self._json(401, {"error": "Phiên hết hạn, hãy đăng nhập lại."})
             if path == "/api/account/me":
+                try:
+                    from core import activation
+                    activation.active_day("acc:" + au["id"])
+                except Exception:
+                    pass
                 ent = pay.entitlements(au["email"])["items"] if au.get("email") else []
                 return self._json(200, {"user": au, "entitlements": ent, "plan": plans.PLANS.get(au.get("plan"), plans.PLANS["free"]),
                                         "plans": plans.all_plans(), "flags": flags.for_user(au["id"] if not au.get("owner") else OWNER_CHAT_ID),
-                                        "roles": accounts.ROLES, "has_owner_app": bool(au.get("owner"))})
+                                        "roles": accounts.ROLES, "has_owner_app": bool(au.get("owner")), "payments_open": pay.payments_open()})
+            if path == "/api/account/try":  # thẻ 15: biên bản thử ngay sau đăng ký (chỉ văn bản, không lưu nội dung)
+                from agents import trial_minutes
+                return self._json(200, trial_minutes.make("acc:" + au["id"], str(data.get("text", ""))[:20000], data.get("sample") is True))
             if path == "/api/account/role":
                 role = str(data.get("role", ""))
                 if role not in au.get("roles", []):
@@ -723,7 +734,7 @@ class Handler(BaseHTTPRequestHandler):
                     return self._json(400, {"error": "Chỉ gói Miễn phí mới bật dùng thử"})
                 r = accounts.admin_set(au["id"], plan="trial", note="tự bật dùng thử")
                 return self._json(200, {"text": f"Đã bật dùng thử Pro {plans.TRIAL_DAYS} ngày.", "user": r["user"]})
-            if path == "upgrade":
+            if path == "/api/account/upgrade":
                 from agents import pay
                 return self._json(200, pay.create_plan_order(au["email"], str(data.get("plan", ""))[:20], au["id"]))
             return self._json(404, {"error": "not found"})
@@ -801,6 +812,16 @@ class Handler(BaseHTTPRequestHandler):
     def _bootstrap(self, tok):
         out = {"agents": registry.describe(), "chat": [({**m, "actions": CHAT_ACTS[m["content"]]} if m.get("role") == "assistant" and m.get("content") in CHAT_ACTS else m) for m in CHAT[-16:]],
                "jobs": [present(j, tok) for j in JOBS.values() if j["status"] == "running"]}
+        try:
+            from agents import meeting
+            out["rec"] = meeting.rec_policy()
+        except Exception:
+            out["rec"] = {"enabled": True, "consent": IS_TENANT}
+        try:
+            from core import activation
+            activation.active_day(OWNER_CHAT_ID)  # mở app = một ngày hoạt động (chỉ id + ngày)
+        except Exception:
+            pass
         if EXTRA_BOOTSTRAP:
             try:
                 out.update(present(EXTRA_BOOTSTRAP(), tok))

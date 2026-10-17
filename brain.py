@@ -79,6 +79,12 @@ def chat_ex(history: list[dict]) -> dict:
     text = _loop(history, actions)
     last_user = next((m["content"] for m in reversed(history) if m.get("role") == "user"), "")
     memory.learn_from(last_user, text)
+    try:
+        from config import OWNER_CHAT_ID
+        from core import activation
+        activation.first_result(OWNER_CHAT_ID, "chat")  # chỉ ghi id + giờ, không ghi nội dung
+    except Exception:
+        pass
     return {"text": text, "actions": actions}
 
 
