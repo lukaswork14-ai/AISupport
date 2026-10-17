@@ -19,6 +19,8 @@ Vai trò (`role`): ceo-chu-dn, quan-ly, sales, marketing, van-hanh, tai-chinh, n
 
 **Nguồn:** kho skill/prompt mã nguồn mở (GitHub, Hugging Face), kho template Obsidian/Notion công khai, khung làm việc nổi tiếng theo vai trò (OKR, EOS, 4DX, sales playbook...), sản phẩm đang bán chạy trên chính chợ (để làm bản theo ngành khác), tri thức nội bộ anh Huy cho phép dùng.
 
+Cách hiện thực (`agents/factory.py`, 17/10/2026): bốn nguồn trong giao diện `github` (tìm theo topic prompts / agent-skills / system-prompts, đọc trường `license` từ API), `template` (topic obsidian-template / obsidian-vault / notion-template / second-brain), `framework` (danh sách khung công khai cài sẵn, có cờ `trademark` để Kiểm duyệt chặn dùng tên nhãn hiệu làm tên sản phẩm), `market` (sản phẩm chính chủ đã bán trên chợ; sản phẩm của người tạo khác coi là không rõ giấy phép). Giấy phép cho phép làm lại: MIT, Apache-2.0, CC-BY-4.0, CC0-1.0, BSD-2/3-Clause, Unlicense; `NOASSERTION` hoặc trống = loại. Điểm 4 tiêu chí chấm bằng luật (từ khoá, ngôn ngữ repo, độ phổ biến), không gọi AI nên quét nhanh và không tốn phí; ngành/vai trò đoán bằng từ khoá, PO sẽ chốt lại ở bước 2. Repo mã nguồn (ngôn ngữ lập trình) bị trừ ở "cài một chạm" vì phải rút văn bản ra rồi viết lại. Tuỳ chọn `GITHUB_TOKEN` trong `.env` nâng hạn mức tìm kiếm GitHub (không bắt buộc).
+
 ## 2. Quy trình clone có cải tiến: anh bấm 2 lần
 
 Anh bấm **Clone** trên một nguồn đã chấm điểm. Đội AI chạy tuần tự, mỗi vai giao kết quả cho vai sau; kết quả từng vai lưu trong dự án (`data/factory/projects`), anh xem được từng bước và bấm **Sửa** để gửi lại đúng vai đó.
