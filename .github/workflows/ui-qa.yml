@@ -28,6 +28,9 @@ jobs:
       - name: Kiểm thử Marketplace, Sản phẩm số, Khách đăng ký
         if: always()
         run: python deploy/market_qa.py
+      - name: Hành trình người dùng 5 thiết bị (khách mua, người bán, chủ nhân)
+        if: always()
+        run: python deploy/journey_qa.py
       - name: Kiểm thử bộ săn repo GitHub
         if: always()
         run: python deploy/repo_qa.py
