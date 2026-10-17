@@ -399,26 +399,103 @@ def create_plan_order(email: str, plan: str, uid: str = "") -> dict:
     return {"owned": False, "order": _public_order(o)}
 
 
+PLAN_DAYS = 31
+
+
+def plan_until_for(cur: dict | None, plan: str, today: dt.date | None = None) -> str:
+    """Ngày hết hạn sau khi trả 1 tháng. Gia hạn đúng gói còn hiệu lực -> cộng nối tiếp từ ngày hết hạn cũ;
+    đổi gói hoặc đã hết hạn -> tính từ hôm nay (chưa tính tiền chênh lệch, chờ chính sách)."""
+    today = today or _now().date()
+    start = today
+    if cur and cur.get("plan") == plan and cur.get("plan_until"):
+        try:
+            old = dt.date.fromisoformat(cur["plan_until"])
+            if old >= today:
+                start = old
+        except ValueError:
+            pass
+    return (start + dt.timedelta(days=PLAN_DAYS)).isoformat()
+
+
 def _deliver_plan(o: dict) -> dict:
     from core import accounts
     u = accounts.by_email(o["email"]) if not o.get("uid") else accounts.get(o["uid"])
-    if u:
-        accounts.admin_set(u["id"], plan=o["plan"], note=f"thanh toán đơn {o['code']}")
+    until = o.get("plan_until") or plan_until_for(u, o["plan"])
+    if u and not o.get("plan_until"):
+        accounts.set_paid_plan(u["id"], o["plan"], until, note=f"thanh toán đơn {o['code']}")
     with _LOCK:
         d = _load()
         oo = d["orders"][o["id"]]
         oo["status"] = "delivered"
-        oo["delivered_at"] = _iso()
+        oo["delivered_at"] = oo.get("delivered_at") or _iso()
         oo["receipt"] = receipt_url(oo)
-        oo["plan_until"] = (_now() + dt.timedelta(days=31)).strftime("%Y-%m-%d")
+        oo["plan_until"] = until
         _save(d)
         o = oo
     try:
         from core import security
-        security.alert_once(f"sale:{o['id']}", f"💎 Nâng cấp gói: {o['email']} đã trả {vnd(o['amount'])} cho {o['name']}.", every=10**9)
+        security.alert_once(f"sale:{o['id']}", f"💎 Nâng cấp gói: {o['email']} đã trả {vnd(o['amount'])} cho {o['name']} (đến {until}).", every=10**9)
     except Exception:
         pass
-    return {"text": "Đã kích hoạt gói", "downloads": []}
+    return {"text": f"Đã kích hoạt gói đến {until}", "downloads": [], "plan_until": until}
+
+
+def _remind_email(r: dict) -> bool:
+    """Email nhắc gia hạn. Chỉ gửi khi Gmail/Lark Mail đã kết nối; chưa có thì bỏ qua (lần quét sau gửi khi đã cấu hình)."""
+    if not _mail_ready():
+        return False
+    from core import plans
+    try:
+        from agents import mailbox
+        name = (plans.PLANS.get(r["plan"]) or {}).get("name", r["plan"])
+        when = "hôm nay" if r["left"] == 0 else f"sau {r['left']} ngày"
+        until = dt.date.fromisoformat(r["until"]).strftime("%d/%m/%Y")
+        body = (f"Chào {r['name'] or 'bạn'},\n\nGói {name} của bạn trên superYou hết hạn {when} (hết ngày {until}).\n\n"
+                f"Gia hạn tại: https://app.roimaxxhub.com/account#plans (Tài khoản › Gói và nâng cấp › Gia hạn).\n\n"
+                "Nếu không gia hạn, tài khoản tự về gói Miễn phí; dữ liệu, sản phẩm đã mua và workflow của bạn vẫn được giữ nguyên.\n\nsuperYou · Roimaxx")
+        platform = "gmail" if mailbox.gmail_ready() else "lark"
+        mailbox.send(platform, r["email"], f"[superYou] Gói {name} hết hạn {when}", body)
+        return True
+    except Exception:
+        import logging
+        logging.getLogger("pay").exception("Gửi email nhắc gia hạn lỗi")
+        return False
+
+
+def plan_sweep() -> dict:
+    """Chạy hằng ngày (và tự chạy khi có người mở Tài khoản, tối đa 1 lần/giờ): hạ gói hết hạn về Free, nhắc gia hạn trước 3 ngày."""
+    from core import accounts
+    expired = accounts.expire_plans()
+    sent, skipped = [], []
+    for r in accounts.due_reminders():
+        if _remind_email(r):
+            accounts.mark_reminded(r["id"], r["until"])
+            sent.append(r["email"])
+        else:
+            skipped.append(r["email"])
+    if expired:
+        try:
+            from core import security
+            security.alert_once(f"plan-exp:{_iso()[:10]}:{len(expired)}", "⏳ Gói hết hạn, đã về Miễn phí: "
+                                + ", ".join(f"{x['email']} ({x['plan']})" for x in expired[:10]) + ".", every=10**9)
+        except Exception:
+            pass
+    return {"expired": expired, "reminded": sent, "remind_pending": skipped, "mail_ready": _mail_ready()}
+
+
+_SWEPT = {"at": 0.0}
+
+
+def maybe_sweep(every: int = 3600) -> None:
+    import time
+    if time.time() - _SWEPT["at"] < every:
+        return
+    _SWEPT["at"] = time.time()
+    try:
+        plan_sweep()
+    except Exception:
+        import logging
+        logging.getLogger("pay").exception("Quét hết hạn gói lỗi")
 
 
 def deliver(oid: str) -> dict:
