@@ -55,3 +55,7 @@
 .mksample{ white-space:pre-line; font-size:13.5px !important; color:var(--text) !important; max-height:150px; overflow:hidden; -webkit-mask-image:linear-gradient(#000 70%, transparent) }
 .mktoc{ max-height:240px; overflow:auto; column-width:220px; column-gap:18px }
 .mkinfo{ display:grid; grid-template-columns:max-content 1fr; gap:6px 14px; margin:0; font-size:14px } .mkinfo dt{ color:var(--muted) } .mkinfo dd{ margin:0 }
+
+/* Khiếu nại (Quản trị) */
+.mkkn{ margin-top:10px }
+.mkknr{ margin:8px 0 6px; font-style:italic; overflow-wrap:anywhere }

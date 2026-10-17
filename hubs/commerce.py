@@ -60,6 +60,15 @@ register(Agent("market", "Marketplace", "🛍", "Khám phá, cài và bán skill
     Action("gd_hoan", "Hoàn tiền", pay.refund, hidden=True, params=[Param("oid", "ID đơn", required=True), Param("note", "Lý do", "textarea")]),
     Action("gd_tra", "Ghi trả tiền người bán", pay.payout_mark, hidden=True,
            params=[Param("sid", "ID người bán", required=True), Param("amount", "Số tiền", "number"), Param("ref", "Mã giao dịch")]),
+    Action("gd_vat", "Ghi đã xuất hoá đơn VAT", pay.vat_mark, hidden=True,
+           params=[Param("oid", "ID đơn", required=True), Param("number", "Số hoá đơn"), Param("note", "Ghi chú")]),
+    # Khiếu nại và hoàn tiền (chỉ chủ nhân)
+    Action("kn", "Khiếu nại và hoàn tiền", pay.complaints_overview, hidden=True, llm=True,
+           desc="Khiếu nại của người mua trên Marketplace: đơn, lý do, người bán, trạng thái xử lý, email mua đang khoá."),
+    Action("kn_xuly", "Xử lý khiếu nại", pay.complaint_resolve, hidden=True,
+           params=[Param("oid", "ID đơn", required=True), Param("decision", "Quyết định (hoan|tu_choi)", required=True), Param("note", "Phản hồi cho khách", "textarea")]),
+    Action("kn_khoamua", "Khoá/mở email mua", pay.admin_block_buyer, hidden=True,
+           params=[Param("email", "Email", required=True), Param("on", "Khoá (1) / mở (0)", default="1"), Param("note", "Ghi chú")]),
     Action("duyet", "Duyệt sản phẩm gửi lên", market.moderate, hidden=True,
            params=[Param("lid", "ID", required=True), Param("decision", "Quyết định", required=True), Param("note", "Ghi chú", "textarea")]),
 ]))

@@ -60,9 +60,8 @@ def current_plan() -> dict:
     """Gói đang áp dụng cho chủ nhân instance này + giới hạn và mức dùng (để UI hiện 'Gói Pro · 3/20 workflow' và nút nâng cấp)."""
     from core import plans
     u = _load()["users"][f"u{OWNER_CHAT_ID}"]
-    plan = u.get("plan") if u.get("plan") in plans.PLANS else "free"
-    if plan == "trial" and u.get("trial_until") and u["trial_until"] < dt.date.today().isoformat():
-        plan = "free"
+    plan = effective_plan(u)
+    plan = plan if plan in plans.PLANS else "free"
     P = plans.all_plans()["plans"][plan]
     used = {}
     try:
@@ -72,7 +71,7 @@ def current_plan() -> dict:
         used["workflows"] = 0
     nxt = {"free": "pro", "trial": "pro", "pro": "business", "business": "enterprise"}.get(plan)
     return {"plan": plan, "name": P["name"], "color": P["color"], "limits": P["limits"], "features": P["features"], "used": used,
-            "trial_until": u.get("trial_until", ""), "next": nxt, "next_name": plans.all_plans()["plans"][nxt]["name"] if nxt else "",
+            "trial_until": u.get("trial_until", ""), "plan_until": u.get("plan_until", "") if plan in PAID_PLANS else "", "next": nxt, "next_name": plans.all_plans()["plans"][nxt]["name"] if nxt else "",
             "upgrade_url": "https://app.roimaxxhub.com/account#plans"}
 
 
@@ -117,7 +116,99 @@ def audit(d: dict, who: str, what: str, meta: str = ""):
 
 
 def _pub(u: dict) -> dict:
-    return {k: u.get(k) for k in ("id", "email", "name", "roles", "plan", "status", "created", "last_login", "last_role", "company", "title", "trial_until")}
+    out = {k: u.get(k) for k in ("id", "email", "name", "roles", "plan", "status", "created", "last_login", "last_role", "company", "title", "trial_until", "plan_until", "vat")}
+    out["plan"] = effective_plan(u)
+    if out["plan"] != u.get("plan"):  # vừa hết hạn, chưa được quét: hiện như Free ngay, dữ liệu giữ nguyên
+        out["plan_expired"] = {"plan": u.get("plan"), "until": u.get("plan_until") or u.get("trial_until") or ""}
+    elif out["plan"] == "free" and u.get("plan_expired"):
+        out["plan_expired"] = {k: u["plan_expired"].get(k, "") for k in ("plan", "until")}
+    return out
+
+
+# ------------------------------------------------------------------ hết hạn gói
+PAID_PLANS = ("pro", "business")
+REMIND_DAYS = 3
+
+
+def _today() -> str:
+    return dt.date.today().isoformat()
+
+
+def effective_plan(u: dict) -> str:
+    """Gói đang có hiệu lực: gói trả phí quá plan_until hoặc dùng thử quá trial_until -> free.
+    Gói chủ sàn đặt tay (không có plan_until) và gói của chủ instance không bao giờ tự hết hạn."""
+    plan = u.get("plan") or "free"
+    if u.get("owner"):
+        return plan
+    today = _today()
+    if plan in PAID_PLANS and u.get("plan_until") and u["plan_until"] < today:
+        return "free"
+    if plan == "trial" and u.get("trial_until") and u["trial_until"] < today:
+        return "free"
+    return plan
+
+
+def set_paid_plan(uid: str, plan: str, until: str, note: str = "") -> dict:
+    """Gói trả phí kích hoạt qua thanh toán (pay._deliver_plan): ghi gói và ngày hết hạn (YYYY-MM-DD, còn hiệu lực hết ngày đó)."""
+    if plan not in PAID_PLANS:
+        raise ValueError("Gói không hợp lệ")
+    with _LOCK:
+        d = _load()
+        u = d["users"].get(uid)
+        if not u:
+            raise ValueError("Không tìm thấy tài khoản")
+        u["plan"] = plan
+        u["plan_until"] = until
+        u.pop("plan_reminded", None)
+        u.pop("plan_expired", None)
+        audit(d, "superYou (thanh toán)", f"Gói {plan} của {u.get('email') or uid} đến {until}", note)
+        _save(d)
+    return _pub(u)
+
+
+def expire_plans() -> list[dict]:
+    """Quét định kỳ: chuyển các tài khoản hết hạn về Free (giữ nguyên dữ liệu, ghi nhật ký). Trả về danh sách vừa chuyển."""
+    out = []
+    with _LOCK:
+        d = _load()
+        for u in d["users"].values():
+            eff = effective_plan(u)
+            if eff != (u.get("plan") or "free"):
+                old = u.get("plan")
+                u["plan"] = eff
+                u["plan_expired"] = {"plan": old, "until": u.get("plan_until") or u.get("trial_until") or "", "at": _now()}
+                u.pop("plan_reminded", None)
+                audit(d, "superYou (hết hạn)", f"Gói {old} của {u.get('email') or u['id']} hết hạn, về Miễn phí", u["plan_expired"]["until"])
+                out.append({"id": u["id"], "email": u.get("email", ""), "name": u.get("name", ""), "plan": old, "until": u["plan_expired"]["until"]})
+        if out:
+            _save(d)
+    return out
+
+
+def due_reminders(days: int = REMIND_DAYS) -> list[dict]:
+    """Tài khoản gói trả phí còn <= days ngày, chưa được nhắc cho kỳ hạn hiện tại."""
+    today = dt.date.today()
+    out = []
+    for u in _load()["users"].values():
+        if u.get("owner") or u.get("plan") not in PAID_PLANS or not u.get("plan_until") or not u.get("email"):
+            continue
+        try:
+            left = (dt.date.fromisoformat(u["plan_until"]) - today).days
+        except ValueError:
+            continue
+        if 0 <= left <= days and u.get("plan_reminded") != u["plan_until"]:
+            out.append({"id": u["id"], "email": u["email"], "name": u.get("name", ""), "plan": u["plan"], "until": u["plan_until"], "left": left})
+    return out
+
+
+def mark_reminded(uid: str, until: str):
+    with _LOCK:
+        d = _load()
+        u = d["users"].get(uid)
+        if u:
+            u["plan_reminded"] = until
+            audit(d, "superYou (nhắc gia hạn)", f"Đã nhắc gia hạn {u.get('email') or uid}", until)
+            _save(d)
 
 
 # ------------------------------------------------------------------ đăng ký, đăng nhập
@@ -269,6 +360,16 @@ def update_profile(uid: str, name: str = "", company: str = "", title: str = "")
     return {"text": "Đã lưu.", "user": _pub(u)}
 
 
+def set_vat(uid: str, vat: dict):
+    """Ghi nhớ thông tin xuất hoá đơn VAT lần gần nhất để điền sẵn ở lần mua sau."""
+    with _LOCK:
+        d = _load()
+        u = d["users"].get(uid)
+        if u:
+            u["vat"] = {k: vat.get(k, "") for k in ("company", "tax_code", "address", "email")}
+            _save(d)
+
+
 def set_last_role(uid: str, role: str):
     with _LOCK:
         d = _load()
@@ -322,7 +423,7 @@ def admin_list(q: str = "", role: str = "", plan: str = "") -> dict:
             continue
         if role and role not in u.get("roles", []):
             continue
-        if plan and u.get("plan") != plan:
+        if plan and effective_plan(u) != plan:
             continue
         rows.append(_pub(u))
     rows.sort(key=lambda u: u.get("created") or "", reverse=True)
@@ -344,6 +445,8 @@ def admin_set(uid: str, plan: str = "", status: str = "", roles: str = "", note:
         what = []
         if plan in plans.PLANS:
             u["plan"] = plan
+            u.pop("plan_until", None)  # chủ sàn đặt tay = không tự hết hạn; gói qua thanh toán dùng set_paid_plan
+            u.pop("plan_reminded", None)
             if plan == "trial":
                 u["trial_until"] = (dt.date.today() + dt.timedelta(days=plans.TRIAL_DAYS)).isoformat()
             what.append(f"gói {plan}")

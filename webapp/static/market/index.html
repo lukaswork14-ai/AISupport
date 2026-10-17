@@ -92,7 +92,7 @@ h3{ font-size:18px; margin:18px 0 6px }
 .info{ display:grid; grid-template-columns:max-content 1fr; gap:6px 14px; margin:0; font-size:14px } .info dt{ color:var(--muted) } .info dd{ margin:0 }
 .getbox{ border:2px solid var(--ink); border-radius:18px; padding:16px; margin-top:16px; background:#FFFBEA }
 .payqr{ display:grid; grid-template-columns:auto minmax(0,1fr); gap:16px; align-items:start } .payqr img{ border:2px solid var(--ink); border-radius:14px; background:#fff }
-@media (max-width:600px){ .payqr{ grid-template-columns:1fr } }
+@media (max-width:600px){ .payqr{ grid-template-columns:1fr } nav{ flex-wrap:wrap; row-gap:8px } .nav-l{ order:3; width:100%; margin-left:0; gap:14px; overflow-x:auto; font-size:14px; padding-bottom:2px } .nav-l a{ white-space:nowrap } nav > .btn{ margin-left:auto } }
 .rev-tiles{ display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:10px }
 /* console */
 .cwrap{ padding-block:30px 60px; display:flex; flex-direction:column; gap:20px }
@@ -121,6 +121,10 @@ label.f small{ font-weight:500; color:var(--muted) }
 .drop{ border:2px dashed var(--ink); border-radius:16px; padding:16px; text-align:center; color:var(--muted); background:var(--soft) }
 .drop.on{ background:#FFF4CC }
 @media (max-width:860px){ .hero{ grid-template-columns:1fr } .stack{ display:none } .hero h1{ font-size:40px } .sell{ grid-template-columns:1fr } .wiz{ grid-template-columns:1fr } .nav-l a.hide{ display:none } h2{ font-size:28px } }
+.pvs{ margin-top:12px } .vatf{ margin-top:10px } .vatf summary{ cursor:pointer; font-weight:600; font-size:14px } .vatg{ display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px } @media (max-width:600px){ .vatg{ grid-template-columns:1fr } } .rev-tiles .tile b{ font-size:clamp(18px,5.6vw,28px); overflow-wrap:anywhere } .pvspec{ padding:14px } .pvspec .spec{ grid-template-columns:1fr }
+.revm{ display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:6px; align-items:end; margin-bottom:6px }
+.revm div{ display:flex; flex-direction:column; align-items:center; gap:3px; min-width:0 } .revm span{ width:70%; max-width:36px; background:var(--violet); border-radius:6px 6px 2px 2px }
+.revm b{ font-size:11px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100% } .revm i{ font-style:normal; font-size:11px; color:var(--muted) }
 </style>
 </head>
 <body>
@@ -204,13 +208,18 @@ function payBox(r, x){
 }
 function dlList(o){ if(!o || !(o.downloads||[]).length) return '<p class="by">Link tải sẽ gửi qua email.</p>';
   return '<div class="box" style="margin-top:10px"><b>Tải sản phẩm</b>'+o.downloads.map(function(d){ return '<p><a href="'+esc(d.url)+'">'+esc(d.name)+'</a> <span class="by">· dùng đến '+esc((d.expires||'').slice(0,10))+'</span></p>'; }).join('')+(o.receipt ? '<p><a href="'+esc(o.receipt)+'" target="_blank" rel="noopener">Xem hoá đơn</a></p>' : '')+'</div>'; }
+function vatForm(p, v){ v = v || {}; return '<details class="vatf" id="'+p+'vat"'+(v.company ? ' open' : '')+'><summary>Cần xuất hoá đơn VAT cho công ty</summary><div class="vatg"><label class="f">Tên công ty<input id="'+p+'vc" maxlength="160" value="'+esc(v.company||'')+'" autocomplete="organization"></label><label class="f">Mã số thuế<input id="'+p+'vt" maxlength="14" inputmode="numeric" placeholder="0101234567" value="'+esc(v.tax_code||'')+'"></label><label class="f" style="grid-column:1/-1">Địa chỉ<input id="'+p+'va" maxlength="250" value="'+esc(v.address||'')+'" autocomplete="street-address"></label><label class="f" style="grid-column:1/-1">Email nhận hoá đơn (nếu khác)<input id="'+p+'ve" type="email" maxlength="254" value="'+esc(v.email||'')+'"></label></div><p class="by" style="margin:4px 0 0;font-size:12px">superYou ghi nhận thông tin và gửi hoá đơn điện tử riêng.</p></details>'; }
+function vatRead(p){ var d = $('#'+p+'vat'); if(!d || !d.open) return null; var v = {company:$('#'+p+'vc').value.trim(), tax_code:$('#'+p+'vt').value.trim(), address:$('#'+p+'va').value.trim(), email:$('#'+p+'ve').value.trim()};
+  if(!v.company && !v.tax_code && !v.address) return null; if(!v.company || !v.tax_code || !v.address) return false; return v; }
 function myOrders(){
+  if(lsGet('sy-acc')){ location.href = '/account#buys'; return; }
   var em = lsGet('sy-email') || '';
-  var b = $('#dlgBody'); b.innerHTML = '<button class="x" id="dx" aria-label="Đóng">×</button><h2 style="margin:0">Đơn hàng của tôi</h2><p class="by">Nhập email đã dùng khi mua để xem lại link tải.</p><form class="form" id="mf"><input id="me" type="email" required placeholder="email@congty.com" value="'+esc(em)+'"><button class="btn k">Xem</button></form><div id="ml"></div>';
+  var b = $('#dlgBody'); b.innerHTML = '<button class="x" id="dx" aria-label="Đóng">×</button><h2 style="margin:0">Đơn hàng của tôi</h2><p class="by">Nhập email đã dùng khi mua. Link tải gửi về email đó; hoặc <a href="/login?mode=signup">tạo tài khoản</a> bằng đúng email này để tải lại, xem hoá đơn và khiếu nại ngay trên web.</p><form class="form" id="mf"><input id="me" type="email" required placeholder="email@congty.com" value="'+esc(em)+'"><button class="btn k">Xem</button></form><div id="ml"></div>';
   var d = $('#dlg'); if(!d.open) d.showModal(); $('#dx').onclick = function(){ d.close(); };
   $('#mf').addEventListener('submit', function(e){ e.preventDefault(); lsSet('sy-email', $('#me').value); $('#ml').innerHTML = '<p class="by">Đang tìm…</p>';
-    api('/api/pay/mine', {email:$('#me').value}).then(function(r){ $('#ml').innerHTML = r.items.length ? r.items.map(function(it){ return '<div class="rv"><b>'+esc(it.name)+'</b> <span class="by">'+esc((it.at||'').slice(0,10))+'</span>'+dlList(it)+'</div>'; }).join('') + '<p class="by">Link hết hạn? <button class="btn sm" id="rs">Gửi lại link mới qua email</button></p>' : '<p class="by">Chưa có đơn nào với email này.</p>';
-      var rs = $('#rs'); if(rs) rs.onclick = function(){ rs.disabled = true; api('/api/pay/resend', {email:$('#me').value}).then(function(){ rs.textContent = 'Đã gửi'; }).catch(function(e){ rs.textContent = e.message; }); }; })
+    api('/api/pay/mine', {email:$('#me').value}).then(function(r){ $('#ml').innerHTML = r.items.length ? r.items.map(function(it){ return '<div class="rv"><b>'+esc(it.name)+'</b> <span class="by">'+esc(it.code||'')+' · '+esc((it.at||'').slice(0,10))+'</span></div>'; }).join('')
+        + (r.mail_ready ? '<p class="by"><button class="btn sm" id="rs">Gửi link tải mới qua email</button></p>' : '') + '<p class="by"><a class="btn sm k" href="/account#buys">Mở Tài khoản › Sản phẩm đã mua</a></p>' : '<p class="by">Chưa có đơn nào với email này.</p>';
+      var rs = $('#rs'); if(rs) rs.onclick = function(){ rs.disabled = true; api('/api/pay/resend', {email:$('#me').value}).then(function(x){ rs.textContent = x.text || 'Đã gửi'; }).catch(function(e){ rs.textContent = e.message; }); }; })
       .catch(function(e){ $('#ml').innerHTML = '<p class="msg err">'+esc(e.message)+'</p>'; }); });
 }
 function specHtml(x){
@@ -234,7 +243,7 @@ function detail(x, fromPath){
   b.innerHTML = '<button class="x" id="dx" aria-label="Đóng">×</button><div class="top">'+icon(x,80)+'<div><span class="typ">'+esc(x.type_label)+(x.featured ? ' · Nổi bật' : '')+'</span><h2 style="margin:6px 0 0;font-size:28px">'+esc(x.name)+'</h2><div class="by">'+esc(x.creator && x.creator.name)+(x.creator && x.creator.official ? '<span class="off">Chính chủ</span>' : '')+' · '+esc(x.cat_label)+'</div><div class="tg" style="-webkit-line-clamp:unset">'+esc(x.tagline||'')+'</div></div></div>'
     + '<div class="facts"><div><b>'+(x.rating ? String(x.rating).replace('.',',') : '–')+'</b><span>'+x.rating_n+' đánh giá</span></div><div><b>'+(x.installs+x.interest)+'</b><span>Người dùng</span></div><div><b>'+(x.type==='brain' ? sp.note_count+' ghi chú' : x.type==='workflow' ? sp.step_count+' bước' : x.type==='pack' ? '3 phần' : (sp.rule_count||'')+' quy tắc')+'</b><span>Nội dung</span></div><div><b>'+esc(x.version)+'</b><span>Phiên bản</span></div><div><b>'+vnd(x.price)+'</b><span>'+(sp.billing==='monthly' ? 'Mỗi tháng' : 'Một lần')+'</span></div></div>'
     + '<div id="getbox" class="getbox"><b>'+esc(sp.buy_label || (x.price>0 ? 'Mua '+vnd(x.price) : 'Nhận miễn phí'))+'</b><p class="by" style="margin:4px 0 0">'+(x.price>0 ? 'Thanh toán bằng chuyển khoản VietQR. Nhập email để nhận link tải và hoá đơn.' : 'Nhập email để nhận link tải.')+'</p>'
-    + '<form class="form" id="gf"><label for="ge" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Email</label><input id="ge" type="email" required placeholder="email@congty.com" autocomplete="email"><button class="btn y">'+(x.price>0 ? 'Mua ngay' : 'Nhận')+'</button></form><p class="msg" id="gm" role="status"></p><p class="by" style="margin:6px 0 0;font-size:12px">Mua là đồng ý <a href="/dieu-khoan" target="_blank">Điều khoản</a> và <a href="/hoan-tien" target="_blank">Chính sách hoàn tiền</a> (hoàn 100% trong 7 ngày nếu lỗi).</p></div>'
+    + '<form class="form" id="gf"><label for="ge" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Email</label><input id="ge" type="email" required placeholder="email@congty.com" autocomplete="email"><button class="btn y">'+(x.price>0 ? 'Mua ngay' : 'Nhận')+'</button></form>'+(x.price>0 ? vatForm('g') : '')+'<p class="msg" id="gm" role="status"></p><p class="by" style="margin:6px 0 0;font-size:12px">Mua là đồng ý <a href="/dieu-khoan" target="_blank">Điều khoản</a> và <a href="/hoan-tien" target="_blank">Chính sách hoàn tiền</a> (hoàn 100% trong 7 ngày nếu lỗi).</p></div>'
     + specHtml(x)
     + (x.whats_new ? '<h3>Có gì mới · phiên bản '+esc(x.version)+'</h3><p>'+esc(x.whats_new)+'</p>' : '')
     + '<h3>Mô tả</h3><p style="white-space:pre-line">'+esc(x.description||'')+'</p>'
@@ -243,7 +252,8 @@ function detail(x, fromPath){
   var d = $('#dlg'); if(!d.open) d.showModal();
   $('#dx').onclick = function(){ d.close(); };
   $('#gf').addEventListener('submit', function(e){ e.preventDefault(); var m = $('#gm'), btn = e.target.querySelector('button'); btn.disabled = true; m.className = 'msg'; m.textContent = 'Đang tạo đơn…';
-    api('/api/pay/order', {lid:x.id, email:$('#ge').value}).then(function(r){ lsSet('sy-email', $('#ge').value); payBox(r, x); })
+    var vat = vatRead('g'); if(vat === false){ m.className = 'msg err'; m.textContent = 'Điền đủ tên công ty, mã số thuế và địa chỉ để xuất hoá đơn VAT.'; btn.disabled = false; return; }
+    api('/api/pay/order', {lid:x.id, email:$('#ge').value, vat:vat}).then(function(r){ lsSet('sy-email', $('#ge').value); payBox(r, x); })
       .catch(function(err){ m.className = 'msg err'; m.textContent = err.message; btn.disabled = false; }); });
   var em = lsGet('sy-email'); if(em) $('#ge').value = em;
 }
@@ -285,8 +295,10 @@ function dash(){
     + '<p class="by">Mọi sản phẩm được đội superYou duyệt trước khi lên kệ, thường trong 1–2 ngày làm việc.</p></div>';
   api('/api/creator/revenue', {}, C.key).then(function(r){
     var bank = r.bank || {};
-    $('#rev').innerHTML = '<h2>Doanh thu</h2><div class="rev-tiles"><div class="tile"><b>'+vnd(r.balance)+'</b><span>Số dư chờ trả</span></div><div class="tile"><b>'+vnd(r.this_month)+'</b><span>Tháng này</span></div><div class="tile"><b>'+r.sales+'</b><span>Lượt bán</span></div><div class="tile"><b>'+vnd(r.paid)+'</b><span>Đã nhận</span></div></div>'
-      + '<p class="by">Bạn nhận '+(100-r.fee_pct)+'% mỗi lượt bán (sàn giữ '+r.fee_pct+'%). superYou chuyển khoản ngày '+r.payout_day+' hằng tháng khi số dư từ '+vnd(r.payout_min)+'. Kỳ tới: '+esc(r.next_payout)+'.</p>'
+    $('#rev').innerHTML = '<h2>Doanh thu</h2><div class="rev-tiles"><div class="tile"><b>'+revVnd(r.balance)+'</b><span>Số dư chờ trả</span></div><div class="tile"><b>'+revVnd(r.this_month)+'</b><span>Tháng này</span></div><div class="tile"><b>'+r.sales+'</b><span>Lượt bán</span></div><div class="tile"><b>'+revVnd(r.paid)+'</b><span>Đã nhận</span></div></div>'
+      + '<div class="okbox" style="margin:10px 0"><b>Kỳ trả tới '+esc(r.next_payout)+': '+(r.next_amount ? vnd(r.next_amount) : '0đ')+'</b>'+(r.next_note ? '<br><span class="by">'+esc(r.next_note)+'</span>' : '')+(r.in_refund_window ? '<br><span class="by">Trong đó '+vnd(r.in_refund_window)+' còn trong hạn hoàn tiền '+r.refund_days+' ngày, có thể bị trừ nếu khách hoàn.</span>' : '')+'</div>'
+      + '<p class="by">Bạn nhận '+(100-r.fee_pct)+'% mỗi lượt bán (sàn giữ '+r.fee_pct+'%). superYou chuyển khoản ngày '+r.payout_day+' hằng tháng khi số dư từ '+vnd(r.payout_min)+'.</p>'
+      + revMonths(r.months) + revProducts(r.by_product)
       + (r.recent.length ? '<div class="list">'+r.recent.map(function(e){ return '<div class="rowi"><div style="flex:1;min-width:0"><div class="nm">'+esc(e.name)+'</div><div class="by">'+esc((e.at||'').slice(0,16).replace('T',' '))+(e.kind==='refund' ? ' · hoàn tiền' : '')+'</div></div><b>'+(e.seller_amount<0?'−':'+')+vnd(Math.abs(e.seller_amount))+'</b></div>'; }).join('')+'</div>' : '<p class="by">Chưa có lượt bán nào.</p>')
       + '<form id="bf" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-top:10px"><label class="f">Ngân hàng<input id="bb" value="'+esc(bank.bank||'')+'" placeholder="MB, VCB, TCB…"></label><label class="f">Số tài khoản<input id="ba" value="'+esc(bank.account||'')+'" inputmode="numeric"></label><label class="f">Chủ tài khoản<input id="bn" value="'+esc(bank.name||'')+'"></label><div style="display:flex;align-items:end"><button class="btn k">Lưu tài khoản nhận tiền</button></div></form><p class="msg" id="bm" role="status"></p>';
     $('#bf').addEventListener('submit', function(e){ e.preventDefault(); var m = $('#bm'); m.className='msg'; m.textContent='Đang lưu…';
@@ -297,8 +309,13 @@ function dash(){
   var th = document.createElement('a'); th.className='btn sm ghost'; th.href='/account'; th.textContent='Tài khoản'; $('#lo').parentNode.insertBefore(th, $('#lo'));
   document.querySelectorAll('[data-e]').forEach(function(b){ b.onclick = function(){ api('/api/creator/get', {lid:b.dataset.e}, C.key).then(function(p){ C.draft = p; C.step = 2; wizard(); }).catch(function(e){ alertMsg(e.message); }); }; });
 }
+function revVnd(v){ return v ? vnd(v) : '0đ'; }
+function revMonths(ms){ if(!ms || !ms.some(function(m){ return m.earned; })) return ''; var mx = Math.max.apply(null, ms.map(function(m){ return Math.abs(m.earned); })) || 1;
+  return '<h3 style="margin:14px 0 6px">6 tháng gần nhất</h3><div class="revm">'+ms.map(function(m){ return '<div><span style="height:'+Math.max(2, Math.round(Math.abs(m.earned)/mx*80))+'px" title="'+esc(revVnd(m.earned))+'"></span><b>'+esc(revVnd(m.earned))+'</b><i>'+esc(m.label)+'</i></div>'; }).join('')+'</div>'; }
+function revProducts(ps){ if(!ps || !ps.length) return '';
+  return '<h3 style="margin:14px 0 6px">Theo sản phẩm</h3><div class="list">'+ps.map(function(r){ return '<div class="rowi"><div style="flex:1;min-width:0"><div class="nm">'+esc(r.name)+'</div><div class="by">'+r.sales+' lượt bán'+(r.refunds ? ' · '+r.refunds+' hoàn' : '')+' · doanh số '+vnd(r.gross)+'</div></div><b>'+vnd(r.earned)+'</b></div>'; }).join('')+'</div>'; }
 function alertMsg(t){ var m = document.createElement('p'); m.className = 'msg err'; m.textContent = t; $('#main .cwrap').prepend(m); }
-var HINT = { skill:'Hướng dẫn đánh số, superYou làm theo khi gặp đúng loại việc.', brain:'Nhiều ghi chú, mỗi ghi chú bắt đầu bằng dòng “# Tiêu đề”.', workflow:'Mỗi dòng một bước dạng agent.hanh_dong: Tên bước. Không dùng bước gửi, đăng hoặc xoá.' };
+var HINT = { pack:'Skill của phòng ban: quy tắc đánh số, superYou làm theo khi gặp đúng loại việc. Workflow và ghi chú điền ở các ô bên dưới.', skill:'Hướng dẫn đánh số, superYou làm theo khi gặp đúng loại việc.', brain:'Nhiều ghi chú, mỗi ghi chú bắt đầu bằng dòng “# Tiêu đề”.', workflow:'Mỗi dòng một bước dạng agent.hanh_dong: Tên bước. Không dùng bước gửi, đăng hoặc xoá.' };
 function wizard(){
   var p = C.draft, d = C.data, st = C.step;
   var steps = ['Nguyên liệu','Trang sản phẩm','Gửi duyệt'].map(function(l,i){ return '<span class="'+(st===i+1 ? 'on' : st>i+1 ? 'done' : '')+'">'+(i+1)+'. '+l+'</span>'; }).join('');
@@ -314,13 +331,16 @@ function wizard(){
     + '<label class="f">Loại<select id="ft" '+(p.id ? 'disabled' : '')+'>'+Object.keys(d.types).map(function(k){ return '<option value="'+k+'" '+(p.type===k?'selected':'')+'>'+esc(d.types[k])+'</option>'; }).join('')+'</select></label>'
     + '<label class="f">Tên<input id="fn" maxlength="80" value="'+esc(p.name)+'"></label><label class="f">Câu giới thiệu<input id="fg" maxlength="160" value="'+esc(p.tagline)+'"><small>Một câu nói rõ lợi ích, từ 20 ký tự.</small></label>'
     + '<label class="f">Mô tả<textarea id="fd">'+esc(p.description)+'</textarea><small>Dành cho ai, làm được gì, dùng thế nào. Từ 120 ký tự.</small></label>'
-    + '<label class="f">Nội dung<textarea id="fb" style="min-height:220px;font-family:ui-monospace,Menlo,monospace;font-size:13.5px">'+esc(p.body)+'</textarea><small id="fh">'+esc(HINT[p.type]||'')+'</small></label>'
+    + '<label class="f">'+(p.type==='pack' ? 'Skill: cách phòng ban làm việc' : 'Nội dung')+'<textarea id="fb" style="min-height:220px;font-family:ui-monospace,Menlo,monospace;font-size:13.5px">'+esc(p.body)+'</textarea><small id="fh">'+esc(HINT[p.type]||'')+'</small></label>'
+    + (p.type==='pack' ? '<label class="f">Các vai trong phòng ban<input id="fr" maxlength="400" value="'+esc(p.pack_roles||'')+'" placeholder="Kế toán trưởng, Thủ quỹ, Kiểm soát chi phí"><small>Cách nhau dấu phẩy, tối đa 8 vai.</small></label>'
+      + '<label class="f">Workflow (không bắt buộc)<textarea id="fw" style="min-height:110px;font-family:ui-monospace,Menlo,monospace;font-size:13.5px" placeholder="lark.tomtat: Tóm tắt Lark buổi sáng&#10;lich.ngay: Lịch hôm nay">'+esc(p.pack_steps||'')+'</textarea><small>'+esc(HINT.workflow)+'</small></label>'
+      + '<label class="f">Ghi chú tri thức (không bắt buộc)<textarea id="fo" style="min-height:140px;font-family:ui-monospace,Menlo,monospace;font-size:13.5px" placeholder="# Quy trình chốt sổ cuối tháng&#10;1. …">'+esc(p.pack_notes||'')+'</textarea><small>'+esc(HINT.brain)+'</small></label>' : '')
     + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><label class="f">Danh mục<select id="fc">'+Object.keys(d.cats).map(function(k){ return '<option value="'+k+'" '+(p.category===k?'selected':'')+'>'+esc(d.cats[k])+'</option>'; }).join('')+'</select></label>'
     + '<label class="f">Giá (đồng)<input id="fp" type="number" min="0" step="1000" value="'+(p.price||0)+'"><small>0 = miễn phí</small></label></div>'
     + '<label class="f">Thẻ<input id="fk" value="'+esc(p.tags||'')+'" placeholder="họp, CEO, báo cáo"></label>'
     + '<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" id="fs">Lưu nháp</button><button class="btn v" id="fn2">Tiếp: kiểm tra và gửi</button><button class="btn sm" id="fx">Về console</button></div><p class="msg" id="fmsg" role="status"></p></div>'
-    + '<div><p class="by" style="margin:0 0 8px">Xem trước trên Marketplace</p><div id="pv"></div></div></div>';
-  if(st === 3) body = '<div class="pane" style="max-width:720px"><h2>Kiểm tra lần cuối</h2><div id="pv"></div><div id="chk"></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" id="bk">Quay lại sửa</button><button class="btn y" id="go">Gửi duyệt</button></div><p class="msg" id="gmsg" role="status"></p></div>';
+    + '<div><p class="by" style="margin:0 0 8px">Xem trước trên Marketplace</p><div id="pv"></div><div id="pvs" class="pvs"></div></div></div>';
+  if(st === 3) body = '<div class="pane" style="max-width:720px"><h2>Kiểm tra lần cuối</h2><div id="pv"></div><div id="pvs" class="pvs"></div><div id="chk"></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" id="bk">Quay lại sửa</button><button class="btn y" id="go">Gửi duyệt</button></div><p class="msg" id="gmsg" role="status"></p></div>';
   $('#main').innerHTML = '<div class="w cwrap"><div class="stepper">'+steps+'</div>'+body+'</div>';
   if(st === 1){
     var rd = function(f){ var r = new FileReader(); r.onload = function(){ $('#wr').value = String(r.result).slice(0, 20000); }; r.readAsText(f); };
@@ -336,17 +356,20 @@ function wizard(){
         .catch(function(e){ m.className = 'msg err'; m.textContent = e.message; btn.disabled = false; }); };
   }
   if(st === 2){
-    var read = function(){ p.type = $('#ft').value; p.name = $('#fn').value; p.tagline = $('#fg').value; p.description = $('#fd').value; p.body = $('#fb').value; p.category = $('#fc').value; p.price = +$('#fp').value||0; p.tags = $('#fk').value; };
+    var read = function(){ p.type = $('#ft').value; p.name = $('#fn').value; p.tagline = $('#fg').value; p.description = $('#fd').value; p.body = $('#fb').value; p.category = $('#fc').value; p.price = +$('#fp').value||0; p.tags = $('#fk').value;
+      if($('#fr')){ p.pack_roles = $('#fr').value; p.pack_steps = $('#fw').value; p.pack_notes = $('#fo').value; } };
     var preview = function(){ read(); var x = {type:p.type, name:p.name||'Tên sản phẩm', tagline:p.tagline||'Câu giới thiệu', price:p.price, type_label:d.types[p.type], creator:{name:d.creator.name}, color:'#14111A', rating:0, rating_n:0};
-      $('#pv').innerHTML = card(x, -1); $('#fh').textContent = HINT[p.type]||''; };
-    preview(); ['input','change'].forEach(function(ev){ $('#main').addEventListener(ev, function(e){ if(e.target.closest('.pane')) preview(); }); });
+      $('#pv').innerHTML = card(x, -1); $('#fh').textContent = HINT[p.type]||''; specPreview(); };
+    preview();
+    var onEv = function(e){ if(C.step !== 2) return; if(e.target.id === 'ft' && e.type === 'change'){ read(); wizard(); return; } if(e.target.closest('.pane')) preview(); };
+    $('#main').oninput = onEv; $('#main').onchange = onEv;  // gán thuộc tính (không cộng dồn listener mỗi lần vẽ lại)
     $('#fx').onclick = function(){ consoleView(); };
     $('#fs').onclick = function(){ read(); save(false, $('#fmsg')); };
     $('#fn2').onclick = function(){ read(); C.step = 3; wizard(); };
   }
   if(st === 3){
     var x = {type:p.type, name:p.name, tagline:p.tagline, price:p.price, type_label:d.types[p.type], creator:{name:d.creator.name}, color:'#14111A', rating:0, rating_n:0};
-    $('#pv').innerHTML = card(x, -1);
+    $('#pv').innerHTML = card(x, -1); specPreview(0);
     var iss = [];
     if((p.name||'').length < 4) iss.push('Tên quá ngắn.');
     if((p.tagline||'').length < 20) iss.push('Câu giới thiệu nên từ 20 ký tự và nói rõ lợi ích.');
@@ -358,9 +381,19 @@ function wizard(){
     $('#go').onclick = function(){ save(true, $('#gmsg')); };
   }
 }
+var PVT = null;
+function specPreview(delay){
+  clearTimeout(PVT); PVT = setTimeout(function(){ var p = C.draft, box = $('#pvs'); if(!box) return;
+    if(!(p.body||'').trim()){ box.innerHTML = '<p class="by">Điền nội dung để xem trước phần chi tiết theo loại sản phẩm.</p>'; return; }
+    api('/api/creator/preview', {type:p.type, name:p.name, tagline:p.tagline, description:p.description, body:p.body, category:p.category, price:p.price,
+      pack_roles:p.pack_roles||'', pack_steps:p.pack_steps||'', pack_notes:p.pack_notes||''}, C.key)
+      .then(function(r){ var b2 = $('#pvs'); if(!b2) return; b2.innerHTML = (r.error ? '<div class="issues"><b>Nội dung chưa hợp lệ</b><p style="margin:4px 0 0">'+esc(r.error)+'</p></div>' : '') + (r.spec && r.spec.kind ? '<div class="pane pvspec">'+specHtml({spec:r.spec})+'</div>' : ''); })
+      .catch(function(){}); }, delay == null ? 600 : delay);
+}
 function save(submit, m){
   var p = C.draft; m.className = 'msg'; m.textContent = submit ? 'Đang gửi…' : 'Đang lưu…';
-  api('/api/creator/save', {lid:p.id||'', type:p.type, name:p.name, tagline:p.tagline, description:p.description, body:p.body, category:p.category, price:p.price, tags:p.tags, submit:submit}, C.key)
+  api('/api/creator/save', {lid:p.id||'', type:p.type, name:p.name, tagline:p.tagline, description:p.description, body:p.body, category:p.category, price:p.price, tags:p.tags, submit:submit,
+    pack_roles:p.pack_roles||'', pack_steps:p.pack_steps||'', pack_notes:p.pack_notes||''}, C.key)
     .then(function(r){ p.id = r.id; m.className = 'msg ok'; m.textContent = r.text; if(submit) setTimeout(consoleView, 900); })
     .catch(function(e){ m.className = 'msg err'; m.textContent = e.message; });
 }

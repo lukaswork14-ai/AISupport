@@ -57,6 +57,8 @@ h2{ margin:0 0 4px; font-size:26px; letter-spacing:-.03em; font-weight:900 }
 .agree{ display:flex; gap:10px; align-items:flex-start; margin-top:12px; font-size:14px; line-height:1.45 }
 .agree input{ width:20px; height:20px; margin-top:1px; flex:none; accent-color:var(--violet, #14111A) }
 .row2{ display:flex; gap:10px; flex-wrap:wrap; margin-top:10px }
+.vatg{ display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px } @media (max-width:600px){ .vatg{ grid-template-columns:1fr } } .vatf summary{ cursor:pointer }
+.cpbox:empty, .rowi > .msg:empty{ display:none }
 </style>
 </head>
 <body>
@@ -70,6 +72,7 @@ function vnd(v){ return v > 0 ? Number(v).toLocaleString('vi-VN') + 'đ' : 'Mi�
 function lsGet(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
 function lsSet(k, v){ try{ if(v == null) localStorage.removeItem(k); else localStorage.setItem(k, v); }catch(e){} }
 var A = { tok: lsGet('sy-acc'), me: null, view: 'home', err: '' };
+(function(){ var h = (location.hash||'').slice(1); h = h==='plans' ? 'plan' : h; if(['home','try','buys','plan','profile','security'].indexOf(h) >= 0) A.view = h; })();
 function api(path, body){
   var h = {'Content-Type':'application/json'}; if(A.tok) h['X-Account'] = A.tok;
   return fetch(path, body === undefined ? {headers:h} : {method:'POST', headers:h, body:JSON.stringify(body)})
@@ -130,6 +133,53 @@ function bindRoles(){
   $('#lo').onclick = function(){ api('/api/account/logout', {}).catch(function(){}).then(function(){ A.tok = null; lsSet('sy-acc', null); authView('login'); }); };
 }
 function alert2(t){ var el = document.createElement('div'); el.className = 'hint'; el.style.cssText = 'position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:9;box-shadow:0 10px 30px rgba(0,0,0,.2)'; el.textContent = t; document.body.appendChild(el); setTimeout(function(){ el.remove(); }, 3500); }
+function dmy(iso){ var a = String(iso||'').slice(0,10).split('-'); return a.length===3 ? a[2]+'/'+a[1]+'/'+a[0] : esc(iso||''); }
+function daysLeft(iso){ var t = new Date(String(iso).slice(0,10)+'T23:59:59'); return Math.floor((t - new Date())/86400000); }
+function planDue(u){
+  if(u.plan==='trial' && u.trial_until) return ' · dùng thử đến '+dmy(u.trial_until);
+  if((u.plan==='pro' || u.plan==='business') && u.plan_until) return ' · hết hạn '+dmy(u.plan_until);
+  return '';
+}
+function planBanner(u, me){
+  if(u.plan_expired && u.plan==='free'){ var pe = me.plans.plans[u.plan_expired.plan]; return '<div class="hint" style="margin:0 0 14px">Gói '+esc(pe ? pe.name : u.plan_expired.plan)+' của bạn đã hết hạn'+(u.plan_expired.until ? ' ngày '+dmy(u.plan_expired.until) : '')+' nên tài khoản về gói Miễn phí. Dữ liệu, sản phẩm đã mua và workflow vẫn giữ nguyên. '+(me.payments_open ? '<a href="#" data-v="plan">Gia hạn</a>' : '')+'</div>'; }
+  if((u.plan==='pro' || u.plan==='business') && u.plan_until){
+    var n = daysLeft(u.plan_until);
+    if(n <= 3) return '<div class="hint" style="margin:0 0 14px"><b>Gói sắp hết hạn</b> · '+(n<=0 ? 'hết hôm nay' : 'còn '+n+' ngày')+' (đến hết '+dmy(u.plan_until)+'). Hết hạn tự về Miễn phí, không mất dữ liệu. '+(me.payments_open ? '<a href="#" data-v="plan">Gia hạn</a>' : '')+'</div>';
+  }
+  return '';
+}
+var BUY_REASONS = {khong_tai:'Không tải / cài được', sai_mo_ta:'Không đúng mô tả', hoan_tien:'Muốn hoàn tiền (7 ngày)', khac:'Vấn đề khác'};
+function buyRow(it){
+  var st = it.status==='refunded' ? '<span class="by" style="color:#B42346">Đã hoàn tiền</span>' : '';
+  var meta = esc(it.code)+' · '+dmy(it.paid_at)+' · '+(it.amount ? esc(it.amount_text) : 'Miễn phí') + (it.kind==='plan' && it.plan_until ? ' · dùng đến hết '+dmy(it.plan_until) : '') + (it.vat ? ' · HĐ VAT '+esc(it.vat.company)+(it.vat.status==='da_xuat' ? ' đã xuất'+(it.vat.number ? ' số '+esc(it.vat.number) : '') : ' đang chờ xuất') : '');
+  var act = '';
+  if(it.can_download){
+    var live = (it.downloads||[]).filter(function(d){ return !d.expired; });
+    act += live.length ? live.map(function(d){ return '<a class="btn sm" href="'+esc(d.url)+'">Tải</a>'; }).join('') : '<button class="btn sm" data-redl="'+esc(it.id)+'">Tải lại</button>';
+  }
+  if(it.status==='delivered' && A.me.buys_mail) act += '<button class="btn sm ghost" data-rs="'+esc(it.id)+'">Gửi lại email</button>';
+  if(it.receipt) act += '<a class="btn sm ghost" href="'+esc(it.receipt)+'" target="_blank" rel="noopener">Hoá đơn</a>';
+  if(it.can_complain) act += '<button class="btn sm ghost" data-cp="'+esc(it.id)+'">Khiếu nại</button>';
+  var foot = '';
+  if(it.complaint) foot = '<span class="by">Đã khiếu nại '+dmy(it.complaint.at)+' · '+({moi:'chủ sàn đang xử lý, phản hồi trong 2 ngày làm việc', da_hoan:'đã chấp nhận, superYou hoàn tiền cho bạn', tu_choi:'chưa được chấp nhận'}[it.complaint.status] || esc(it.complaint.status))+(it.complaint.reply ? '<br>Phản hồi: '+esc(it.complaint.reply) : '')+'</span>';
+  else if(it.refundable) foot = '<span class="by">Có thể yêu cầu hoàn tiền đến '+dmy(it.refund_until)+'</span>';
+  return '<div class="rowi" style="flex-wrap:wrap;align-items:flex-start" id="o-'+esc(it.id)+'"><span style="flex:1;min-width:180px"><b>'+esc(it.name)+'</b> '+st+'<br><span class="by">'+meta+'</span>'+(foot ? '<br>'+foot : '')+'</span>'
+    + '<span style="display:flex;gap:6px;flex-wrap:wrap">'+act+'</span><div class="cpbox" style="flex-basis:100%"></div><p class="msg" style="flex-basis:100%;margin:0" role="status"></p></div>';
+}
+function buyMsg(oid, t, err){ var m = document.querySelector('#o-'+oid+' .msg'); if(m){ m.className = 'msg'+(err?' err':''); m.textContent = t; } }
+function buyReload(oid, t){ api('/api/account/orders', {}).then(function(r){ A.me.entitlements = r.items; A.me.buys_mail = r.mail_ready; render(); if(t) buyMsg(oid, t); }).catch(function(){}); }
+function buyBind(){
+  document.querySelectorAll('[data-redl]').forEach(function(b){ b.onclick = function(){ var id = b.dataset.redl; b.disabled = true; api('/api/account/redownload', {oid:id}).then(function(r){ buyReload(id, r.text); }).catch(function(e){ buyMsg(id, e.message, true); b.disabled = false; }); }; });
+  document.querySelectorAll('[data-rs]').forEach(function(b){ b.onclick = function(){ var id = b.dataset.rs; b.disabled = true; api('/api/account/resend', {oid:id}).then(function(r){ buyMsg(id, r.text); }).catch(function(e){ buyMsg(id, e.message, true); b.disabled = false; }); }; });
+  document.querySelectorAll('[data-cp]').forEach(function(b){ b.onclick = function(){ var id = b.dataset.cp, box = document.querySelector('#o-'+id+' .cpbox');
+    box.innerHTML = '<div class="card" style="margin-top:8px;padding:12px"><b>Bạn gặp vấn đề gì?</b><div style="display:flex;gap:6px;flex-wrap:wrap;margin:8px 0">'+Object.keys(BUY_REASONS).map(function(k){ return '<button class="btn sm ghost" data-rk="'+k+'">'+BUY_REASONS[k]+'</button>'; }).join('')+'</div><label class="f">Ghi thêm (không bắt buộc, trừ “Vấn đề khác”)<textarea rows="2" maxlength="400" class="cpd"></textarea></label></div>';
+    box.querySelectorAll('[data-rk]').forEach(function(k){ k.onclick = function(){ box.querySelectorAll('button').forEach(function(x){ x.disabled = true; });
+      api('/api/account/complain', {oid:id, reason:k.dataset.rk, detail:box.querySelector('.cpd').value}).then(function(r){ buyReload(id, r.text); }).catch(function(e){ buyMsg(id, e.message, true); box.querySelectorAll('button').forEach(function(x){ x.disabled = false; }); }); }; });
+  }; });
+}
+function vatForm(p, v){ v = v || {}; return '<details class="vatf card" style="margin-top:14px" id="'+p+'vat"'+(v.company ? ' open' : '')+'><summary><b>Cần xuất hoá đơn VAT cho công ty</b></summary><div class="vatg"><label class="f">Tên công ty<input id="'+p+'vc" maxlength="160" value="'+esc(v.company||'')+'" autocomplete="organization"></label><label class="f">Mã số thuế<input id="'+p+'vt" maxlength="14" inputmode="numeric" placeholder="0101234567" value="'+esc(v.tax_code||'')+'"></label><label class="f" style="grid-column:1/-1">Địa chỉ<input id="'+p+'va" maxlength="250" value="'+esc(v.address||'')+'"></label><label class="f" style="grid-column:1/-1">Email nhận hoá đơn (nếu khác)<input id="'+p+'ve" type="email" maxlength="254" value="'+esc(v.email||'')+'"></label></div><p class="by" style="margin:4px 0 0">Áp dụng cho lần nâng cấp hoặc gia hạn bạn bấm tiếp theo. superYou gửi hoá đơn điện tử riêng.</p></details>'; }
+function vatRead(p){ var d = document.getElementById(p+'vat'); if(!d || !d.open) return null; var g = function(k){ return document.getElementById(p+k).value.trim(); }; var v = {company:g('vc'), tax_code:g('vt'), address:g('va'), email:g('ve')};
+  if(!v.company && !v.tax_code && !v.address) return null; if(!v.company || !v.tax_code || !v.address) return false; return v; }
 function render(){
   var me = A.me, u = me.user, p = me.plan;
   $('#topr').innerHTML = roleSwitcher();
@@ -137,8 +187,8 @@ function render(){
   var body = '';
   if(A.view === 'home'){
     var ent = me.entitlements || [];
-    body = '<h2>Chào '+esc(u.name)+'</h2><p class="by" style="margin:0 0 14px">Gói <b style="color:var(--ink)">'+esc(p.name)+'</b>'+(u.trial_until ? ' · dùng thử đến '+esc(u.trial_until) : '')+' · vai '+u.roles.map(function(r){ return ROLE[r].label; }).join(', ')+'</p>'
-      + '<div class="tiles"><div class="tile"><b>'+ent.length+'</b><span>Sản phẩm đã mua</span></div><div class="tile"><b>'+esc(p.name)+'</b><span>Gói hiện tại</span></div><div class="tile"><b>'+(p.limits.workflows||'∞')+'</b><span>Workflow riêng</span></div><div class="tile"><b>'+(p.limits.market_credit ? vnd(p.limits.market_credit) : '0đ')+'</b><span>Tín dụng Marketplace/tháng</span></div></div>'
+    body = '<h2>Chào '+esc(u.name)+'</h2><p class="by" style="margin:0 0 14px">Gói <b style="color:var(--ink)">'+esc(p.name)+'</b>'+planDue(u)+' · vai '+u.roles.map(function(r){ return ROLE[r].label; }).join(', ')+'</p>'+planBanner(u, me)
+      + '<div class="tiles"><div class="tile"><b>'+ent.filter(function(o){ return o.kind!=='plan' && o.status!=='refunded'; }).length+'</b><span>Sản phẩm đã mua</span></div><div class="tile"><b>'+esc(p.name)+'</b><span>Gói hiện tại</span></div><div class="tile"><b>'+(p.limits.workflows||'∞')+'</b><span>Workflow riêng</span></div><div class="tile"><b>'+(p.limits.market_credit ? vnd(p.limits.market_credit) : '0đ')+'</b><span>Tín dụng Marketplace/tháng</span></div></div>'
       + '<div class="card" style="margin-top:16px"><b>Bước tiếp theo</b><div class="list">'
       + '<button class="rowi" data-v="try" style="text-align:left;width:100%;background:none;border:0;font:inherit;color:inherit;cursor:pointer"><span class="ric" style="background:#C98205">✎</span><span style="flex:1"><b>Thử biên bản ngay (1 phút)</b><br><span class="by">Dán ghi chú cuộc họp, nhận tóm tắt, quyết định và ai làm gì</span></span>›</button>'
       + (me.has_owner_app ? '<a class="rowi" href="/app" style="text-decoration:none;color:inherit"><span class="ric" style="background:#14111A">S</span><span style="flex:1"><b>Mở superHuy</b><br><span class="by">Trợ lý riêng của anh (PIN hoặc Face ID)</span></span>›</a><a class="rowi" href="/hq" style="text-decoration:none;color:inherit"><span class="ric" style="background:#B42346">H</span><span style="flex:1"><b>Mở superYou HQ</b><br><span class="by">Điều hành toàn bộ business</span></span>›</a>'
@@ -156,14 +206,15 @@ function render(){
   }
   if(A.view === 'buys'){
     var e2 = me.entitlements || [];
-    body = '<h2>Sản phẩm đã mua</h2>' + (e2.length ? '<div class="list">'+e2.map(function(it){ return '<div class="rowi"><span style="flex:1"><b>'+esc(it.name)+'</b><br><span class="by">'+esc((it.at||'').slice(0,10))+'</span></span>'+(it.downloads||[]).map(function(d){ return '<a class="btn sm" href="'+esc(d.url)+'">Tải</a>'; }).join('')+(it.receipt ? '<a class="btn sm ghost" href="'+esc(it.receipt)+'" target="_blank" rel="noopener">Hoá đơn</a>' : '')+'</div>'; }).join('')+'</div>'
-      : '<div class="hint">Chưa có sản phẩm nào. Mua trên <a href="/market">Marketplace</a> bằng đúng email này, sản phẩm sẽ hiện ở đây.</div>');
+    body = '<h2>Sản phẩm đã mua</h2><p class="by" style="margin:0 0 14px">Mọi đơn mua bằng tài khoản này hoặc email '+esc(u.email||'')+'. Hoàn tiền trong 7 ngày nếu chưa cài hoặc cài dưới 2 lần.</p>'
+      + (e2.length ? '<div class="list" id="buyl">'+e2.map(buyRow).join('')+'</div>'
+      : '<div class="hint">Chưa có sản phẩm nào. Mua trên <a href="/market">Marketplace</a> khi đã đăng nhập (hoặc bằng đúng email này), sản phẩm sẽ hiện ở đây.</div>');
   }
   if(A.view === 'plan'){
     var P = me.plans.plans, order = me.plans.order;
-    body = '<h2>Gói và nâng cấp</h2><p class="by" style="margin:0 0 14px">Giá hiển thị theo chính sách hiện hành; thanh toán gói mở dần, liên hệ superYou để kích hoạt sớm.</p><div class="plans">'
+    body = '<h2>Gói và nâng cấp</h2><p class="by" style="margin:0 0 14px">Giá hiển thị theo chính sách hiện hành; thanh toán gói mở dần, liên hệ superYou để kích hoạt sớm.</p>'+planBanner(u, me)+'<div class="plans">'
       + order.map(function(k){ var pl = P[k]; return '<div class="plan '+(u.plan===k?'cur':'')+'" style="--c:'+pl.color+'">'+(u.plan===k?'<span class="tag">Đang dùng</span>':'')+'<span class="pname">'+esc(pl.name)+'</span><span class="by">'+esc(pl.tagline)+'</span><span class="price">'+(pl.price ? vnd(pl.price) : (k==='enterprise'?'Liên hệ':'0đ'))+'<span class="by" style="font-size:13px"> '+esc(pl.period||'')+'</span></span><ul>'+pl.features.map(function(f){ return '<li>'+esc(f)+'</li>'; }).join('')+'</ul>'
-        + (u.plan===k ? '' : k==='trial' && u.plan==='free' ? '<button class="btn sm y" id="trial">Bật dùng thử</button>' : k==='free' ? '' : (pl.price && (k==='pro' || k==='business') ? (me.payments_open ? '<button class="btn sm v" data-up="'+k+'">Nâng cấp · '+vnd(pl.price)+'</button>' : '<button class="btn sm ghost" disabled>Sắp mở bán</button>') : '<a class="btn sm v" href="/landing#dang-ky">Liên hệ nâng cấp</a>'))+'</div>'; }).join('')+'</div><div id="upbox"></div>';
+        + (u.plan===k ? (u.plan_until && pl.price && (k==='pro' || k==='business') ? '<span class="by">Đến hết '+dmy(u.plan_until)+'</span>'+(me.payments_open ? '<button class="btn sm v" data-up="'+k+'">Gia hạn 1 tháng · '+vnd(pl.price)+'</button>' : '') : '') : k==='trial' && u.trial_until ? '' : k==='trial' && u.plan==='free' ? '<button class="btn sm y" id="trial">Bật dùng thử</button>' : k==='free' ? '' : (pl.price && (k==='pro' || k==='business') ? (me.payments_open ? '<button class="btn sm v" data-up="'+k+'">Nâng cấp · '+vnd(pl.price)+'</button>'+(me.intl_open ? '<button class="btn sm ghost" data-intl="'+k+'">Thẻ quốc tế (USD)</button>' : '') : '<button class="btn sm ghost" disabled>Sắp mở bán</button>') : '<a class="btn sm v" href="/landing#dang-ky">Liên hệ nâng cấp</a>'))+'</div>'; }).join('')+'</div>'+(me.payments_open ? vatForm('u', u.vat) : '')+'<div id="upbox"></div>';
     body = body.replace('thanh toán gói mở dần, liên hệ superYou để kích hoạt sớm.', me.payments_open ? 'thanh toán bằng chuyển khoản VietQR, gói kích hoạt ngay khi tiền về.' : 'thanh toán đang tạm đóng trong giai đoạn thử nghiệm; superYou sẽ báo qua email khi mở bán.');
   }
   if(A.view === 'profile'){
@@ -174,8 +225,10 @@ function render(){
   }
   $('#main').innerHTML = '<div class="shell"><aside class="side">'+items.map(function(it){ return '<button class="'+(A.view===it[0]?'on':'')+'" data-v="'+it[0]+'">'+it[1]+'</button>'; }).join('')+'</aside><section>'+body+'</section></div>';
   bindRoles();
-  document.querySelectorAll('[data-v]').forEach(function(b){ b.onclick = function(){ A.view = b.dataset.v; render(); }; });
-  document.querySelectorAll('[data-up]').forEach(function(b){ b.onclick = function(){ b.disabled = true; api('/api/account/upgrade', {plan: b.dataset.up}).then(function(r){ upgradeBox(r.order); }).catch(function(e){ alert2(e.message); b.disabled = false; }); }; });
+  document.querySelectorAll('[data-v]').forEach(function(b){ b.onclick = function(e){ if(e) e.preventDefault(); A.view = b.dataset.v; render(); }; });
+  if(A.view === 'buys') buyBind();
+  document.querySelectorAll('[data-intl]').forEach(function(b){ b.onclick = function(){ b.disabled = true; api('/api/account/upgrade', {plan: b.dataset.intl, method:'intl'}).then(function(r){ if(/^https:\/\/[a-z0-9.-]+\.lemonsqueezy\.com\//.test(r.url||'')) location.href = r.url; else alert2('Chưa mở được trang thanh toán.'); }).catch(function(e){ alert2(e.message); b.disabled = false; }); }; });
+  document.querySelectorAll('[data-up]').forEach(function(b){ b.onclick = function(){ b.disabled = true; var vat = vatRead('u'); if(vat === false){ alert2('Điền đủ tên công ty, mã số thuế và địa chỉ để xuất hoá đơn VAT.'); b.disabled = false; return; } api('/api/account/upgrade', {plan: b.dataset.up, vat: vat}).then(function(r){ upgradeBox(r.order); }).catch(function(e){ alert2(e.message); b.disabled = false; }); }; });
   var tgo = $('#tgo'), tsm = $('#tsm');
   function tryRun(sample){ var m = $('#tm'); tgo.disabled = tsm.disabled = true; m.className = 'msg'; m.textContent = 'Đang làm biên bản… thường mất 10–30 giây.'; if(sample) $('#tt').value = '';
     api('/api/account/try', {text: $('#tt').value, sample: !!sample}).then(function(r){ m.textContent = ''; $('#tout').innerHTML = tryHtml(r); tgo.disabled = tsm.disabled = false; })
