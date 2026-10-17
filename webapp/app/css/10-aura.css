@@ -1,6 +1,6 @@
 /* =================================================================== superHuy aura (giao diện super app) */
 :root{
-  --bg:#F4F1F8; --surface:#FFFFFF; --text:#1B1724; --muted:#7A7387;
+  --bg:#F4F1F8; --surface:#FFFFFF; --text:#1B1724; --muted:#6B6478; /* ≥5:1 trên nền và thẻ (cũ #7A7387: 4.06:1) */
   --line:color-mix(in srgb, #2A1A45 9%, transparent); --fill:color-mix(in srgb, #4A2C7A 7%, transparent);
   --jade:#A2338C; --jade-ink:#FFFFFF; --jade-soft:color-mix(in srgb, #A2338C 11%, transparent);
   --aura:linear-gradient(135deg,#7B5CF0 0%,#C13F96 100%);
@@ -88,14 +88,14 @@ html[data-scheme="dark"] .apps i{ background:color-mix(in srgb,var(--c) 22%,tran
 .savebtn{ align-self:flex-start; display:inline-flex; gap:6px; align-items:center; font-size:12.5px; font-weight:600; color:var(--jade); padding:4px 2px; margin:-4px 0 6px }
 .savebtn[disabled]{ color:var(--muted) }
 .gemcode{ font:700 26px/1 ui-monospace,SFMono-Regular,Menlo,monospace; letter-spacing:.12em; padding:12px 14px; border-radius:12px; background:var(--fill) }
-.trk.roimaxx{ background:color-mix(in srgb,#1F7AE0 14%,transparent); color:#1F7AE0 } html[data-scheme="dark"] .trk.roimaxx{ color:#7DB6FF }
+.trk.roimaxx{ background:color-mix(in srgb,#1F7AE0 14%,transparent); color:#1A68C2 } html[data-scheme="dark"] .trk.roimaxx, html[data-scheme="dark"] .vd.thu_nghiem, html[data-scheme="dark"] .tkst.dang_lam{ color:#7DB6FF }
 .trk.leversphere{ background:color-mix(in srgb,#199e70 15%,transparent); color:#13805F } html[data-scheme="dark"] .trk.leversphere{ color:#4FD1A5 }
 .itype{ font-size:11.5px; font-weight:700; padding:3px 8px; border-radius:7px; background:var(--fill); color:var(--text) }
 .rpstack{ height:min(440px,54vh); min-height:390px }
 .stars{ display:inline-flex; align-items:center; gap:3px; white-space:nowrap }
 .itype{ display:inline-flex; align-items:center; gap:4px }
 .vd{ font-size:11.5px; font-weight:700; padding:3px 8px; border-radius:7px; background:var(--fill); color:var(--text) }
-.vd.ap_dung{ background:var(--jade-soft); color:var(--jade) } .vd.thu_nghiem{ background:color-mix(in srgb,#1F7AE0 14%,transparent); color:#1F7AE0 }
+.vd.ap_dung{ background:var(--jade-soft); color:var(--jade) } .vd.thu_nghiem{ background:color-mix(in srgb,#1F7AE0 14%,transparent); color:#1A68C2 }
 html[data-scheme="dark"] .vd.thu_nghiem{ color:#7DB6FF } .vd.bo_qua{ color:var(--muted) }
 .fit{ font-size:11.5px; font-weight:600; color:var(--muted) }
 .rpname{ margin:2px 0 0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
@@ -108,7 +108,7 @@ html[data-scheme="dark"] .vd.thu_nghiem{ color:#7DB6FF } .vd.bo_qua{ color:var(-
 .rpopt:last-child{ border-bottom:0 } .rpopt input{ width:20px; height:20px; margin-top:2px; accent-color:var(--jade); flex:none }
 .bn{ font-size:11px; font-weight:600; padding:2px 7px; border-radius:6px; background:var(--jade-soft); color:var(--jade) }
 .tkst{ font-size:11.5px; font-weight:700; padding:3px 8px; border-radius:7px; background:var(--fill); white-space:nowrap }
-.tkst.moi{ background:var(--amber-soft); color:var(--amber) } .tkst.dang_lam{ background:color-mix(in srgb,#1F7AE0 14%,transparent); color:#1F7AE0 }
+.tkst.moi{ background:var(--amber-soft); color:var(--amber) } .tkst.dang_lam{ background:color-mix(in srgb,#1F7AE0 14%,transparent); color:#1A68C2 }
 .tkst.xong{ background:var(--jade-soft); color:var(--jade) } .tkst.bo{ color:var(--muted) }
 .relpill{ font-size:11.5px; font-weight:600; color:var(--muted); white-space:nowrap }
 .caobox{ background:var(--fill); border-radius:14px; padding:10px 12px; margin:8px 0 6px; font-size:14px }

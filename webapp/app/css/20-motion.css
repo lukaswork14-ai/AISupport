@@ -60,6 +60,8 @@ body.unlocking #lock{ animation:lockOut .5s var(--ease-out) forwards; display:fl
 @media (prefers-reduced-motion:reduce){
   #app.enter, #app.enter > *, nav .ai span.orb, #lock::before, #lock::after, #lock .mark, .skel, #toast.in{ animation:none!important }
   .sheet, nav .pill{ transition:none }
+  /* tôn trọng cài đặt "Giảm chuyển động" cho mọi hiệu ứng còn lại (vẫn giữ trạng thái cuối) */
+  *, *::before, *::after{ animation-duration:.01ms !important; animation-iteration-count:1 !important; transition-duration:.01ms !important; scroll-behavior:auto !important }
 }
 .brandimg{ width:100%; height:100%; object-fit:cover; display:block; border-radius:inherit }
 .orb:has(.brandimg), #lock .mark:has(.brandimg){ overflow:hidden; padding:0 }

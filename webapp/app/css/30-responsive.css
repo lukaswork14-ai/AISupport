@@ -73,3 +73,11 @@
 html.macapp{ --mac-top:22px }
 html.macapp body.standalone{ padding-top:0 }
 
+
+/* ================= Trợ năng: vùng chạm tối thiểu 44×44px trên màn cảm ứng =================
+   Mở rộng vùng bấm bằng lớp vô hình, không đổi kích thước nhìn thấy của nút. */
+@media (pointer:coarse){
+  :is(.iconbtn, .chip, .btn.sm, .swatch, .sec .link, .addlink, .seg button, .hask .mic){ position:relative }
+  :is(.iconbtn, .chip, .btn.sm, .swatch, .sec .link, .addlink, .seg button, .hask .mic)::after{
+    content:""; position:absolute; left:50%; top:50%; width:max(100%, 44px); height:max(100%, 44px); transform:translate(-50%,-50%) }
+}

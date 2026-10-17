@@ -8,20 +8,22 @@
   --jade: #0B9877;
   --jade-ink: #FFFFFF;
   --jade-soft: color-mix(in srgb, var(--jade) 13%, transparent);
-  --amber: #C98205;
+  --amber: #9A6200; /* chữ vàng hổ phách: ≥4.5:1 trên nền trắng (cũ #C98205 chỉ 3.1:1) */
   --amber-soft: color-mix(in srgb, #E8A317 16%, transparent);
   --danger: var(--tg-theme-destructive-text-color, #D64545);
   --r-sheet: 26px; --r-card: 20px; --r-ctl: 14px;
   --nav-h: 64px;
   --safe-b: env(safe-area-inset-bottom);
 }
-html[data-scheme="dark"]{ --jade:#33D1A8; --jade-ink:#062018; --amber:#F2B23A; }
+html[data-scheme="dark"]{ --jade:#33D1A8; --jade-ink:#062018; --amber:#F2B23A; --danger:var(--tg-theme-destructive-text-color, #E5534F); }
 *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent }
 html,body{ margin:0; background:var(--bg); color:var(--text);
   font:15px/1.5 "Be Vietnam Pro", -apple-system, system-ui, sans-serif; -webkit-font-smoothing:antialiased }
 body{ padding-bottom:calc(var(--nav-h) + var(--safe-b) + 12px) }
 button{ font:inherit; color:inherit; background:none; border:0; padding:0; cursor:pointer }
-button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible{ outline:2px solid var(--jade); outline-offset:2px }
+/* trợ năng: mọi thứ bấm được đều có viền focus rõ khi dùng bàn phím */
+:is(button, a[href], input, textarea, select, summary, [role=button], [tabindex]:not([tabindex="-1"])):focus-visible{ outline:2px solid var(--jade); outline-offset:2px }
+:is(button, a[href], [role=button], [tabindex]):focus:not(:focus-visible){ outline:none }
 svg{ display:block }
 .wrap{ max-width:640px; margin:0 auto; padding:14px 16px 8px }
 
@@ -70,7 +72,8 @@ h2{ font-size:17px; font-weight:600; letter-spacing:-.01em; margin:0 }
 .empty{ padding:22px 16px; color:var(--muted); font-size:14px }
 
 /* lịch */
-.seg{ display:inline-flex; padding:3px; border-radius:12px; background:var(--fill) }
+.seg{ display:inline-flex; padding:3px; border-radius:12px; background:var(--fill); max-width:100%; overflow-x:auto; scrollbar-width:none }
+.seg::-webkit-scrollbar{ display:none } .seg > button{ flex:none; white-space:nowrap }
 .seg button{ padding:6px 12px; border-radius:9px; font-size:13px; font-weight:600; color:var(--muted) }
 .seg button.on{ background:var(--surface); color:var(--text); box-shadow:0 1px 2px rgba(0,0,0,.08) }
 .tl{ padding:6px 16px 12px }
