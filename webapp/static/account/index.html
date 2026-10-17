@@ -54,6 +54,9 @@ h2{ margin:0 0 4px; font-size:26px; letter-spacing:-.03em; font-weight:900 }
 .plans{ display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:12px }
 .pill{ font-size:12px; font-weight:800; padding:3px 9px; border-radius:999px; background:var(--soft) }
 .hint{ background:var(--soft); border-radius:14px; padding:12px 14px; font-size:14px }
+.agree{ display:flex; gap:10px; align-items:flex-start; margin-top:12px; font-size:14px; line-height:1.45 }
+.agree input{ width:20px; height:20px; margin-top:1px; flex:none; accent-color:var(--violet, #14111A) }
+.row2{ display:flex; gap:10px; flex-wrap:wrap; margin-top:10px }
 </style>
 </head>
 <body>
@@ -83,16 +86,17 @@ function authView(mode){
     + (mode==='login'
       ? '<form class="card" id="lf"><label class="f">Email<input id="le" type="email" required autocomplete="email" value="'+esc(lsGet('sy-email')||'')+'"></label><label class="f">Mật khẩu<input id="lp" type="password" required autocomplete="current-password" minlength="8"></label><button class="btn v">Đăng nhập</button><p class="msg" id="lm" role="status"></p></form>'
       : '<form class="card" id="sf"><label class="f">Tên hiển thị<input id="sn" required maxlength="60" autocomplete="name"></label><label class="f">Email<input id="se" type="email" required autocomplete="email"></label><label class="f">Mật khẩu (từ 8 ký tự)<input id="sp" type="password" required minlength="8" autocomplete="new-password"></label>'
-        + '<label class="f">Tôi muốn<select id="sr"><option value="member">Dùng superYou (người dùng)</option><option value="seller">Bán sản phẩm trên Marketplace (người bán)</option></select></label>'
-        + '<label class="f">Bắt đầu với<select id="spl"><option value="free">Gói Miễn phí</option><option value="trial">Dùng thử Pro 14 ngày (không cần thẻ)</option></select></label>'
-        + '<button class="btn v">Tạo tài khoản</button><p class="msg" id="sm" role="status"></p><p class="by" style="margin:0">Khi tạo tài khoản bạn đồng ý với điều khoản sử dụng và chính sách dữ liệu của superYou.</p></form>')
+        + '<label class="agree"><input type="checkbox" id="sag"> <span>Tôi đã đọc và đồng ý <a href="/dieu-khoan" target="_blank" rel="noopener">Điều khoản</a> và <a href="/bao-mat" target="_blank" rel="noopener">Quyền riêng tư</a> (bản nháp, đang được rà soát).</span></label>'
+        + '<button class="btn v">Tạo tài khoản</button><p class="msg" id="sm" role="status"></p></form>')
     + '<div class="owner"><img src="/icons/huy-128.png" alt=""><div style="flex:1"><b>Chủ sàn / superHuy</b><div class="by">Mở khoá bằng mã PIN hoặc Face ID, không dùng mật khẩu.</div></div><a class="btn sm y" href="/app">Mở app</a></div></div>';
   $('#tLogin').onclick = function(){ authView('login'); }; $('#tSignup').onclick = function(){ authView('signup'); };
   var lf = $('#lf'); if(lf) lf.addEventListener('submit', function(e){ e.preventDefault(); var m = $('#lm'), b = lf.querySelector('button'); b.disabled = true; m.className='msg'; m.textContent='Đang đăng nhập…';
     api('/api/account/login', {email:$('#le').value, password:$('#lp').value}).then(function(r){ A.tok = r.session; lsSet('sy-acc', r.session); lsSet('sy-email', $('#le').value); afterLogin(r.user); })
       .catch(function(err){ m.className='msg err'; m.textContent = err.message; b.disabled = false; }); });
   var sf = $('#sf'); if(sf) sf.addEventListener('submit', function(e){ e.preventDefault(); var m = $('#sm'), b = sf.querySelector('button'); b.disabled = true; m.className='msg'; m.textContent='Đang tạo…';
-    api('/api/account/signup', {name:$('#sn').value, email:$('#se').value, password:$('#sp').value, role:$('#sr').value, plan:$('#spl').value}).then(function(r){ A.tok = r.session; lsSet('sy-acc', r.session); lsSet('sy-email', $('#se').value); afterLogin(r.user); })
+    if(!$('#sag').checked){ m.className='msg err'; m.textContent='Bạn tích ô đồng ý Điều khoản và Quyền riêng tư để tiếp tục.'; b.disabled = false; return; }
+    var role = new URLSearchParams(location.search).get('role') === 'seller' ? 'seller' : 'member';
+    api('/api/account/signup', {name:$('#sn').value, email:$('#se').value, password:$('#sp').value, role:role, plan:'free', agree:true}).then(function(r){ A.tok = r.session; lsSet('sy-acc', r.session); lsSet('sy-email', $('#se').value); if(role === 'member') A.view = 'try'; afterLogin(r.user); })
       .catch(function(err){ m.className='msg err'; m.textContent = err.message; b.disabled = false; }); });
 }
 function afterLogin(u){
@@ -129,18 +133,26 @@ function alert2(t){ var el = document.createElement('div'); el.className = 'hint
 function render(){
   var me = A.me, u = me.user, p = me.plan;
   $('#topr').innerHTML = roleSwitcher();
-  var items = [['home','Tổng quan'],['buys','Sản phẩm đã mua'],['plan','Gói và nâng cấp'],['profile','Hồ sơ'],['security','Bảo mật']];
+  var items = [['home','Tổng quan'],['try','Thử biên bản'],['buys','Sản phẩm đã mua'],['plan','Gói và nâng cấp'],['profile','Hồ sơ'],['security','Bảo mật']];
   var body = '';
   if(A.view === 'home'){
     var ent = me.entitlements || [];
     body = '<h2>Chào '+esc(u.name)+'</h2><p class="by" style="margin:0 0 14px">Gói <b style="color:var(--ink)">'+esc(p.name)+'</b>'+(u.trial_until ? ' · dùng thử đến '+esc(u.trial_until) : '')+' · vai '+u.roles.map(function(r){ return ROLE[r].label; }).join(', ')+'</p>'
       + '<div class="tiles"><div class="tile"><b>'+ent.length+'</b><span>Sản phẩm đã mua</span></div><div class="tile"><b>'+esc(p.name)+'</b><span>Gói hiện tại</span></div><div class="tile"><b>'+(p.limits.workflows||'∞')+'</b><span>Workflow riêng</span></div><div class="tile"><b>'+(p.limits.market_credit ? vnd(p.limits.market_credit) : '0đ')+'</b><span>Tín dụng Marketplace/tháng</span></div></div>'
       + '<div class="card" style="margin-top:16px"><b>Bước tiếp theo</b><div class="list">'
+      + '<button class="rowi" data-v="try" style="text-align:left;width:100%;background:none;border:0;font:inherit;color:inherit;cursor:pointer"><span class="ric" style="background:#C98205">✎</span><span style="flex:1"><b>Thử biên bản ngay (1 phút)</b><br><span class="by">Dán ghi chú cuộc họp, nhận tóm tắt, quyết định và ai làm gì</span></span>›</button>'
       + (me.has_owner_app ? '<a class="rowi" href="/app" style="text-decoration:none;color:inherit"><span class="ric" style="background:#14111A">S</span><span style="flex:1"><b>Mở superHuy</b><br><span class="by">Trợ lý riêng của anh (PIN hoặc Face ID)</span></span>›</a><a class="rowi" href="/hq" style="text-decoration:none;color:inherit"><span class="ric" style="background:#B42346">H</span><span style="flex:1"><b>Mở superYou HQ</b><br><span class="by">Điều hành toàn bộ business</span></span>›</a>'
         : (u.plan==='free' ? '<div class="rowi"><span class="ric" style="background:#C98205">★</span><span style="flex:1"><b>Dùng thử Pro 14 ngày</b><br><span class="by">superYou riêng, không cần thẻ</span></span><button class="btn sm y" id="trial">Bật dùng thử</button></div>' : '<div class="rowi"><span class="ric" style="background:#14111A">S</span><span style="flex:1"><b>superYou riêng của bạn</b><br><span class="by">Đội superYou đang chuẩn bị máy chủ cho gói của bạn; bạn sẽ nhận email hướng dẫn mở bot Telegram.</span></span></div>'))
       + '<a class="rowi" href="/market" style="text-decoration:none;color:inherit"><span class="ric" style="background:#0E7C6B">M</span><span style="flex:1"><b>Khám phá Marketplace</b><br><span class="by">Skill, workflow, gói tri thức</span></span>›</a>'
       + (u.roles.indexOf('seller')>=0 ? '<a class="rowi" href="/market/console" style="text-decoration:none;color:inherit"><span class="ric" style="background:#0E7C6B">B</span><span style="flex:1"><b>Console người bán</b><br><span class="by">Sản phẩm, doanh thu</span></span>›</a>' : '')
       + '</div></div>';
+  }
+  if(A.view === 'try'){
+    body = '<h2>Thử biên bản</h2><p class="by" style="margin:0 0 14px">Dán ghi chú hoặc lời kể về một cuộc họp. superYou trả về tóm tắt, quyết định và ai làm gì.</p>'
+      + '<div class="card"><label class="f">Ghi chú cuộc họp<textarea id="tt" rows="7" maxlength="8000" placeholder="Ví dụ: Họp sáng nay với anh Nam bên kho. Chốt giao hàng thứ Tư, chị Mai gửi báo giá trước thứ Ba…"></textarea></label>'
+      + '<div class="row2"><button class="btn v" id="tgo">Làm biên bản</button><button class="btn ghost" id="tsm">Dùng ví dụ mẫu</button></div>'
+      + '<p class="by" style="margin:10px 0 0">Văn bản được xử lý bởi mô hình AI qua OpenRouter (có thể ở nước ngoài) và không được lưu lại. Đừng dán mật khẩu hay số tài khoản.</p>'
+      + '<p class="msg" id="tm" role="status"></p></div><div id="tout"></div>';
   }
   if(A.view === 'buys'){
     var e2 = me.entitlements || [];
@@ -151,8 +163,8 @@ function render(){
     var P = me.plans.plans, order = me.plans.order;
     body = '<h2>Gói và nâng cấp</h2><p class="by" style="margin:0 0 14px">Giá hiển thị theo chính sách hiện hành; thanh toán gói mở dần, liên hệ superYou để kích hoạt sớm.</p><div class="plans">'
       + order.map(function(k){ var pl = P[k]; return '<div class="plan '+(u.plan===k?'cur':'')+'" style="--c:'+pl.color+'">'+(u.plan===k?'<span class="tag">Đang dùng</span>':'')+'<span class="pname">'+esc(pl.name)+'</span><span class="by">'+esc(pl.tagline)+'</span><span class="price">'+(pl.price ? vnd(pl.price) : (k==='enterprise'?'Liên hệ':'0đ'))+'<span class="by" style="font-size:13px"> '+esc(pl.period||'')+'</span></span><ul>'+pl.features.map(function(f){ return '<li>'+esc(f)+'</li>'; }).join('')+'</ul>'
-        + (u.plan===k ? '' : k==='trial' && u.plan==='free' ? '<button class="btn sm y" id="trial">Bật dùng thử</button>' : k==='free' ? '' : (pl.price && (k==='pro' || k==='business') ? '<button class="btn sm v" data-up="'+k+'">Nâng cấp · '+vnd(pl.price)+'</button>' : '<a class="btn sm v" href="/landing#dang-ky">Liên hệ nâng cấp</a>'))+'</div>'; }).join('')+'</div><div id="upbox"></div>';
-    body = body.replace('thanh toán gói mở dần, liên hệ superYou để kích hoạt sớm.', 'thanh toán bằng chuyển khoản VietQR, gói kích hoạt ngay khi tiền về.');
+        + (u.plan===k ? '' : k==='trial' && u.plan==='free' ? '<button class="btn sm y" id="trial">Bật dùng thử</button>' : k==='free' ? '' : (pl.price && (k==='pro' || k==='business') ? (me.payments_open ? '<button class="btn sm v" data-up="'+k+'">Nâng cấp · '+vnd(pl.price)+'</button>' : '<button class="btn sm ghost" disabled>Sắp mở bán</button>') : '<a class="btn sm v" href="/landing#dang-ky">Liên hệ nâng cấp</a>'))+'</div>'; }).join('')+'</div><div id="upbox"></div>';
+    body = body.replace('thanh toán gói mở dần, liên hệ superYou để kích hoạt sớm.', me.payments_open ? 'thanh toán bằng chuyển khoản VietQR, gói kích hoạt ngay khi tiền về.' : 'thanh toán đang tạm đóng trong giai đoạn thử nghiệm; superYou sẽ báo qua email khi mở bán.');
   }
   if(A.view === 'profile'){
     body = '<h2>Hồ sơ</h2><form class="card" id="pf"><label class="f">Tên hiển thị<input id="pn" value="'+esc(u.name||'')+'"></label><label class="f">Công ty<input id="pc" value="'+esc(u.company||'')+'"></label><label class="f">Chức danh<input id="pt" value="'+esc(u.title||'')+'"></label><label class="f">Email<input value="'+esc(u.email||'')+'" disabled></label><button class="btn v">Lưu</button><p class="msg" id="pm" role="status"></p></form>';
@@ -164,9 +176,22 @@ function render(){
   bindRoles();
   document.querySelectorAll('[data-v]').forEach(function(b){ b.onclick = function(){ A.view = b.dataset.v; render(); }; });
   document.querySelectorAll('[data-up]').forEach(function(b){ b.onclick = function(){ b.disabled = true; api('/api/account/upgrade', {plan: b.dataset.up}).then(function(r){ upgradeBox(r.order); }).catch(function(e){ alert2(e.message); b.disabled = false; }); }; });
+  var tgo = $('#tgo'), tsm = $('#tsm');
+  function tryRun(sample){ var m = $('#tm'); tgo.disabled = tsm.disabled = true; m.className = 'msg'; m.textContent = 'Đang làm biên bản… thường mất 10–30 giây.'; if(sample) $('#tt').value = '';
+    api('/api/account/try', {text: $('#tt').value, sample: !!sample}).then(function(r){ m.textContent = ''; $('#tout').innerHTML = tryHtml(r); tgo.disabled = tsm.disabled = false; })
+      .catch(function(e){ m.className = 'msg err'; m.textContent = e.message; tgo.disabled = tsm.disabled = false; }); }
+  if(tgo){ tgo.onclick = function(){ tryRun(false); }; tsm.onclick = function(){ tryRun(true); }; }
   var tr = $('#trial'); if(tr) tr.onclick = function(){ tr.disabled = true; api('/api/account/trial', {}).then(function(r){ alert2(r.text); load(); }).catch(function(e){ alert2(e.message); tr.disabled = false; }); };
   var pf = $('#pf'); if(pf) pf.addEventListener('submit', function(e){ e.preventDefault(); var m = $('#pm'); m.className='msg'; m.textContent='Đang lưu…'; api('/api/account/profile', {name:$('#pn').value, company:$('#pc').value, title:$('#pt').value}).then(function(r){ m.className='msg ok'; m.textContent = r.text; A.me.user = Object.assign(A.me.user, r.user); }).catch(function(err){ m.className='msg err'; m.textContent = err.message; }); });
   var pw = $('#pw'); if(pw) pw.addEventListener('submit', function(e){ e.preventDefault(); var m = $('#pwm'); m.className='msg'; m.textContent='Đang đổi…'; api('/api/account/password', {old:$('#po').value, new:$('#pnw').value}).then(function(r){ m.className='msg ok'; m.textContent = r.text; pw.reset(); }).catch(function(err){ m.className='msg err'; m.textContent = err.message; }); });
+}
+function tryHtml(r){
+  function ul(xs){ return xs && xs.length ? '<ul>'+xs.map(function(x){ return '<li>'+esc(x)+'</li>'; }).join('')+'</ul>' : '<p class="by">Không có.</p>'; }
+  return '<div class="card" style="margin-top:14px"><span class="by">'+(r.sample ? 'Biên bản từ ví dụ mẫu' : 'Biên bản của bạn')+'</span><h3 style="margin:4px 0 8px">'+esc(r.title)+'</h3><p>'+esc(r.summary)+'</p>'
+    + '<b>Quyết định</b>'+ul(r.decisions)
+    + '<b>Ai làm gì</b>'+(r.next_steps && r.next_steps.length ? '<ul>'+r.next_steps.map(function(x){ return '<li>'+esc(x.text)+(x.owner ? ' · <b>'+esc(x.owner)+'</b>' : '')+(x.due ? ' · '+esc(x.due) : '')+'</li>'; }).join('')+'</ul>' : '<p class="by">Không có.</p>')
+    + (r.open_questions && r.open_questions.length ? '<b>Còn bỏ ngỏ</b>'+ul(r.open_questions) : '')
+    + '<p class="by" style="margin-top:12px">Đúng ý chưa? Bạn sửa ghi chú rồi bấm Làm biên bản lần nữa. Bản đầy đủ (ghi âm, nhắc việc, bản tin sáng) mở dần trong giai đoạn thử nghiệm.</p></div>';
 }
 var UPOLL = null;
 function upgradeBox(o){

@@ -13,7 +13,7 @@ from apscheduler.triggers.interval import IntervalTrigger
 from telegram import (BotCommand, BotCommandScopeChat, BotCommandScopeDefault, InlineKeyboardButton, InlineKeyboardMarkup,
                       MenuButtonDefault, MenuButtonWebApp, Update, WebAppInfo)
 from telegram.constants import ChatAction
-from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters
+from telegram.ext import Application, CallbackQueryHandler, CommandHandler, ContextTypes, MessageHandler, filters
 
 import brain
 import hub
@@ -632,12 +632,47 @@ async def on_audio(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     name = getattr(obj, "file_name", None) or ("voice.ogg" if msg.voice else "video.mp4" if (msg.video or msg.video_note) else "audio.m4a")
     meeting.INBOX.mkdir(parents=True, exist_ok=True)
     path = meeting.INBOX / f"tg-{msg.message_id}-{re.sub(r'[^A-Za-z0-9._-]', '_', name)}"
+    if not meeting.recording_enabled():  # bản của khách khi chưa mở ghi âm (quyết định #7): không tải file về
+        await msg.reply_text(meeting.RECORDING_CLOSED_TEXT)
+        return
     f = await obj.get_file()
     await f.download_to_drive(str(path))
-    m = await asyncio.to_thread(meeting.create, str(path), "Telegram", "", msg.caption or "",
-                                msg.date.astimezone().replace(tzinfo=None).isoformat(timespec="seconds"))
+    started = msg.date.astimezone().replace(tzinfo=None).isoformat(timespec="seconds")
+    if meeting.consent_required():  # bản của khách: hỏi đồng ý trước, chưa gửi âm thanh đi đâu
+        key = f"{msg.message_id}"
+        ctx.bot_data.setdefault("rec_pending", {})[key] = (str(path), msg.caption or "", started)
+        await msg.reply_text("🎙 " + meeting.CONSENT_TEXT, reply_markup=InlineKeyboardMarkup([[
+            InlineKeyboardButton("Huỷ", callback_data=f"rc:no:{key}"), InlineKeyboardButton("🎙 Ghi âm", callback_data=f"rc:ok:{key}")]]))
+        return
+    await asyncio.to_thread(meeting.create, str(path), "Telegram", "", msg.caption or "", started)
     await msg.reply_text("🎙 Đã nhận âm thanh. superHuy đang chép lời và làm biên bản, xong em gửi tóm tắt vào đây. "
                          "Anh có thể ghi chú bối cảnh (vd: họp Leversphere, dự án X) ở phần chú thích khi gửi file.")
+
+
+async def on_rec_consent(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    """Nút [Ghi âm]/[Huỷ] dưới câu xin đồng ý (thẻ 15, họp 17/10/2026). Bấm Ghi âm mới tạo biên bản, kèm log đồng ý."""
+    from pathlib import Path
+    from agents import meeting
+    q = update.callback_query
+    _, act, key = (q.data or "rc::").split(":", 2)
+    item = ctx.bot_data.get("rec_pending", {}).pop(key, None)
+    await q.answer()
+    if not item:
+        await q.edit_message_text("Bản ghi này đã được xử lý hoặc hết hạn. Gửi lại file nếu cần.")
+        return
+    path, caption, started = item
+    if act != "ok":
+        try:
+            Path(path).unlink()
+        except Exception:
+            pass
+        await q.edit_message_text("Đã huỷ. File ghi âm đã được xoá, không gửi đi đâu.")
+        return
+    try:
+        await asyncio.to_thread(meeting.create, path, "Telegram", "", caption, started, meeting.make_consent("telegram"))
+        await q.edit_message_text("🎙 Đã ghi nhận đồng ý. Trợ lý đang chép lời và làm biên bản, xong sẽ gửi tóm tắt vào đây.")
+    except ValueError as e:
+        await q.edit_message_text(str(e))
 
 
 def main():
@@ -664,6 +699,7 @@ def main():
         # lỗi mạng tạm thời (máy ngủ, mất wifi): chỉ ghi 1 dòng, bot tự kết nối lại
         log.warning("Lỗi (bot tự xử lý tiếp): %s", ctx.error)
     app.add_error_handler(on_error)
+    app.add_handler(CallbackQueryHandler(on_rec_consent, pattern=r"^rc:"))
     app.add_handler(MessageHandler(OWNER_ONLY & (filters.VOICE | filters.AUDIO | filters.VIDEO | filters.VIDEO_NOTE | filters.Document.ALL), on_audio))
     app.add_handler(MessageHandler(OWNER_ONLY & filters.TEXT & ~filters.COMMAND, on_text))
     log.info("Đang chạy. Nhấn Ctrl+C để dừng.")

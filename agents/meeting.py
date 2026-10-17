@@ -20,7 +20,7 @@ import time
 import uuid
 from pathlib import Path
 
-from config import DATA_DIR, LLM_MODEL, OBSIDIAN_VAULT
+from config import DATA_DIR, IS_TENANT, LLM_MODEL, OBSIDIAN_VAULT
 from llm import ask_json, fix_vi, make_client
 
 log = logging.getLogger("meeting")
@@ -38,6 +38,33 @@ ORGS = {  # tổ chức -> vai trò của anh Huy (superHuy dự họp với vai
 }
 TYPES = ["Họp nội bộ", "Họp ban lãnh đạo", "1-1", "Đối tác", "Khách hàng", "Nhà đầu tư", "Tuyển dụng", "Đào tạo / chia sẻ",
          "Brainstorm", "Báo cáo tiến độ", "Khác"]
+
+
+# ------------------------------------------------------------------ đồng ý ghi âm (quyết định #7 + thẻ 15, họp 17/10/2026)
+# Bản của khách (IS_TENANT): biên bản từ ghi âm tạm đóng cho tới khi có DPIA (anh đặt SUPERYOU_RECORDING=1 trên VPS).
+# Khi mở: mỗi bản ghi phải có xác nhận đồng ý (thời điểm, nguồn, phiên bản câu chữ); thiếu thì KHÔNG gửi âm thanh đi chép lời.
+CONSENT_VERSION = "2026-10-17"
+CONSENT_TEXT = ("superYou sẽ ghi âm và chuyển thành văn bản cuộc họp này, tách theo người nói. Âm thanh và văn bản được xử lý "
+                "bởi mô hình AI, có thể ở nước ngoài. Bạn xác nhận đã thông báo cho mọi người tham gia và được họ đồng ý.")
+RECORDING_CLOSED_TEXT = ("Biên bản từ ghi âm đang tạm đóng trong giai đoạn thử nghiệm để hoàn tất hồ sơ bảo vệ dữ liệu. "
+                         "Bạn vẫn có thể dán ghi chú cuộc họp vào ô chat để superYou làm biên bản.")
+
+
+def consent_required() -> bool:
+    return IS_TENANT
+
+
+def recording_enabled() -> bool:
+    return (not IS_TENANT) or __import__("os").getenv("SUPERYOU_RECORDING", "0").strip() == "1"
+
+
+def rec_policy() -> dict:
+    return {"enabled": recording_enabled(), "consent": consent_required(), "consent_text": CONSENT_TEXT, "version": CONSENT_VERSION,
+            "closed_text": "" if recording_enabled() else RECORDING_CLOSED_TEXT}
+
+
+def make_consent(source: str) -> dict:
+    return {"ok": True, "version": CONSENT_VERSION, "at": dt.datetime.now().isoformat(timespec="seconds"), "source": str(source)[:40]}
 
 
 # ------------------------------------------------------------------ lưu trữ
@@ -558,14 +585,23 @@ def _calendar_hint(started: str) -> str:
     return ""
 
 
-def create(src_path: str, source: str, title: str = "", hint: str = "", started: str = "") -> dict:
-    """Nhận 1 file âm thanh (bất kỳ định dạng ffmpeg đọc được) -> tạo cuộc họp và xếp hàng xử lý."""
+def create(src_path: str, source: str, title: str = "", hint: str = "", started: str = "", consent: dict | None = None) -> dict:
+    """Nhận 1 file âm thanh (bất kỳ định dạng ffmpeg đọc được) -> tạo cuộc họp và xếp hàng xử lý.
+    Bản của khách: phải mở ghi âm (recording_enabled) và có consent từ make_consent(); nếu không thì xoá file, báo lỗi."""
+    if not recording_enabled() or (consent_required() and not (consent or {}).get("ok")):
+        try:
+            Path(src_path).unlink()
+        except Exception:
+            pass
+        raise ValueError(RECORDING_CLOSED_TEXT if not recording_enabled() else "Cần xác nhận đồng ý ghi âm trước khi làm biên bản.")
     mid = dt.datetime.now().strftime("%y%m%d") + "-" + uuid.uuid4().hex[:5]
     d = _dir(mid)
     d.mkdir(parents=True, exist_ok=True)
     started = started or dt.datetime.now().isoformat(timespec="seconds")
     m = {"id": mid, "title": title or "", "hint": hint, "source": source, "created": dt.datetime.now().isoformat(timespec="seconds"),
          "started": started, "status": "queued", "step": "Đang xếp hàng", "progress": 0, "raw": str(src_path)}
+    if consent:
+        m["consent"] = {k: consent.get(k) for k in ("version", "at", "source")}
     save(m)
     _jobs.put(mid)
     _ensure_worker()
@@ -594,6 +630,11 @@ def _prepare(mid: str) -> dict:
 
 
 def process(mid: str):
+    m0 = load(mid) or {}
+    if consent_required() and not (recording_enabled() and m0.get("consent")):
+        # chốt chặn thứ hai: không gửi âm thanh ra ngoài khi thiếu log đồng ý (kể cả bản ghi tồn từ trước)
+        patch(mid, status="error", err="Thiếu xác nhận đồng ý ghi âm nên không chép lời.", step="")
+        return
     patch(mid, status="working", err="")
     m = _prepare(mid)
     m = patch(mid, step="Đang chép lời", progress=3)
@@ -632,6 +673,12 @@ def process(mid: str):
         log.exception("Ghi Obsidian lỗi")
         m = patch(mid, obsidian_err=str(e)[:200])
     m = patch(mid, status="done", step="", progress=100, done_at=dt.datetime.now().isoformat(timespec="seconds"))
+    try:
+        from config import OWNER_CHAT_ID
+        from core import activation
+        activation.first_result(OWNER_CHAT_ID, "bien_ban")
+    except Exception:
+        pass
     try:
         from core import notify
         org = ORGS.get(labels.get("org"), {}).get("name", "")

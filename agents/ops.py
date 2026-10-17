@@ -159,16 +159,25 @@ def system_health() -> dict:
 
 
 # ------------------------------------------------------------------ 3. chi phí
-def record_llm(tokens_in: int = 0, tokens_out: int = 0, model: str = "") -> dict:
-    """Cộng dồn token LLM theo ngày (để nối vào llm.py sau). Giá theo bảng ops.json.llm_price[model] = {in, out} đ/1k token, mặc định 0."""
+def record_llm(tokens_in: int = 0, tokens_out: int = 0, model: str = "", cost_usd: float | None = None) -> dict:
+    """Cộng dồn token LLM theo ngày; llm.make_client() gọi hàm này sau mỗi lượt.
+    Chi phí: ưu tiên chi phí thật OpenRouter trả về (cost_usd) quy đổi bằng biến USD_VND (anh đặt trên VPS);
+    chưa có USD_VND thì chỉ cộng cost_usd, còn 'cost' (đ) theo bảng ops.json.llm_price[model] = {in, out} đ/1k token."""
+    rate = float(os.getenv("USD_VND", "0") or 0)
     with _LOCK:
         d = _load()
         day = d["llm"].setdefault(_today(), {"calls": 0, "in": 0, "out": 0, "cost": 0})
+        day.setdefault("cost_usd", 0.0)
         price = d["llm_price"].get(model) or d["llm_price"].get("default") or {}
         day["calls"] += 1
         day["in"] += int(tokens_in or 0)
         day["out"] += int(tokens_out or 0)
-        day["cost"] += int(tokens_in or 0) / 1000 * float(price.get("in", 0)) + int(tokens_out or 0) / 1000 * float(price.get("out", 0))
+        if cost_usd is not None:
+            day["cost_usd"] = round(day["cost_usd"] + float(cost_usd), 6)
+        if cost_usd is not None and rate > 0:
+            day["cost"] += float(cost_usd) * rate
+        else:
+            day["cost"] += int(tokens_in or 0) / 1000 * float(price.get("in", 0)) + int(tokens_out or 0) / 1000 * float(price.get("out", 0))
         for k in sorted(d["llm"])[:-KEEP_DAYS]:
             d["llm"].pop(k, None)
         _save(d)
@@ -190,6 +199,24 @@ def _llm_estimate(d: dict) -> tuple[int, int]:
             calls += int(v.get("calls", 0))
             cost += float(v.get("cost", 0))
     return calls, int(cost)
+
+
+def llm_month() -> dict:
+    """Tổng LLM tháng này của instance: lượt gọi, token, chi phí thật (USD) và quy đổi (đ)."""
+    d = _load()
+    month = dt.date.today().strftime("%Y-%m")
+    out = {"month": month, "calls": 0, "in": 0, "out": 0, "cost_usd": 0.0, "cost": 0}
+    for day, v in d["llm"].items():
+        if day.startswith(month):
+            for k in ("calls", "in", "out"):
+                out[k] += int(v.get(k, 0))
+            out["cost_usd"] += float(v.get("cost_usd", 0) or 0)
+            out["cost"] += float(v.get("cost", 0) or 0)
+    out["cost_usd"] = round(out["cost_usd"], 4)
+    out["cost"] = int(out["cost"])
+    out["text"] = (f"LLM tháng {month}: {out['calls']} lượt · {out['in'] + out['out']:,} token · ${out['cost_usd']:.2f}"
+                   + (f" ≈ {_vnd(out['cost'])}" if out["cost"] else " (đặt USD_VND để quy đổi)"))
+    return out
 
 
 def cost_snapshot() -> dict:
@@ -340,6 +367,14 @@ def weekly_report(to_board: bool = True) -> dict:
 
 
 # ------------------------------------------------------------------ 7. tổng quan
+def _activation() -> dict:
+    try:
+        from core import activation
+        return activation.summary(prefix="" if IS_TENANT else "acc:")
+    except Exception as e:
+        return {"text": f"Chưa đọc được số liệu kích hoạt: {e}"}
+
+
 def overview() -> dict:
     """Số liệu cho thẻ dashboard Vận hành."""
     try:
@@ -351,6 +386,6 @@ def overview() -> dict:
         return {"text": f"Vận hành: {h['failing']} kiểm tra lỗi · ổ đĩa {h['disk']['pct']}% · {t['active']}/{t['count']} tenant chạy · {_vnd(last.get('per_customer', 0))}/khách · {len(d['issues_last'])} vấn đề mở.",
                 "health": {"total": len(h["checks"]), "failing": h["failing"], "checks": h["checks"]}, "disk": h["disk"], "load": h["load"], "mem_mb": h["mem_mb"],
                 "tenants": {"count": t["count"], "active": t["active"], "items": t["items"]}, "cost": last, "cost_history": snaps[-30:],
-                "issues": d["issues_last"], "thresholds": thresholds()["thresholds"], "last_report": rep, "reports": d["reports"][-4:][::-1]}
+                "issues": d["issues_last"], "llm_month": llm_month(), "activation": _activation(), "thresholds": thresholds()["thresholds"], "last_report": rep, "reports": d["reports"][-4:][::-1]}
     except Exception as e:
         return {"text": f"Không tải được tổng quan vận hành: {e}", "error": str(e)[:200]}

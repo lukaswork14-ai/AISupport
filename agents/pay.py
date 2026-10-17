@@ -40,6 +40,13 @@ REFUND_DAYS = 7
 PAYOUT_MIN = 200000
 PAYOUT_DAY = 10
 ORDER_TTL_H = 24
+# Thẻ 14 (họp 17/10, anh duyệt): tạm khoá thu tiền cho tới khi có pháp nhân nhận tiền, luật sư rà chính sách và đo được chi phí LLM.
+# Mở lại: đặt SUPERYOU_PAYMENTS=1 trong .env trên VPS (việc của anh). Sản phẩm miễn phí vẫn nhận bình thường.
+PAYMENTS_CLOSED_TEXT = "Thanh toán đang tạm đóng trong giai đoạn thử nghiệm. superYou sẽ báo bạn qua email khi mở bán."
+
+
+def payments_open() -> bool:
+    return os.getenv("SUPERYOU_PAYMENTS", "0").strip() == "1"
 STATUS = {"pending": "Chờ thanh toán", "paid": "Đã thanh toán", "delivered": "Đã giao", "refunded": "Đã hoàn tiền", "expired": "Hết hạn", "cancelled": "Đã huỷ"}
 
 
@@ -78,7 +85,7 @@ def vnd(v: int) -> str:
 def config() -> dict:
     bank = {"id": (os.getenv("BANK_ID") or "").strip().upper(), "account": (os.getenv("BANK_ACCOUNT") or "").strip(),
             "name": (os.getenv("BANK_ACCOUNT_NAME") or "").strip()}
-    return {"fee_pct": FEE_PCT, "min_price": MIN_PRICE, "tiers": TIERS, "refund_days": REFUND_DAYS, "payout_min": PAYOUT_MIN, "payout_day": PAYOUT_DAY,
+    return {"fee_pct": FEE_PCT, "min_price": MIN_PRICE, "tiers": TIERS, "refund_days": REFUND_DAYS, "payout_min": PAYOUT_MIN, "payout_day": PAYOUT_DAY, "payments_open": payments_open(),
             "bank": bank, "vietqr_ready": all(bank.values()), "webhook_ready": bool(os.getenv("PAY_WEBHOOK_TOKEN")),
             "payos_ready": all(os.getenv(k) for k in ("PAYOS_CLIENT_ID", "PAYOS_API_KEY", "PAYOS_CHECKSUM_KEY")),
             "mail_ready": _mail_ready()}
@@ -197,6 +204,8 @@ def create_order(lid: str, email: str, channel: str = "public") -> dict:
     if not x or x["status"] != "published":
         raise ValueError("Sản phẩm chưa lên kệ")
     price = int(x.get("price") or 0)
+    if price > 0 and not payments_open():
+        raise ValueError(PAYMENTS_CLOSED_TEXT)
     with _LOCK:
         d = _load()
         # chống lạm dụng: tối đa ORDER_PER_DAY đơn mỗi email mỗi ngày, người bán bị khoá thì không bán
@@ -372,6 +381,8 @@ def create_plan_order(email: str, plan: str, uid: str = "") -> dict:
     email = (email or "").strip().lower()[:254]
     if not leads.EMAIL_RE.match(email):
         raise ValueError("Email chưa đúng.")
+    if not payments_open():
+        raise ValueError(PAYMENTS_CLOSED_TEXT)
     P = plans.all_plans()["plans"]
     if plan not in ("pro", "business") or not int(P[plan].get("price") or 0):
         raise ValueError("Gói này liên hệ superYou để kích hoạt.")

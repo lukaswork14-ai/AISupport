@@ -879,6 +879,9 @@ const IN_TG = !!tg?.initData;
 if(/superHuyMac/.test(navigator.userAgent)) document.documentElement.classList.add('macapp');  // mở trong Telegram; ngược lại là app iPhone/trình duyệt (đăng nhập bằng PIN)
 const STANDALONE = !!(navigator.standalone || matchMedia('(display-mode: standalone)').matches);
 const HQ = /^\/hq(\/|$)/.test(location.pathname); if(HQ) document.documentElement.classList.add('hq');
+/* bản superYou của khách (máy chủ chèn window.SUPERYOU_TENANT): chỉ Chat · Hôm nay · Biên bản (quyết định #4, thẻ 15) */
+const TENANT = !HQ && !!window.SUPERYOU_TENANT;
+const TENANT_TABS = ['home','meet','chat','me','more'];
 const S = { tok:null, tab:'home', data:{}, jobs:{}, busy:{}, kind:'', calDay:'today', cal:{}, chatWait:false, first:'' };
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -965,7 +968,8 @@ function copyText(t){
 }
 
 /* ---------- điều hướng */
-const TABS = HQ ? [['hq','Tổng quan','home'],['board','Phòng ban','users'],['ai','superHuy','spark'],['mkt','Marketplace','bag'],['users','Người dùng','users']]
+const TABS = TENANT ? [['home','Hôm nay','home'],['ai','superYou','spark'],['meet','Biên bản','mic']]
+  : HQ ? [['hq','Tổng quan','home'],['board','Phòng ban','users'],['ai','superHuy','spark'],['mkt','Marketplace','bag'],['users','Người dùng','users']]
   : [['home','Hôm nay','home'],['tasks','Việc','tasks'],['ai','superHuy','spark'],['meet','Họp','mic'],['growth','Phát triển','sprout']];
 function nav(){
   const n = $('#nav'); n.hidden = false;
@@ -983,7 +987,8 @@ function nav(){
   sideNav();
 }
 /* thanh bên cho màn hình rộng (Mac, iPad ngang, máy tính) */
-const SIDE = HQ ? [['hq','Tổng quan','home',"go('hq')"],['board','Phòng ban','users',"go('board')"],['mkt','Marketplace','bag',"go('mkt')"],['gd','Giao dịch','wallet',"S.mk.view='qt';S.mk.admTab='gd';go('mkt')"],
+const SIDE = TENANT ? [['home','Hôm nay','home',"go('home')"],['chat','Trò chuyện','chat',"go('chat')"],['meet','Biên bản','mic',"go('meet')"],['me','Hồ sơ','users',"go('me')"],['more','Cài đặt','gear',"go('more')"]]
+  : HQ ? [['hq','Tổng quan','home',"go('hq')"],['board','Phòng ban','users',"go('board')"],['mkt','Marketplace','bag',"go('mkt')"],['gd','Giao dịch','wallet',"S.mk.view='qt';S.mk.admTab='gd';go('mkt')"],
   ['leads','Khách hàng','inbox',"go('leads')"],['lab','Xưởng clone','factory',"go('lab')"],['cfo','Tài chính CFO','chart',"go('cfo')"],['sales','Bán hàng CSO','inbox',"go('sales')"],['ops','Vận hành','check',"go('ops')"],['users','Người dùng & gói','users',"go('users')"],['ex','Thử nghiệm','sprout',"go('ex')"],['_qc','Hệ thống','check',"openQC()"],['_app','Mở superHuy','spark',"openLink(location.origin+'/app')"]]
   : [['home','Hôm nay','home',"go('home')"],['tasks','Việc','tasks',"go('tasks')"],['meet','Họp','mic',"go('meet')"],['content','Nội dung','film',"go('content')"],
   ['growth','Phát triển','sprout',"go('growth')"],['mail','Hộp thư','inbox',"go('mail')"],['money','Tài chính','wallet',"go('money')"],['chat','Trò chuyện','chat',"go('chat')"],
@@ -999,7 +1004,7 @@ function sideNav(){
 const WIDE = matchMedia('(min-width:1024px)');
 WIDE.addEventListener?.('change', ()=>{ try{ if(S.tok) render(); }catch(e){} });
 document.addEventListener('keydown', e=>{ if((e.metaKey||e.ctrlKey) && e.key.toLowerCase()==='k' && S.tok && !lockOn()){ e.preventDefault(); S.dockOpen=true; dock(); setTimeout(()=>$('#dIn')?.focus(),150); } });
-function go(tab){ if(tab==='news'||tab==='studio'){ S.cview = tab==='news'?'duyet':'tao'; tab='content'; } if(S.tab!==tab){ haptic('soft'); S.enter = true; S.popTab = tab; } S.tab = tab; closeSheet(); render(); window.scrollTo(0,0); if(tab==='chat') setTimeout(()=>$('#msgIn')?.focus(), 200); }
+function go(tab){ if(TENANT && !TENANT_TABS.includes(tab)) tab = 'home'; if(tab==='news'||tab==='studio'){ S.cview = tab==='news'?'duyet':'tao'; tab='content'; } if(S.tab!==tab){ haptic('soft'); S.enter = true; S.popTab = tab; } S.tab = tab; closeSheet(); render(); window.scrollTo(0,0); if(tab==='chat') setTimeout(()=>$('#msgIn')?.focus(), 200); }
 function render(){
   nav();
   const app = $('#app');
@@ -1478,8 +1483,20 @@ async function upPart(uid, seq, blob){
     }catch(e){ if(a===3) throw e; await new Promise(ok=>setTimeout(ok, 1500*(a+1))); }
   }
 }
+/* đồng ý ghi âm (quyết định #7, thẻ 15): bản của khách phải bấm [Ghi âm] trên màn xác nhận; trả null nếu huỷ/tạm đóng */
+function recConsent(){
+  const P = S.data?.rec || {};
+  if(P.enabled === false) { sheet(`<h2>Biên bản từ ghi âm</h2><p class="lead">${esc(P.closed_text||'Tạm đóng.')}</p><button class="btn full" onclick="closeSheet()">Đã hiểu</button>`); return Promise.resolve(null); }
+  if(!P.consent) return Promise.resolve({});
+  return new Promise(ok=>{
+    S._rc = v => { closeSheet(); ok(v); };
+    sheet(`<h2>Xin đồng ý ghi âm</h2><p class="lead">${esc(P.consent_text||'')}</p>
+      <div class="row" style="gap:10px;margin-top:14px"><button class="btn grow" onclick="S._rc(null)">Huỷ</button><button class="btn pri grow" onclick="S._rc({consent:'1'})">${ico('mic',16)} Ghi âm</button></div>`);
+  });
+}
 async function meetUpload(file){
   if(!file) return;
+  const cons = await recConsent(); if(cons === null){ const mf=$('#mfile'); if(mf) mf.value=''; return; }
   const uid = 'up'+Date.now().toString(36)+Math.random().toString(36).slice(2,6), CH = 8*1024*1024, n = Math.ceil(file.size/CH);
   sheet(`<h2>Tải file ghi âm</h2><p class="lead">${esc(file.name)} · ${(file.size/1048576).toFixed(1)} MB</p>
     <label class="field"><span>Bối cảnh (không bắt buộc)</span><input type="text" id="uhint" placeholder="Ví dụ: họp Leversphere, dự án Growth Q4, có anh Nam bên đối tác"></label>
@@ -1487,13 +1504,14 @@ async function meetUpload(file){
   try{
     for(let i=0;i<n;i++){ await upPart(uid, i, file.slice(i*CH, (i+1)*CH)); const p = Math.round((i+1)/n*100); const b=$('#upb'); if(b){ b.style.width=p+'%'; $('#upt').textContent=`Đã tải ${p}%`; } }
     const started = file.lastModified ? new Date(file.lastModified - 0).toISOString().slice(0,19) : '';
-    const r = await run('hop','tao',{upload_id:uid, name:file.name, hint:$('#uhint')?.value||'', source:'Tải file'},'',true);
+    const r = await run('hop','tao',{upload_id:uid, name:file.name, hint:$('#uhint')?.value||'', source:'Tải file', ...cons},'',true);
     closeSheet(); toast(r.text, 4000); S.mt.at = 0; meetEnter(true);
   }catch(e){ const t=$('#upt'); if(t){ t.textContent = 'Lỗi: '+e.message; t.style.color='var(--danger)'; } else toast(e.message); }
 }
 
 /* ghi âm trong app */
 async function recStart(){
+  const cons = await recConsent(); if(cons === null) return;
   if(!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) return toast('Thiết bị này chưa cho ghi âm trong app. Anh dùng app ghi âm của máy rồi Tải file nhé.', 5000);
   let stream;
   try{ stream = await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false, noiseSuppression:true, autoGainControl:true, channelCount:1}}); }
@@ -1501,7 +1519,7 @@ async function recStart(){
   const mime = ['audio/webm;codecs=opus','audio/mp4','audio/webm','audio/ogg'].find(t=>MediaRecorder.isTypeSupported?.(t)) || '';
   const rec = new MediaRecorder(stream, mime?{mimeType:mime, audioBitsPerSecond:48000}:{});
   const R = S.mt.rec = { uid:'rec'+Date.now().toString(36), seq:0, queue:Promise.resolve(), rec, stream, t0:Date.now(), paused:0, pauseAt:0,
-    started:new Date(Date.now()-new Date().getTimezoneOffset()*60000).toISOString().slice(0,19), ext:(rec.mimeType||mime).includes('mp4')?'m4a':'webm', failed:0, sent:0 };
+    started:new Date(Date.now()-new Date().getTimezoneOffset()*60000).toISOString().slice(0,19), ext:(rec.mimeType||mime).includes('mp4')?'m4a':'webm', failed:0, sent:0, cons };
   rec.ondataavailable = e => { if(!e.data || !e.data.size) return; const seq = R.seq++; R.queue = R.queue.then(()=>upPart(R.uid, seq, e.data).then(()=>{ R.sent++; }).catch(()=>{ R.failed++; })); };
   rec.start(10000);
   try{ R.wake = await navigator.wakeLock?.request('screen'); }catch(e){}
@@ -1552,7 +1570,7 @@ async function recStop(){
   S.mt.rec = null;
   if(secs < 3){ toast('Bản ghi quá ngắn'); return render(); }
   if(R.failed){ toast(`${R.failed} phần chưa gửi được do mạng, biên bản có thể thiếu một đoạn.`, 5000); }
-  try{ const r = await run('hop','tao',{upload_id:R.uid, name:'rec.'+R.ext, title:R.title||'', hint:R.hint||'', started:R.started, source:'Ghi âm trong app'},'',true);
+  try{ const r = await run('hop','tao',{upload_id:R.uid, name:'rec.'+R.ext, title:R.title||'', hint:R.hint||'', started:R.started, source:'Ghi âm trong app', ...(R.cons||{})},'',true);
     toast(r.text, 4000); notifyH('success'); }catch(e){ toast(e.message, 5000); }
   S.mt.at = 0; render();
 }
@@ -1730,11 +1748,21 @@ function shPaint(){
     <div id="shLinks">${shLinksHtml()}</div>`);
   $('#sheet').scrollTop = y;
 }
+/* thẻ 15 (họp 17/10): lời thoại/âm thanh chỉ kèm khi người dùng xác nhận lại */
+function askOK(msg){ return new Promise(ok=>{ if(tg?.showConfirm){ try{ return tg.showConfirm(msg, r=>ok(!!r)); }catch(e){} } ok(window.confirm(msg)); }); }
+async function shConfirm(){
+  const h = S.sh, sens = h.parts.filter(p=>p==='transcript'||p==='audio');
+  if(!sens.length) return '';
+  const ok = await askOK('Liên kết sẽ kèm '+(sens.length===2?'lời thoại và âm thanh gốc':sens[0]==='audio'?'âm thanh gốc':'lời thoại')+' của cuộc họp. Ai có liên kết đều nghe/đọc được. Bạn chắc chắn chia sẻ?');
+  if(!ok) throw new Error('Đã huỷ chia sẻ');
+  return '1';
+}
 function shToggle(k){ const p = S.sh.parts; S.sh.parts = p.includes(k) ? p.filter(x=>x!==k) : [...p, k]; S.sh.last = null; shPaint(); }
 async function shMake(){
   const h = S.sh; if(!h.parts.length) throw new Error('Chọn ít nhất 1 phần');
   if(h.last && h.last.key === h.parts.join()+h.days+h.note) return h.last;
-  const r = await run('hop','chia_se',{mid:h.mid, parts:h.parts.join(','), days:h.days, note:h.note},'',true);
+  const confirm = await shConfirm();
+  const r = await run('hop','chia_se_ui',{mid:h.mid, channel:'web', parts:h.parts.join(','), days:h.days, note:h.note, confirm},'',true);
   h.last = {...r, key:h.parts.join()+h.days+h.note}; shLoadLinks(); return h.last;
 }
 function shLastHtml(){ const l = S.sh.last; return `<div class="card pad shlink"><div class="meta" style="margin:0 0 6px">Liên kết hết hạn ${esc(l.expires)}</div><div class="url">${esc(l.url)}</div>
@@ -1759,7 +1787,8 @@ function shEmail(){
 async function shEmailGo(){
   const to = $('#shTo').value.trim(), h = S.sh; if(!to.includes('@')) return toast('Nhập email người nhận');
   const b = $('#shSend'); b.disabled = true; b.textContent = 'Đang gửi…';
-  try{ const r = await run('hop','chia_se_email',{mid:h.mid, to, cc:$('#shCc').value.trim(), parts:h.parts.join(','), days:h.days, note:h.note, platform:$('#shLk').classList.contains('on')?'lark':'gmail'},'',true);
+  try{ const confirm = await shConfirm();
+    const r = await run('hop','chia_se_ui',{mid:h.mid, channel:'email', to, cc:$('#shCc').value.trim(), parts:h.parts.join(','), days:h.days, note:h.note, platform:$('#shLk').classList.contains('on')?'lark':'gmail', confirm},'',true);
     toast(r.text.split('.')[0]); notifyH('success'); $('#shOut').innerHTML = `<div class="card pad" style="margin-top:12px">✓ ${esc(r.text)}</div>`; shLoadLinks(); }
   catch(e){ toast(e.message); b.disabled = false; b.textContent = 'Gửi email'; }
 }
@@ -1776,7 +1805,7 @@ function shLarkGo(id, name){
 }
 async function shLarkSend(id){
   const h = S.sh, b = $('#shLg'); b.disabled = true;
-  try{ const r = await run('hop','chia_se_lark',{mid:h.mid, chat_id:id, parts:h.parts.join(','), days:h.days, note:h.note},'',true); toast(r.text); notifyH('success'); $('#shOut').innerHTML = `<div class="card pad" style="margin-top:12px">✓ ${esc(r.text)}</div>`; shLoadLinks(); }
+  try{ const confirm = await shConfirm(); const r = await run('hop','chia_se_ui',{mid:h.mid, channel:'lark', chat_id:id, parts:h.parts.join(','), days:h.days, note:h.note, confirm},'',true); toast(r.text); notifyH('success'); $('#shOut').innerHTML = `<div class="card pad" style="margin-top:12px">✓ ${esc(r.text)}</div>`; shLoadLinks(); }
   catch(e){ toast(e.message); b.disabled = false; }
 }
 async function shLoadLinks(){ try{ S.sh.links = (await run('hop','chia_se_ds',{mid:S.sh.mid},'',true)).items||[]; const el = $('#shLinks'); if(el) el.innerHTML = shLinksHtml(); }catch(e){} }
@@ -3079,12 +3108,13 @@ function vHq(){
   if((d.s||{}).drafts_pending) need.push([`${d.s.drafts_pending} thư bán hàng chờ anh duyệt gửi`, "go('sales')"]);
   if(((d.o||{}).issues||[]).length) need.push([`${d.o.issues.length} vấn đề vận hành vượt ngưỡng`, "go('ops')"]);
   const cfg = d.g.config||{};
-  if(!cfg.vietqr_ready) need.push(['Chưa có tài khoản nhận tiền (VietQR)', "S.mk.view='qt';S.mk.admTab='gd';go('mkt')"]);
+  if(cfg.payments_open && !cfg.vietqr_ready) need.push(['Chưa có tài khoản nhận tiền (VietQR)', "S.mk.view='qt';S.mk.admTab='gd';go('mkt')"]);
   const us = d.u||{}, cf = d.c||{};
   const funnel = [['Khách đăng ký', l.total||0],['Tài khoản', us.total||0],['Dùng thử', (us.by_plan||{}).trial||0],['Trả phí', ((us.by_plan||{}).pro||0)+((us.by_plan||{}).business||0)],['Lượt mua', g.sales||0]];
   const fmax = Math.max(1, ...funnel.map(f=>f[1]));
   const mods = [['users','Người dùng & gói','users','#2457C5',`${us.total||0} tài khoản`],['board','Phòng ban','users','#5B3FD9',`${wait.length} chờ duyệt`],['mkt','Marketplace','bag','#0E7C6B',`${a.published||0} đang bán`],['lab','Xưởng clone','factory','#C2410C','Săn và clone'],['cfo','Tài chính CFO','chart','#B4236B',cf.cash?.amount?money(cf.cash.amount)+' tiền mặt':'Chưa ghi tiền mặt'],['leads','Khách hàng','inbox','#7A5A00',`${l.by_status?.moi||0} chưa liên hệ`],['sales','Bán hàng CSO','inbox','#0F7A45',`${(d.s||{}).drafts_pending||0} thư chờ duyệt`],['ops','Vận hành','check','#5A5170',(d.o||{}).text?`${(d.o.health||{}).failing||0} lỗi QC · ổ đĩa ${(d.o.disk||{}).pct||0}%`:'Hệ thống'],['ex','Thử nghiệm','sprout','#199e70','Phạm vi, A/B'],['gd','Giao dịch','wallet','#d95926',`${g.pending||0} chờ tiền`]];
-  return head + `<div class="kpis mkkpis"><div class="card kpi"><b>${money(g.gross||0)}</b><span>Tổng bán</span></div><div class="card kpi"><b>${money(g.month||0)}</b><span>Doanh thu tháng</span></div><div class="card kpi"><b>${us.total||0}</b><span>Tài khoản</span></div><div class="card kpi"><b>${((us.by_plan||{}).pro||0)+((us.by_plan||{}).business||0)}</b><span>Khách trả phí</span></div><div class="card kpi"><b>${a.published||0}</b><span>Sản phẩm đang bán</span></div><div class="card kpi"><b>${a.creators||0}</b><span>Người bán</span></div><div class="card kpi"><b>${l.total||0}</b><span>Khách đăng ký</span></div><div class="card kpi ${(cf.flags||[]).length?'warn':''}"><b>${(cf.flags||[]).length}</b><span>Cảnh báo tài chính</span></div></div>
+  return head + `<div class="kpis mkkpis"><div class="card kpi"><b>${money(g.gross||0)}</b><span>Tổng bán</span></div><div class="card kpi"><b>${money(g.month||0)}</b><span>Doanh thu tháng</span></div><div class="card kpi"><b>${us.total||0}</b><span>Tài khoản</span></div><div class="card kpi"><b>${((us.by_plan||{}).pro||0)+((us.by_plan||{}).business||0)}</b><span>Khách trả phí</span></div><div class="card kpi"><b>${a.published||0}</b><span>Sản phẩm đang bán</span></div><div class="card kpi"><b>${a.creators||0}</b><span>Người bán</span></div><div class="card kpi"><b>${l.total||0}</b><span>Khách đăng ký</span></div><div class="card kpi ${(cf.flags||[]).length?'warn':''}"><b>${(cf.flags||[]).length}</b><span>Cảnh báo tài chính</span></div>${(()=>{ const ac=(d.o||{}).activation||{}, lm=(d.o||{}).llm_month||{};
+      return `<div class="card kpi"><b>${ac.rate_pct==null?'–':ac.rate_pct+'%'}</b><span>Kích hoạt 24 giờ${ac.eligible?` (${ac.activated}/${ac.eligible})`:''}</span></div><div class="card kpi"><b>${ac.median_minutes_to_first==null?'–':ac.median_minutes_to_first+' ph'}</b><span>Tới kết quả đầu</span></div><div class="card kpi"><b>${ac.north_star??'–'}</b><span>North Star (≥4 ngày/tuần)</span></div><div class="card kpi"><b>$${(lm.cost_usd||0).toFixed(2)}</b><span>LLM tháng · ${lm.calls||0} lượt</span></div>`; })()}${cfg.payments_open===false?`<div class="card kpi"><b>Đóng</b><span>Thanh toán (SUPERYOU_PAYMENTS)</span></div>`:''}</div>
     <div class="hqmods">${mods.map(([t,l2,i,c,sub])=>`<button class="card pad hqmod" onclick="${t==='gd'?"S.mk.view='qt';S.mk.admTab='gd';go('mkt')":t==='mkt'?"S.mk.view='qt';go('mkt')":`go('${t}')`}"><i style="--c:${c}">${ico(i,20)}</i><b>${l2}</b><span class="meta">${sub}</span></button>`).join('')}</div>
     <div class="hgrid" style="margin-top:4px"><div class="hcol hcol-l"><section class="hb"><div class="sec"><h2>Phễu kinh doanh</h2></div><div class="card pad chart">${funnel.map(([n,v])=>`<div class="fun"><span>${n}</span><i><em style="width:${Math.max(3,Math.round(v/fmax*100))}%"></em></i><b>${v}</b></div>`).join('')}</div></section>
     <section class="hb"><div class="sec"><h2>Phòng ban</h2><button class="link" onclick="go('board')">Mở bảng</button></div><div class="hqdepts">${Object.entries(b.depts||{}).map(([k,v])=>`<button class="card pad hqdept" style="--c:${v.color}" onclick="S.bdDept='${k}';go('board')"><b>${esc(v.name)}</b><span class="meta"><b>${v.waiting}</b> chờ duyệt · <b>${v.open}</b> đang làm</span></button>`).join('')}</div></section></div>
