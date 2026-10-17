@@ -139,6 +139,37 @@ APP_FILES = {"/manifest.webmanifest": "manifest.webmanifest", "/sw.js": "sw.js",
 if IS_TENANT:  # instance khách: app cài lên điện thoại mang tên và icon superYou, không phải superHuy của anh Huy
     APP_FILES.update({"/manifest.webmanifest": "manifest-superyou.webmanifest", "/apple-touch-icon.png": "brand/icon-180.png",
                       "/apple-touch-icon-precomposed.png": "brand/icon-180.png", "/favicon.ico": "brand/icon-128.png"})
+# Nhận diện superYou cho app trên instance khách: icon, tên và bảng màu superYou (superHuy của anh Huy giữ nguyên giao diện riêng).
+# Dùng <style> nội tuyến vì CSP chỉ cho phép style inline. Sinh 1 lần, tự làm lại khi index.html đổi.
+SUPERYOU_APP_THEME = (
+    ":root{--bg:#FFF8E7;--surface:#FFFFFF;--text:#14111A;--muted:#6E6553;"
+    "--line:color-mix(in srgb,#14111A 10%,transparent);--fill:color-mix(in srgb,#14111A 6%,transparent);"
+    "--jade:#14111A;--jade-ink:#FFD23F;--jade-soft:color-mix(in srgb,#FFD23F 35%,transparent);"
+    "--aura:linear-gradient(135deg,#14111A 0%,#2B241A 100%)}"
+    "html[data-scheme=\"dark\"]{--bg:#14111A;--surface:#1F1B15;--text:#FFF8E7;--muted:#B0A68F;"
+    "--jade:#FFD23F;--jade-ink:#14111A;--jade-soft:color-mix(in srgb,#FFD23F 16%,transparent)}")
+
+
+def _app_index() -> Path:
+    src = STATIC / "index.html"
+    if not IS_TENANT:
+        return src
+    out = DATA_DIR / "app-superyou.html"
+    try:
+        if not out.exists() or out.stat().st_mtime < src.stat().st_mtime:
+            s = src.read_text(encoding="utf-8")
+            s = re.sub(r"/icons/huy-(128|180|192|512)\.png(\?v=\d+)?", lambda m: f"/brand/icon-{m.group(1)}.png", s)
+            s = s.replace("<title>superHuy</title>", "<title>superYou</title>", 1)
+            s = s.replace('content="#F4F1F8"', 'content="#FFF8E7"').replace('content="#131019"', 'content="#14111A"')
+            s = s.replace("</head>", f"<style id=\"superyou-brand\">{SUPERYOU_APP_THEME}</style>\n</head>", 1)
+            tmp = out.with_suffix(".tmp")
+            tmp.write_text(s, encoding="utf-8")
+            tmp.replace(out)
+        return out
+    except Exception:
+        return src
+
+
 _HELLO: dict[str, list[float]] = {}
 
 
@@ -318,7 +349,7 @@ class Handler(BaseHTTPRequestHandler):
         if u.path in ("/login", "/login/", "/account", "/account/", "/dang-nhap", "/tai-khoan"):
             return self._file(STATIC / "account/index.html", cache=False)
         if u.path in ("/", "/index.html", "/app", "/hq", "/hq/"):
-            return self._file(STATIC / "index.html", cache=False)
+            return self._file(_app_index(), cache=False)
         if u.path.startswith("/market/") and re.fullmatch(r"/market/[a-z0-9-]{1,80}", u.path):  # trang chi tiết sản phẩm công khai
             return self._file(STATIC / "market/index.html", cache=False)
         if u.path in APP_FILES:  # ứng dụng iPhone (PWA): manifest, service worker, biểu tượng

@@ -7,14 +7,14 @@
 <meta name="description" content="Chợ skill, workflow và gói tri thức cho siêu trợ lý superYou. Dành cho nhà quản lý, solopreneur và bất kỳ ai muốn làm việc hiệu quả hơn.">
 <meta property="og:title" content="superYou Marketplace">
 <meta property="og:description" content="Cài skill, workflow và gói tri thức cho trợ lý AI của bạn. Hoặc đóng gói kinh nghiệm của bạn để bán.">
-<meta property="og:image" content="/icons/huy-512.png">
-<meta name="theme-color" content="#6A3DF0">
-<link rel="icon" href="/icons/huy-128.png">
+<meta property="og:image" content="/brand/og.png">
+<meta name="theme-color" content="#FFD23F">
+<link rel="icon" href="/brand/icon-128.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
-:root{ --ink:#0E0B14; --paper:#FFFFFF; --soft:#F4F1FA; --muted:#5A5170; --line:#E4DEEE; --violet:#6A3DF0; --violet-d:#4B22C9; --yellow:#FFD23F; --pink:#FF5AA8; --green:#0F7A45; --red:#B42346;
+:root{ --ink:#0E0B14; --paper:#FFFFFF; --soft:#FBF3DF; --muted:#6B5F45; --line:#E9DFC6; --violet:#14111A; --on-violet:#FFFFFF; --violet-d:#000000; --yellow:#FFD23F; --pink:#FF6B4A; --green:#0F7A45; --red:#B42346;
   --font:"Be Vietnam Pro",system-ui,-apple-system,"Segoe UI",sans-serif }
 *{ box-sizing:border-box }
 html,body{ margin:0; background:var(--paper); color:var(--ink); font:16px/1.55 var(--font); -webkit-font-smoothing:antialiased }
@@ -31,13 +31,13 @@ nav{ display:flex; align-items:center; gap:18px }
 .nav-l a{ color:var(--ink); text-decoration:none }
 .btn{ display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:11px 18px; border-radius:13px; border:2px solid var(--ink); background:var(--paper); font-weight:800; cursor:pointer; text-decoration:none; color:var(--ink); transition:transform .15s, box-shadow .15s; white-space:nowrap }
 .btn:hover{ transform:translateY(-2px); box-shadow:0 4px 0 var(--ink); color:var(--ink) }
-.btn.y{ background:var(--yellow) } .btn.v{ background:var(--violet); color:#fff } .btn.v:hover{ color:#fff } .btn.k{ background:var(--ink); color:#fff } .btn.k:hover{ color:#fff }
+.btn.y{ background:var(--yellow) } .btn.v{ background:var(--violet); color:var(--on-violet) } .btn.v:hover{ color:var(--on-violet) } .btn.k{ background:var(--ink); color:var(--paper) } .btn.k:hover{ color:var(--paper) }
 .btn.sm{ padding:7px 12px; font-size:14px; border-radius:10px }
 .btn:disabled{ opacity:.5; cursor:default; transform:none; box-shadow:none }
 @media (prefers-reduced-motion:reduce){ .btn,.card-p{ transition:none } }
 .hero{ padding-block:44px 28px; display:grid; grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr); gap:36px; align-items:center }
 .hero h1{ margin:0; font-size:56px; line-height:1.03; letter-spacing:-.045em; font-weight:900; text-wrap:balance }
-.hero h1 span{ background:var(--violet); color:#fff; padding:0 12px; border-radius:14px; display:inline-block; transform:rotate(-1.2deg) }
+.hero h1 span{ background:var(--violet); color:var(--on-violet); padding:0 12px; border-radius:14px; display:inline-block; transform:rotate(-1.2deg) }
 .hero p{ font-size:19px; color:#3D3550; max-width:56ch }
 .search{ display:flex; gap:8px; margin-top:18px; max-width:560px }
 .search input{ flex:1; min-width:0; padding:15px 16px; border-radius:14px; border:2px solid var(--ink); font-size:16px; background:#fff }
@@ -61,7 +61,7 @@ h2{ font-size:34px; letter-spacing:-.035em; line-height:1.1; margin:36px 0 14px;
 .ft{ display:flex; justify-content:space-between; align-items:center; gap:8px; font-size:14px }
 .pr{ font-weight:800 } .st{ color:#B7791F; font-weight:700 }
 .typ{ font-size:12px; font-weight:800; padding:3px 9px; border-radius:999px; background:var(--soft) }
-.sell{ margin-block:48px; background:var(--violet); color:#fff; border:2px solid var(--ink); border-radius:32px; padding:44px clamp(20px,5vw,56px); display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:30px; align-items:center }
+.sell{ margin-block:48px; background:var(--violet); color:var(--on-violet); border:2px solid var(--ink); border-radius:32px; padding:44px clamp(20px,5vw,56px); display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:30px; align-items:center }
 .sell h2{ margin:0 0 10px; font-size:40px } .sell p{ color:#E7DFFF; font-size:17px }
 .steps{ display:flex; flex-direction:column; gap:10px; margin:0; padding:0; list-style:none; counter-reset:s }
 .steps li{ background:#fff; color:var(--ink); border:2px solid var(--ink); border-radius:16px; padding:14px 16px 14px 56px; position:relative; counter-increment:s }
@@ -84,7 +84,7 @@ h3{ font-size:18px; margin:18px 0 6px }
 .spec{ display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:10px; margin-top:14px }
 .box{ background:var(--soft); border-radius:16px; padding:12px 14px; display:flex; flex-direction:column; gap:6px; min-width:0 } .box b{ font-size:14px } .box p{ margin:0; font-size:14px; color:var(--muted) } .box .ex{ color:var(--violet); font-weight:600 }
 .flow{ margin:0; padding:0; list-style:none; counter-reset:f } .flow li{ position:relative; padding:8px 0 8px 34px; counter-increment:f }
-.flow li::before{ content:counter(f); position:absolute; left:0; top:8px; width:24px; height:24px; border-radius:50%; background:var(--violet); color:#fff; font-size:12px; font-weight:800; display:grid; place-items:center }
+.flow li::before{ content:counter(f); position:absolute; left:0; top:8px; width:24px; height:24px; border-radius:50%; background:var(--violet); color:var(--on-violet); font-size:12px; font-weight:800; display:grid; place-items:center }
 .flow li::after{ content:""; position:absolute; left:11px; top:34px; bottom:-6px; width:2px; background:var(--line) } .flow li:last-child::after{ display:none }
 .flow b{ display:block; font-size:14.5px } .flow span{ font-size:12.5px; color:var(--muted) }
 .sample{ white-space:pre-line; color:var(--ink) !important; max-height:140px; overflow:hidden; -webkit-mask-image:linear-gradient(#000 70%, transparent) }
@@ -125,7 +125,7 @@ label.f small{ font-weight:500; color:var(--muted) }
 </head>
 <body>
 <header><div class="w"><nav aria-label="Chính">
-  <a class="logo" href="/market"><img src="/icons/huy-128.png" alt="">superYou <em>Marketplace</em></a>
+  <a class="logo" href="/market"><img src="/brand/mark.svg" alt="">superYou <em>Marketplace</em></a>
   <div class="nav-l"><a class="hide" href="/market#kham-pha">Khám phá</a><a href="#" id="myo">Đơn của tôi</a><a href="/market/console">Bán trên superYou</a><a href="/account">Tài khoản</a></div>
   <a class="btn y sm" href="/landing">Dùng thử superYou</a>
 </nav></div></header>
@@ -146,7 +146,7 @@ function api(path, body, key){
   return fetch(path, body === undefined ? {headers:h} : {method:'POST', headers:h, body:JSON.stringify(body)})
     .then(function(r){ return r.json().catch(function(){ return {error:'Phản hồi không hợp lệ'}; }).then(function(j){ if(!r.ok || j.error){ var e = new Error(j.error || 'Có lỗi'); e.status = r.status; throw e; } return j; }); });
 }
-function icon(x, s){ s = s || 56; return '<span class="ic" style="width:'+s+'px;height:'+s+'px;background:'+esc(x.color||'#6A3DF0')+'">'+(TYPE_IC[x.type]||'S')+'</span>'; }
+function icon(x, s){ s = s || 56; return '<span class="ic" style="width:'+s+'px;height:'+s+'px;background:'+esc(x.color||'#14111A')+'">'+(TYPE_IC[x.type]||'S')+'</span>'; }
 function stars(x){ return x.rating ? '<span class="st">★ '+String(x.rating).replace('.',',')+'</span> <span class="by">('+x.rating_n+')</span>' : '<span class="by">Mới</span>'; }
 function card(x, i){ return '<button class="card-p" data-i="'+i+'"><div class="top">'+icon(x)+'<div><div class="nm">'+esc(x.name)+'</div><div class="by">'+esc(x.creator && x.creator.name)+(x.creator && x.creator.official ? '<span class="off">Chính chủ</span>' : '')+'</div></div></div>'
   + '<div class="tg">'+esc(x.tagline||'')+'</div>'+(x.spec ? '<div class="by">'+esc(x.spec.kind==='skill' ? (x.spec.rule_count||'')+' quy tắc · kích hoạt khi '+(x.spec.trigger||'').toLowerCase().slice(0,40) : x.spec.kind==='workflow' ? x.spec.step_count+' bước · '+(x.spec.runtime||'')+(x.spec.connects&&x.spec.connects.length ? ' · cần '+x.spec.connects.join(', ') : '') : x.spec.kind==='pack' ? (x.spec.roles||[]).length+' vai · skill + workflow + '+x.spec.note_count+' ghi chú' : x.spec.note_count+' ghi chú · đọc '+x.spec.read_min+' phút')+'</div>' : '')+'<div class="ft"><span class="typ">'+esc(x.type_label)+'</span>'+stars(x)+'<span class="pr">'+vnd(x.price)+'</span></div></button>'; }
@@ -337,7 +337,7 @@ function wizard(){
   }
   if(st === 2){
     var read = function(){ p.type = $('#ft').value; p.name = $('#fn').value; p.tagline = $('#fg').value; p.description = $('#fd').value; p.body = $('#fb').value; p.category = $('#fc').value; p.price = +$('#fp').value||0; p.tags = $('#fk').value; };
-    var preview = function(){ read(); var x = {type:p.type, name:p.name||'Tên sản phẩm', tagline:p.tagline||'Câu giới thiệu', price:p.price, type_label:d.types[p.type], creator:{name:d.creator.name}, color:'#6A3DF0', rating:0, rating_n:0};
+    var preview = function(){ read(); var x = {type:p.type, name:p.name||'Tên sản phẩm', tagline:p.tagline||'Câu giới thiệu', price:p.price, type_label:d.types[p.type], creator:{name:d.creator.name}, color:'#14111A', rating:0, rating_n:0};
       $('#pv').innerHTML = card(x, -1); $('#fh').textContent = HINT[p.type]||''; };
     preview(); ['input','change'].forEach(function(ev){ $('#main').addEventListener(ev, function(e){ if(e.target.closest('.pane')) preview(); }); });
     $('#fx').onclick = function(){ consoleView(); };
@@ -345,7 +345,7 @@ function wizard(){
     $('#fn2').onclick = function(){ read(); C.step = 3; wizard(); };
   }
   if(st === 3){
-    var x = {type:p.type, name:p.name, tagline:p.tagline, price:p.price, type_label:d.types[p.type], creator:{name:d.creator.name}, color:'#6A3DF0', rating:0, rating_n:0};
+    var x = {type:p.type, name:p.name, tagline:p.tagline, price:p.price, type_label:d.types[p.type], creator:{name:d.creator.name}, color:'#14111A', rating:0, rating_n:0};
     $('#pv').innerHTML = card(x, -1);
     var iss = [];
     if((p.name||'').length < 4) iss.push('Tên quá ngắn.');
