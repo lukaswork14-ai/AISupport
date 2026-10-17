@@ -14,7 +14,15 @@ Anh Huy duyệt ngày 17/10/2026.
    - **Tự động:** Casso hoặc SePay gọi `POST /api/pay/webhook` kèm token (`PAY_WEBHOOK_TOKEN`) trong header `Authorization: Apikey …` (Casso) hoặc `Secure-Token`/`X-Webhook-Token`. superYou tìm mã đơn trong nội dung chuyển khoản, khớp số tiền thì ghi đã trả.
    - **Tay:** app › Marketplace › Quản trị › Giao dịch › **Đã nhận tiền**.
 3. Giao hàng: đóng gói SKILL.md / zip ghi chú / workflow.json, link tải ký 7 ngày, hoá đơn `/pay/receipt`, email cho khách (cần Gmail hoặc Lark Mail đã kết nối), ghi quyền sở hữu theo email, báo anh qua Telegram.
-4. Khách xem lại ở **Đơn của tôi** trên trang công khai (nhập email), bấm **Gửi lại link** nếu hết hạn.
+4. Khách xem lại ở **Tài khoản › Sản phẩm đã mua** (đơn gắn với tài khoản: mua khi đã đăng nhập, hoặc mua bằng đúng email tài khoản): tải lại (link mới ngay trên trang), gửi lại email (tối đa 3 lần/ngày/đơn, khi mail đã kết nối), xem hoá đơn, khiếu nại một chạm (chọn lý do có sẵn). Trang công khai **Đơn của tôi** chỉ hiện tên và mã đơn theo email, không lộ link tải; link mới chỉ đi qua email.
+
+## Gói trả phí: hạn dùng và gia hạn
+- Đơn gói Pro/Doanh nghiệp đã trả ghi `plan_until` (31 ngày) vào đơn và tài khoản. Gia hạn sớm cùng gói thì cộng nối tiếp từ ngày hết hạn cũ; đổi gói hoặc đã quá hạn thì tính từ hôm nay (chưa tính tiền chênh lệch).
+- Quá `plan_until` (hết ngày đó) tài khoản tự về Miễn phí, giữ nguyên dữ liệu, sản phẩm đã mua, workflow; ghi nhật ký kiểm toán và báo anh qua Telegram. Dùng thử hết hạn cũng về Miễn phí; mỗi tài khoản dùng thử một lần.
+- Gói anh đặt tay trong HQ › Người dùng không có hạn (không tự hết hạn).
+- Nhắc gia hạn qua email khi còn ≤ 3 ngày, một lần mỗi kỳ hạn, chỉ khi Gmail/Lark Mail đã kết nối (chưa có thì không gửi, lần quét sau gửi khi đã cấu hình).
+- Quét: `pay.plan_sweep()` chạy hằng ngày (job trong `main.py`, Product Lead nối) và tự chạy tối đa 1 lần/giờ khi có người mở Tài khoản.
+- Tài khoản hiện ngày hết hạn, cảnh báo khi còn ≤ 3 ngày và nút Gia hạn (khi thanh toán mở).
 
 ## Sổ cái và trả người bán
 - Mỗi đơn đã trả ghi một dòng: tổng, phí sàn, phần người bán. Hoàn tiền ghi dòng âm.

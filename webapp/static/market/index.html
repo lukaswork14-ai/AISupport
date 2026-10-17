@@ -205,12 +205,14 @@ function payBox(r, x){
 function dlList(o){ if(!o || !(o.downloads||[]).length) return '<p class="by">Link tải sẽ gửi qua email.</p>';
   return '<div class="box" style="margin-top:10px"><b>Tải sản phẩm</b>'+o.downloads.map(function(d){ return '<p><a href="'+esc(d.url)+'">'+esc(d.name)+'</a> <span class="by">· dùng đến '+esc((d.expires||'').slice(0,10))+'</span></p>'; }).join('')+(o.receipt ? '<p><a href="'+esc(o.receipt)+'" target="_blank" rel="noopener">Xem hoá đơn</a></p>' : '')+'</div>'; }
 function myOrders(){
+  if(lsGet('sy-acc')){ location.href = '/account#buys'; return; }
   var em = lsGet('sy-email') || '';
-  var b = $('#dlgBody'); b.innerHTML = '<button class="x" id="dx" aria-label="Đóng">×</button><h2 style="margin:0">Đơn hàng của tôi</h2><p class="by">Nhập email đã dùng khi mua để xem lại link tải.</p><form class="form" id="mf"><input id="me" type="email" required placeholder="email@congty.com" value="'+esc(em)+'"><button class="btn k">Xem</button></form><div id="ml"></div>';
+  var b = $('#dlgBody'); b.innerHTML = '<button class="x" id="dx" aria-label="Đóng">×</button><h2 style="margin:0">Đơn hàng của tôi</h2><p class="by">Nhập email đã dùng khi mua. Link tải gửi về email đó; hoặc <a href="/login?mode=signup">tạo tài khoản</a> bằng đúng email này để tải lại, xem hoá đơn và khiếu nại ngay trên web.</p><form class="form" id="mf"><input id="me" type="email" required placeholder="email@congty.com" value="'+esc(em)+'"><button class="btn k">Xem</button></form><div id="ml"></div>';
   var d = $('#dlg'); if(!d.open) d.showModal(); $('#dx').onclick = function(){ d.close(); };
   $('#mf').addEventListener('submit', function(e){ e.preventDefault(); lsSet('sy-email', $('#me').value); $('#ml').innerHTML = '<p class="by">Đang tìm…</p>';
-    api('/api/pay/mine', {email:$('#me').value}).then(function(r){ $('#ml').innerHTML = r.items.length ? r.items.map(function(it){ return '<div class="rv"><b>'+esc(it.name)+'</b> <span class="by">'+esc((it.at||'').slice(0,10))+'</span>'+dlList(it)+'</div>'; }).join('') + '<p class="by">Link hết hạn? <button class="btn sm" id="rs">Gửi lại link mới qua email</button></p>' : '<p class="by">Chưa có đơn nào với email này.</p>';
-      var rs = $('#rs'); if(rs) rs.onclick = function(){ rs.disabled = true; api('/api/pay/resend', {email:$('#me').value}).then(function(){ rs.textContent = 'Đã gửi'; }).catch(function(e){ rs.textContent = e.message; }); }; })
+    api('/api/pay/mine', {email:$('#me').value}).then(function(r){ $('#ml').innerHTML = r.items.length ? r.items.map(function(it){ return '<div class="rv"><b>'+esc(it.name)+'</b> <span class="by">'+esc(it.code||'')+' · '+esc((it.at||'').slice(0,10))+'</span></div>'; }).join('')
+        + (r.mail_ready ? '<p class="by"><button class="btn sm" id="rs">Gửi link tải mới qua email</button></p>' : '') + '<p class="by"><a class="btn sm k" href="/account#buys">Mở Tài khoản › Sản phẩm đã mua</a></p>' : '<p class="by">Chưa có đơn nào với email này.</p>';
+      var rs = $('#rs'); if(rs) rs.onclick = function(){ rs.disabled = true; api('/api/pay/resend', {email:$('#me').value}).then(function(x){ rs.textContent = x.text || 'Đã gửi'; }).catch(function(e){ rs.textContent = e.message; }); }; })
       .catch(function(e){ $('#ml').innerHTML = '<p class="msg err">'+esc(e.message)+'</p>'; }); });
 }
 function specHtml(x){
