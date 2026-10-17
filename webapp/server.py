@@ -707,6 +707,8 @@ class Handler(BaseHTTPRequestHandler):
             if not au:
                 return self._json(401, {"error": "Phiên hết hạn, hãy đăng nhập lại."})
             if path == "/api/account/me":
+                pay.maybe_sweep()  # hạ gói hết hạn + nhắc gia hạn (dự phòng nếu job hằng ngày chưa chạy)
+                au = acc_user(self.headers.get("X-Account", "")) or au
                 try:
                     from core import activation
                     activation.active_day("acc:" + au["id"])
@@ -738,6 +740,8 @@ class Handler(BaseHTTPRequestHandler):
             if path == "/api/account/trial":
                 if au.get("plan") != "free":
                     return self._json(400, {"error": "Chỉ gói Miễn phí mới bật dùng thử"})
+                if au.get("trial_until"):
+                    return self._json(400, {"error": "Mỗi tài khoản dùng thử Pro một lần. Nâng cấp tại Gói và nâng cấp."})
                 r = accounts.admin_set(au["id"], plan="trial", note="tự bật dùng thử")
                 return self._json(200, {"text": f"Đã bật dùng thử Pro {plans.TRIAL_DAYS} ngày.", "user": r["user"]})
             if path == "/api/account/upgrade":

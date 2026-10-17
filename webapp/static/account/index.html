@@ -130,6 +130,21 @@ function bindRoles(){
   $('#lo').onclick = function(){ api('/api/account/logout', {}).catch(function(){}).then(function(){ A.tok = null; lsSet('sy-acc', null); authView('login'); }); };
 }
 function alert2(t){ var el = document.createElement('div'); el.className = 'hint'; el.style.cssText = 'position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:9;box-shadow:0 10px 30px rgba(0,0,0,.2)'; el.textContent = t; document.body.appendChild(el); setTimeout(function(){ el.remove(); }, 3500); }
+function dmy(iso){ var a = String(iso||'').slice(0,10).split('-'); return a.length===3 ? a[2]+'/'+a[1]+'/'+a[0] : esc(iso||''); }
+function daysLeft(iso){ var t = new Date(String(iso).slice(0,10)+'T23:59:59'); return Math.floor((t - new Date())/86400000); }
+function planDue(u){
+  if(u.plan==='trial' && u.trial_until) return ' · dùng thử đến '+dmy(u.trial_until);
+  if((u.plan==='pro' || u.plan==='business') && u.plan_until) return ' · hết hạn '+dmy(u.plan_until);
+  return '';
+}
+function planBanner(u, me){
+  if(u.plan_expired && u.plan==='free'){ var pe = me.plans.plans[u.plan_expired.plan]; return '<div class="hint" style="margin:0 0 14px">Gói '+esc(pe ? pe.name : u.plan_expired.plan)+' của bạn đã hết hạn'+(u.plan_expired.until ? ' ngày '+dmy(u.plan_expired.until) : '')+' nên tài khoản về gói Miễn phí. Dữ liệu, sản phẩm đã mua và workflow vẫn giữ nguyên. '+(me.payments_open ? '<a href="#" data-v="plan">Gia hạn</a>' : '')+'</div>'; }
+  if((u.plan==='pro' || u.plan==='business') && u.plan_until){
+    var n = daysLeft(u.plan_until);
+    if(n <= 3) return '<div class="hint" style="margin:0 0 14px"><b>Gói sắp hết hạn</b> · '+(n<=0 ? 'hết hôm nay' : 'còn '+n+' ngày')+' (đến hết '+dmy(u.plan_until)+'). Hết hạn tự về Miễn phí, không mất dữ liệu. '+(me.payments_open ? '<a href="#" data-v="plan">Gia hạn</a>' : '')+'</div>';
+  }
+  return '';
+}
 function render(){
   var me = A.me, u = me.user, p = me.plan;
   $('#topr').innerHTML = roleSwitcher();
@@ -137,7 +152,7 @@ function render(){
   var body = '';
   if(A.view === 'home'){
     var ent = me.entitlements || [];
-    body = '<h2>Chào '+esc(u.name)+'</h2><p class="by" style="margin:0 0 14px">Gói <b style="color:var(--ink)">'+esc(p.name)+'</b>'+(u.trial_until ? ' · dùng thử đến '+esc(u.trial_until) : '')+' · vai '+u.roles.map(function(r){ return ROLE[r].label; }).join(', ')+'</p>'
+    body = '<h2>Chào '+esc(u.name)+'</h2><p class="by" style="margin:0 0 14px">Gói <b style="color:var(--ink)">'+esc(p.name)+'</b>'+planDue(u)+' · vai '+u.roles.map(function(r){ return ROLE[r].label; }).join(', ')+'</p>'+planBanner(u, me)
       + '<div class="tiles"><div class="tile"><b>'+ent.length+'</b><span>Sản phẩm đã mua</span></div><div class="tile"><b>'+esc(p.name)+'</b><span>Gói hiện tại</span></div><div class="tile"><b>'+(p.limits.workflows||'∞')+'</b><span>Workflow riêng</span></div><div class="tile"><b>'+(p.limits.market_credit ? vnd(p.limits.market_credit) : '0đ')+'</b><span>Tín dụng Marketplace/tháng</span></div></div>'
       + '<div class="card" style="margin-top:16px"><b>Bước tiếp theo</b><div class="list">'
       + '<button class="rowi" data-v="try" style="text-align:left;width:100%;background:none;border:0;font:inherit;color:inherit;cursor:pointer"><span class="ric" style="background:#C98205">✎</span><span style="flex:1"><b>Thử biên bản ngay (1 phút)</b><br><span class="by">Dán ghi chú cuộc họp, nhận tóm tắt, quyết định và ai làm gì</span></span>›</button>'
@@ -161,9 +176,9 @@ function render(){
   }
   if(A.view === 'plan'){
     var P = me.plans.plans, order = me.plans.order;
-    body = '<h2>Gói và nâng cấp</h2><p class="by" style="margin:0 0 14px">Giá hiển thị theo chính sách hiện hành; thanh toán gói mở dần, liên hệ superYou để kích hoạt sớm.</p><div class="plans">'
+    body = '<h2>Gói và nâng cấp</h2><p class="by" style="margin:0 0 14px">Giá hiển thị theo chính sách hiện hành; thanh toán gói mở dần, liên hệ superYou để kích hoạt sớm.</p>'+planBanner(u, me)+'<div class="plans">'
       + order.map(function(k){ var pl = P[k]; return '<div class="plan '+(u.plan===k?'cur':'')+'" style="--c:'+pl.color+'">'+(u.plan===k?'<span class="tag">Đang dùng</span>':'')+'<span class="pname">'+esc(pl.name)+'</span><span class="by">'+esc(pl.tagline)+'</span><span class="price">'+(pl.price ? vnd(pl.price) : (k==='enterprise'?'Liên hệ':'0đ'))+'<span class="by" style="font-size:13px"> '+esc(pl.period||'')+'</span></span><ul>'+pl.features.map(function(f){ return '<li>'+esc(f)+'</li>'; }).join('')+'</ul>'
-        + (u.plan===k ? '' : k==='trial' && u.plan==='free' ? '<button class="btn sm y" id="trial">Bật dùng thử</button>' : k==='free' ? '' : (pl.price && (k==='pro' || k==='business') ? (me.payments_open ? '<button class="btn sm v" data-up="'+k+'">Nâng cấp · '+vnd(pl.price)+'</button>' : '<button class="btn sm ghost" disabled>Sắp mở bán</button>') : '<a class="btn sm v" href="/landing#dang-ky">Liên hệ nâng cấp</a>'))+'</div>'; }).join('')+'</div><div id="upbox"></div>';
+        + (u.plan===k ? (u.plan_until && pl.price && (k==='pro' || k==='business') ? '<span class="by">Đến hết '+dmy(u.plan_until)+'</span>'+(me.payments_open ? '<button class="btn sm v" data-up="'+k+'">Gia hạn 1 tháng · '+vnd(pl.price)+'</button>' : '') : '') : k==='trial' && u.trial_until ? '' : k==='trial' && u.plan==='free' ? '<button class="btn sm y" id="trial">Bật dùng thử</button>' : k==='free' ? '' : (pl.price && (k==='pro' || k==='business') ? (me.payments_open ? '<button class="btn sm v" data-up="'+k+'">Nâng cấp · '+vnd(pl.price)+'</button>' : '<button class="btn sm ghost" disabled>Sắp mở bán</button>') : '<a class="btn sm v" href="/landing#dang-ky">Liên hệ nâng cấp</a>'))+'</div>'; }).join('')+'</div><div id="upbox"></div>';
     body = body.replace('thanh toán gói mở dần, liên hệ superYou để kích hoạt sớm.', me.payments_open ? 'thanh toán bằng chuyển khoản VietQR, gói kích hoạt ngay khi tiền về.' : 'thanh toán đang tạm đóng trong giai đoạn thử nghiệm; superYou sẽ báo qua email khi mở bán.');
   }
   if(A.view === 'profile'){
