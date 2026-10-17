@@ -27,7 +27,8 @@ Anh Huy duyệt ngày 17/10/2026.
 ## Sổ cái và trả người bán
 - Mỗi đơn đã trả ghi một dòng: tổng, phí sàn, phần người bán. Hoàn tiền ghi dòng âm.
 - Quản trị › Giao dịch: tổng bán, về sàn, tháng này, đơn chờ, nợ người bán, hoàn tiền, ghi đã trả (kèm mã giao dịch ngân hàng).
-- Console người bán › Doanh thu: số dư, tháng này, lượt bán, lịch sử, tài khoản nhận tiền, kỳ trả tiếp theo.
+- Console người bán › Doanh thu: số dư, tháng này, lượt bán, 6 tháng gần nhất, doanh thu theo sản phẩm, lịch sử, tài khoản nhận tiền; kỳ trả tới kèm số tiền dự kiến (số dư từ 200.000đ), phần còn trong hạn hoàn tiền 7 ngày (chỉ để người bán biết, không giữ lại tiền).
+- Người bán tạo được Phòng ban AI (pack): skill bắt buộc + workflow (cùng luật an toàn) + ghi chú tri thức + vai; xem trước trang chi tiết theo đúng loại trước khi gửi duyệt.
 
 ## Khiếu nại và hoàn tiền
 - Khách khiếu nại từ Tài khoản › Sản phẩm đã mua (lý do có sẵn) hoặc trang công khai (email + mã đơn). Người bán bị 3 khiếu nại/30 ngày tự bị khoá.

@@ -630,15 +630,37 @@ def seller_balance(d: dict, sid: str) -> dict:
 
 
 def seller_revenue(sid: str) -> dict:
+    """Console người bán › Doanh thu: số dư, theo sản phẩm, 6 tháng gần nhất, phần còn trong hạn hoàn tiền, dự kiến kỳ trả tới."""
     d = _load()
     sales = [e for e in d["ledger"] if e["seller"].get("id") == sid]
     b = seller_balance(d, sid)
     month = _now().strftime("%Y-%m")
+    since = _iso(_now() - dt.timedelta(days=REFUND_DAYS))
+    refunded = {e["order"] for e in sales if e["kind"] == "refund"}
+    hold = sum(e["seller_amount"] for e in sales if e["kind"] == "sale" and e["at"] >= since and e["order"] not in refunded)
+    by_product = {}
+    for e in sales:
+        r = by_product.setdefault(e["lid"], {"lid": e["lid"], "name": e["name"], "sales": 0, "refunds": 0, "gross": 0, "earned": 0})
+        r["sales" if e["kind"] == "sale" else "refunds"] += 1
+        r["gross"] += e["amount"]
+        r["earned"] += e["seller_amount"]
+    months = []
+    t = _now().replace(day=1)
+    for _ in range(6):
+        k = t.strftime("%Y-%m")
+        months.append({"month": k, "label": t.strftime("%m/%Y"), "earned": sum(e["seller_amount"] for e in sales if e["at"][:7] == k)})
+        t = (t - dt.timedelta(days=1)).replace(day=1)
+    bank = d["bank_info"].get(sid, {})
+    nxt = b["balance"] if b["balance"] >= PAYOUT_MIN else 0
     return {"balance": b["balance"], "earned": b["earned"], "paid": b["paid"], "sales": len([e for e in sales if e["kind"] == "sale"]),
-            "this_month": sum(e["seller_amount"] for e in sales if e["at"][:7] == month),
+            "refunds": len(refunded), "this_month": sum(e["seller_amount"] for e in sales if e["at"][:7] == month),
             "recent": [{"at": e["at"], "name": e["name"], "amount": e["amount"], "seller_amount": e["seller_amount"], "kind": e["kind"]} for e in sales[-20:]][::-1],
-            "payouts": [p for p in d["payouts"] if p["seller"] == sid][-12:][::-1], "bank": d["bank_info"].get(sid, {}),
-            "fee_pct": FEE_PCT, "payout_min": PAYOUT_MIN, "payout_day": PAYOUT_DAY, "next_payout": _next_payout()}
+            "payouts": [p for p in d["payouts"] if p["seller"] == sid][-12:][::-1], "bank": bank,
+            "by_product": sorted(by_product.values(), key=lambda r: -r["earned"]), "months": months[::-1],
+            "in_refund_window": hold, "next_amount": nxt, "next_ready": bool(nxt) and bool(bank.get("account")),
+            "next_note": ("Chưa có tài khoản nhận tiền: điền bên dưới để nhận kỳ tới." if nxt and not bank.get("account") else
+                          f"Số dư dưới {vnd(PAYOUT_MIN)} được cộng dồn sang kỳ sau." if not nxt else ""),
+            "fee_pct": FEE_PCT, "payout_min": PAYOUT_MIN, "payout_day": PAYOUT_DAY, "refund_days": REFUND_DAYS, "next_payout": _next_payout()}
 
 
 def _next_payout() -> str:

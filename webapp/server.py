@@ -791,6 +791,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(200, market.creator_get(c, str(data.get("lid", ""))[:20]))
             if path == "/api/creator/save":
                 return self._json(200, market.creator_save(c, data))
+            if path == "/api/creator/preview":
+                return self._json(200, market.creator_preview(c, data))
             if path == "/api/creator/revenue":
                 from agents import pay
                 return self._json(200, pay.seller_revenue(c["id"]))
