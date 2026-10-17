@@ -8,7 +8,8 @@ Anh Huy duyệt ngày 17/10/2026. Mục tiêu: nhiều session cùng phát tri�
 |---|---|
 | **Product Lead** | Lộ trình, bảng đề xuất, gộp code vào `main`, phát hành, báo cáo anh Huy. Trợ lý cá nhân superHuy, superYou HQ và các phòng ban AI (CFO, CSO, Vận hành). Chủ các file dùng chung. |
 | **Trải nghiệm & Giao diện** | Hệ thống thiết kế và nhận diện, landing, chuẩn hoá UI/UX trên mọi màn hình (điện thoại, iPad, Mac, Telegram Mini App giữ màu Telegram), chuyển động, trợ năng. |
-| **Thương mại & Marketplace** | Marketplace, thanh toán và sổ cái, Xưởng clone, tài khoản, vai trò, gói, console người bán, trang công khai của Marketplace. Làm trọn từ backend tới giao diện của mảng. |
+| **Thương mại & Marketplace** | Marketplace (danh mục, xếp hạng, đánh giá, mua bán), thanh toán và sổ cái, tài khoản, vai trò, gói, console người bán, trang công khai của Marketplace. Làm trọn từ backend tới giao diện của mảng. |
+| **Xưởng Tài sản số** | Tìm nguồn, chấm điểm, clone có cải tiến (đội BA/PO/Dev/Designer/Tester/Kiểm duyệt) thành skill, Second Brain, OS theo vai trò; bàn giao cho chợ bản sẵn sàng để anh bấm Publish. Xem `docs/xuong-tai-san-so.md`. |
 | **Nền tảng & DevOps** | CI/CD, VPS, tenant cho khách, sao lưu, giám sát, hiệu năng, bảo mật hạ tầng. |
 
 Ngoài phòng Product, giữ nguyên và độc lập: **QA & Bảo mật** (kiểm thử chéo, không sửa tính năng), **GTM**.
@@ -24,7 +25,8 @@ Chủ file là người duy nhất sửa trực tiếp. Mảng khác cần thay 
 | Các agent trợ lý cá nhân: `agents/` còn lại (lịch, email, họp, nội dung, Studio, học, game, tài chính cá nhân, Second Brain...) | Product Lead |
 | `webapp/app/js/00-core.js, 10-assistant.js, 30-leads.js, 40-me.js, 50-hq.js, 60-life.js, 90-shell.js`, `webapp/app/css/50-hq-me.css` | Product Lead |
 | `webapp/app/shell.html`, `webapp/app/css/00-base.css, 10-aura.css, 20-motion.css, 30-responsive.css`, `webapp/static/brand/`, `webapp/static/landing/`, `webapp/static/legal/` (trình bày), `docs/superyou-brand.md` | Trải nghiệm & Giao diện |
-| `hubs/commerce.py`, `agents/market.py, pay.py, factory.py, trial_minutes.py`, `core/accounts.py, plans.py, passkey.py`, `webapp/app/js/20-market.js, 35-roles.js`, `webapp/app/css/40-market.css`, `webapp/static/market/`, `webapp/static/account/`, các route `/api/market, /api/pay, /api/creator, /api/account` trong `server.py`, `docs/superyou-thanh-toan.md` | Thương mại & Marketplace |
+| `agents/factory.py, factory_team.py`, `webapp/app/js/25-factory.js`, `webapp/app/css/45-factory.css`, `deploy/factory_qa.py`, khối `register(Agent("xuong"...` trong `hubs/commerce.py`, `docs/xuong-tai-san-so.md` | Xưởng Tài sản số |
+| `hubs/commerce.py` (trừ khối xuong), `agents/market.py, pay.py, trial_minutes.py`, `core/accounts.py, plans.py, passkey.py`, `webapp/app/js/20-market.js, 35-roles.js`, `webapp/app/css/40-market.css`, `webapp/static/market/`, `webapp/static/account/`, các route `/api/market, /api/pay, /api/creator, /api/account` trong `server.py`, `docs/superyou-thanh-toan.md` | Thương mại & Marketplace |
 | `.github/workflows/`, `deploy/` (trừ QA của từng mảng), `config.py`, `requirements.txt`, `deploy/vps_defaults.env`, `docs/superyou-pilot.md` | Nền tảng & DevOps |
 | `tests/` | Mảng nào viết test cho mảng đó; QA & Bảo mật được thêm test ở mọi mảng |
 | Nội dung pháp lý trong `webapp/static/legal/` (điều khoản, hoàn tiền) | GTM viết, Giao diện trình bày, Thương mại nối luồng khiếu nại |

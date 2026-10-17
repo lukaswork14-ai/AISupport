@@ -1,0 +1,16 @@
+/* ---------- Xưởng Tài sản số (chỉ chủ nhân): thẻ, tab, ảnh chụp, lựa chọn clone */
+.lbbar{ display:flex; flex-direction:column; gap:10px } .lbbar .seg{ flex-wrap:wrap } .lbbar select, .mkrow select{ font:inherit; font-size:13.5px; padding:7px 10px; border-radius:11px; border:1px solid var(--line); background:var(--surface); color:var(--text) }
+.lbgrid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:10px }
+.lbcard{ position:relative; display:flex; flex-direction:column; align-items:flex-start; gap:4px; padding:14px; text-align:left; min-width:0 }
+.lbcard img{ width:56px; height:56px; border-radius:28%; object-fit:cover; background:var(--fill) } .lbcard b{ font-size:14px; line-height:1.3 }
+.lbcard.cloned{ box-shadow:0 0 0 2px var(--danger) }
+.lbtag{ position:absolute; top:8px; right:8px; font-size:10.5px; font-weight:700; background:var(--danger); color:#fff; border-radius:7px; padding:2px 6px }
+.lbicon{ width:72px; height:72px; border-radius:28%; object-fit:cover; flex:none } .lbmini{ width:40px; height:40px; border-radius:28%; object-fit:cover; flex:none }
+.lbtabs{ margin-top:14px; display:flex; overflow-x:auto; max-width:100% } .lbtabs button{ white-space:nowrap }
+.lbshots{ display:flex; gap:10px; overflow-x:auto; padding-bottom:6px } .lbshots img{ height:360px; max-width:none; border-radius:16px; flex:none; background:var(--fill) }
+.lbtargets{ display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:8px }
+.lbt{ display:flex; gap:8px; align-items:center; padding:10px 12px; border-radius:12px; box-shadow:0 0 0 1px var(--line); cursor:pointer; font-size:13.5px }
+.lbt:has(input:checked){ box-shadow:0 0 0 2px var(--jade); background:var(--jade-soft) }
+.lbopt{ display:flex; gap:10px; align-items:flex-start; padding:7px 2px; font-size:14px; cursor:pointer } .lbopt input{ margin-top:3px }
+.lbprompt{ white-space:pre-wrap; font:12.5px/1.55 ui-monospace,Menlo,monospace; background:var(--fill); padding:14px; border-radius:14px; max-height:360px; overflow:auto }
+.lbways{ display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:10px; margin-top:12px } .lbways button{ text-align:left; display:flex; flex-direction:column; gap:6px } .lbways b{ display:flex; gap:8px; align-items:center }
