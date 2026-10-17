@@ -128,6 +128,8 @@ APP_FILES = {"/manifest.webmanifest": "manifest.webmanifest", "/sw.js": "sw.js",
              **{f"/icons/huy-{n}.png": f"icons/huy-{n}.png" for n in ("128", "180", "192", "512", "maskable-512")},
              "/install": "install/index.html", "/install/": "install/index.html", "/install/superHuy.mobileconfig": "install/superHuy.mobileconfig",
              "/landing": "landing/index.html", "/landing/": "landing/index.html",
+             "/dieu-khoan": "legal/index.html", "/terms": "legal/index.html", "/hoan-tien": "legal/index.html", "/refund": "legal/index.html",
+             "/bao-mat": "legal/index.html", "/privacy": "legal/index.html", "/nguoi-ban": "legal/index.html",
              "/market": "market/index.html", "/market/": "market/index.html",
              # Nhận diện superYou v1 (logo, icon, ảnh chia sẻ, sticker Su, biến màu)
              **{f"/brand/{n}": f"brand/{n}" for n in (
@@ -346,6 +348,10 @@ class Handler(BaseHTTPRequestHandler):
             p = check_download(q.get("f", ""), q.get("e", ""), q.get("n", ""), q.get("s", ""))
             if not p:
                 return self._json(403, {"error": "Link tải đã hết hạn, mở lại app để lấy link mới."})
+            if q.get("o"):
+                from agents import pay as _pay
+                if not _pay.download_allowed(q.get("o", "")):
+                    return self._json(429, {"error": "Link này đã tải quá số lần cho phép hôm nay. Mở Tài khoản › Sản phẩm đã mua để lấy link mới vào ngày mai."})
             return self._file(p, cache=False, download=q.get("n") or p.name)
         if u.path.startswith("/s/"):  # trang chia sẻ biên bản họp (công khai qua liên kết bí mật)
             return self._share(u.path)
@@ -435,7 +441,7 @@ class Handler(BaseHTTPRequestHandler):
             except Exception:
                 log.exception("Webhook thanh toán lỗi")
                 return self._json(500, {"error": "webhook error"})
-        if u.path in ("/api/pay/order", "/api/pay/resend", "/api/pay/mine"):  # khách mua trên trang công khai
+        if u.path in ("/api/pay/order", "/api/pay/resend", "/api/pay/mine", "/api/pay/complain"):  # khách mua trên trang công khai
             ip = self.headers.get("X-Real-IP") or self.client_address[0]
             if not _hello_ok("pay:" + ip):
                 return self._json(429, {"error": "Thao tác quá nhanh, thử lại sau ít phút nhé."})
@@ -445,6 +451,8 @@ class Handler(BaseHTTPRequestHandler):
                     return self._json(200, pay.create_order(str(data.get("lid", ""))[:20], str(data.get("email", "")), "public"))
                 if u.path == "/api/pay/resend":
                     return self._json(200, pay.resend(str(data.get("email", ""))))
+                if u.path == "/api/pay/complain":
+                    return self._json(200, pay.complain(str(data.get("oid", ""))[:20], str(data.get("email", "")), str(data.get("reason", ""))))
                 return self._json(200, pay.entitlements(str(data.get("email", ""))))
             except ValueError as e:
                 return self._json(400, {"error": str(e)[:200]})
@@ -684,6 +692,9 @@ class Handler(BaseHTTPRequestHandler):
                     return self._json(400, {"error": "Chỉ gói Miễn phí mới bật dùng thử"})
                 r = accounts.admin_set(au["id"], plan="trial", note="tự bật dùng thử")
                 return self._json(200, {"text": f"Đã bật dùng thử Pro {plans.TRIAL_DAYS} ngày.", "user": r["user"]})
+            if path == "upgrade":
+                from agents import pay
+                return self._json(200, pay.create_plan_order(au["email"], str(data.get("plan", ""))[:20], au["id"]))
             return self._json(404, {"error": "not found"})
         except PermissionError as e:
             return self._json(401, {"error": str(e)})

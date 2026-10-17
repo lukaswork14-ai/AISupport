@@ -151,7 +151,8 @@ function render(){
     var P = me.plans.plans, order = me.plans.order;
     body = '<h2>Gói và nâng cấp</h2><p class="by" style="margin:0 0 14px">Giá hiển thị theo chính sách hiện hành; thanh toán gói mở dần, liên hệ superYou để kích hoạt sớm.</p><div class="plans">'
       + order.map(function(k){ var pl = P[k]; return '<div class="plan '+(u.plan===k?'cur':'')+'" style="--c:'+pl.color+'">'+(u.plan===k?'<span class="tag">Đang dùng</span>':'')+'<span class="pname">'+esc(pl.name)+'</span><span class="by">'+esc(pl.tagline)+'</span><span class="price">'+(pl.price ? vnd(pl.price) : (k==='enterprise'?'Liên hệ':'0đ'))+'<span class="by" style="font-size:13px"> '+esc(pl.period||'')+'</span></span><ul>'+pl.features.map(function(f){ return '<li>'+esc(f)+'</li>'; }).join('')+'</ul>'
-        + (u.plan===k ? '' : k==='trial' && u.plan==='free' ? '<button class="btn sm y" id="trial">Bật dùng thử</button>' : k==='free' ? '' : '<a class="btn sm v" href="/landing#dang-ky">Liên hệ nâng cấp</a>')+'</div>'; }).join('')+'</div>';
+        + (u.plan===k ? '' : k==='trial' && u.plan==='free' ? '<button class="btn sm y" id="trial">Bật dùng thử</button>' : k==='free' ? '' : (pl.price && (k==='pro' || k==='business') ? '<button class="btn sm v" data-up="'+k+'">Nâng cấp · '+vnd(pl.price)+'</button>' : '<a class="btn sm v" href="/landing#dang-ky">Liên hệ nâng cấp</a>'))+'</div>'; }).join('')+'</div><div id="upbox"></div>';
+    body = body.replace('thanh toán gói mở dần, liên hệ superYou để kích hoạt sớm.', 'thanh toán bằng chuyển khoản VietQR, gói kích hoạt ngay khi tiền về.');
   }
   if(A.view === 'profile'){
     body = '<h2>Hồ sơ</h2><form class="card" id="pf"><label class="f">Tên hiển thị<input id="pn" value="'+esc(u.name||'')+'"></label><label class="f">Công ty<input id="pc" value="'+esc(u.company||'')+'"></label><label class="f">Chức danh<input id="pt" value="'+esc(u.title||'')+'"></label><label class="f">Email<input value="'+esc(u.email||'')+'" disabled></label><button class="btn v">Lưu</button><p class="msg" id="pm" role="status"></p></form>';
@@ -162,9 +163,23 @@ function render(){
   $('#main').innerHTML = '<div class="shell"><aside class="side">'+items.map(function(it){ return '<button class="'+(A.view===it[0]?'on':'')+'" data-v="'+it[0]+'">'+it[1]+'</button>'; }).join('')+'</aside><section>'+body+'</section></div>';
   bindRoles();
   document.querySelectorAll('[data-v]').forEach(function(b){ b.onclick = function(){ A.view = b.dataset.v; render(); }; });
+  document.querySelectorAll('[data-up]').forEach(function(b){ b.onclick = function(){ b.disabled = true; api('/api/account/upgrade', {plan: b.dataset.up}).then(function(r){ upgradeBox(r.order); }).catch(function(e){ alert2(e.message); b.disabled = false; }); }; });
   var tr = $('#trial'); if(tr) tr.onclick = function(){ tr.disabled = true; api('/api/account/trial', {}).then(function(r){ alert2(r.text); load(); }).catch(function(e){ alert2(e.message); tr.disabled = false; }); };
   var pf = $('#pf'); if(pf) pf.addEventListener('submit', function(e){ e.preventDefault(); var m = $('#pm'); m.className='msg'; m.textContent='Đang lưu…'; api('/api/account/profile', {name:$('#pn').value, company:$('#pc').value, title:$('#pt').value}).then(function(r){ m.className='msg ok'; m.textContent = r.text; A.me.user = Object.assign(A.me.user, r.user); }).catch(function(err){ m.className='msg err'; m.textContent = err.message; }); });
   var pw = $('#pw'); if(pw) pw.addEventListener('submit', function(e){ e.preventDefault(); var m = $('#pwm'); m.className='msg'; m.textContent='Đang đổi…'; api('/api/account/password', {old:$('#po').value, new:$('#pnw').value}).then(function(r){ m.className='msg ok'; m.textContent = r.text; pw.reset(); }).catch(function(err){ m.className='msg err'; m.textContent = err.message; }); });
+}
+var UPOLL = null;
+function upgradeBox(o){
+  var b = $('#upbox'); if(!b || !o) return; if(UPOLL) clearInterval(UPOLL);
+  b.innerHTML = '<div class="card" style="margin-top:14px"><b>'+esc(o.name)+' · '+esc(o.amount_text)+'</b>'
+    + (o.qr ? '<img src="'+esc(o.qr)+'" alt="Mã QR thanh toán" style="width:220px;max-width:100%;border-radius:12px">' : '')
+    + (o.bank && o.bank.id ? '<p class="by">Ngân hàng '+esc(o.bank.id)+' · STK <b>'+esc(o.bank.account)+'</b> · '+esc(o.bank.name)+'<br>Nội dung chuyển khoản: <b>'+esc(o.code)+'</b></p>' : '<p class="by">Mã đơn <b>'+esc(o.code)+'</b>. Chủ sàn chưa mở tài khoản nhận tiền tự động; superYou sẽ liên hệ qua email để hoàn tất.</p>')
+    + '<p class="msg" id="upm">'+(o.manual ? 'Đối soát thủ công trong vài giờ làm việc.' : 'Gói kích hoạt tự động trong khoảng 1 phút sau khi tiền về.')+'</p></div>';
+  b.scrollIntoView({behavior:'smooth', block:'nearest'});
+  UPOLL = setInterval(function(){ fetch('/api/pay/status?o='+encodeURIComponent(o.id)+'&e='+encodeURIComponent(A.me.user.email)).then(function(r){ return r.json(); }).then(function(st){
+    if(st.status === 'delivered' || st.status === 'paid'){ clearInterval(UPOLL); $('#upm').className = 'msg ok'; $('#upm').textContent = 'Đã nhận thanh toán, gói đã kích hoạt.'; load(); }
+    else if(st.status === 'expired' || st.status === 'cancelled'){ clearInterval(UPOLL); $('#upm').className = 'msg err'; $('#upm').textContent = 'Đơn đã hết hạn, bấm Nâng cấp để tạo đơn mới.'; }
+  }).catch(function(){}); }, 6000);
 }
 var path = location.pathname.replace(/\/$/, '');
 if(/\/(login|dang-nhap)$/.test(path)){ if(A.tok) load(); else authView(new URLSearchParams(location.search).get('mode') || 'login'); }

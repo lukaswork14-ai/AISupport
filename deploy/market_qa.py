@@ -145,7 +145,7 @@ def main():
             hq.goto("http://127.0.0.1:8787/hq")
             hq.wait_for_timeout(3500)
             hq.screenshot(path=str(OUT / f"{tag}-30-hq-overview.png"), full_page=True)
-            for name, js in (("31-hq-board", "go('board')"), ("32-hq-cfo", "go('cfo')"), ("33-hq-mkt", "go('mkt')"), ("34-hq-ex", "go('ex')"), ("35-hq-users", "go('users')"), ("36-hq-plans", "S.usView='goi';render()"), ("37-hq-roles", "roleMenu()")):
+            for name, js in (("31-hq-board", "go('board')"), ("32-hq-cfo", "go('cfo')"), ("33-hq-mkt", "go('mkt')"), ("34-hq-ex", "go('ex')"), ("35-hq-users", "go('users')"), ("36-hq-plans", "S.usView='goi';render()"), ("38-hq-sales", "go('sales')"), ("39-hq-ops", "go('ops')"), ("37-hq-roles", "roleMenu()")):
                 try:
                     hq.evaluate(js)
                     hq.wait_for_timeout(2200)
@@ -209,6 +209,16 @@ def main():
                 pub.evaluate("localStorage.removeItem('sy-acc')")
             except Exception as e:
                 errs.append(f"[{tag} account] {e}")
+            try:
+                pub.goto("http://127.0.0.1:8787/hoan-tien"); pub.wait_for_timeout(1200)
+                pub.screenshot(path=str(OUT / f"{tag}-29-legal-refund.png"), full_page=True)
+                pub.goto("http://127.0.0.1:8787/market?q=Finance"); pub.wait_for_timeout(1800)
+                pub.evaluate("(function(){var b=[].slice.call(document.querySelectorAll('#grid .card-p')).find(function(c){return /Finance OS/.test(c.textContent)}); if(b) b.click();})()")
+                pub.wait_for_timeout(1000)
+                pub.screenshot(path=str(OUT / f"{tag}-21c-public-pack.png"))
+                pub.evaluate("document.getElementById('dlg').close()")
+            except Exception as e:
+                errs.append(f"[{tag} legal/pack] {e}")
             pub.goto("http://127.0.0.1:8787/market/console")
             pub.wait_for_timeout(1500)
             pub.screenshot(path=str(OUT / f"{tag}-22-console-login.png"), full_page=True)

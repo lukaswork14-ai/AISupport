@@ -22,7 +22,7 @@ from config import DATA_DIR
 
 FILE = DATA_DIR / "market.json"
 _LOCK = threading.Lock()
-TYPES = {"skill": "Skill", "brain": "Gói Second Brain", "workflow": "Workflow"}
+TYPES = {"skill": "Skill", "brain": "Gói Second Brain", "workflow": "Workflow", "pack": "Phòng ban AI"}
 CATS = {"dieu-hanh": "Điều hành", "hop": "Họp & quyết định", "noi-dung": "Nội dung & marketing", "ban-hang": "Bán hàng & e-commerce",
         "hoc": "Học tập", "nang-suat": "Năng suất cá nhân"}
 COLORS = ["#5B3FD9", "#0E7C6B", "#C2410C", "#B4236B", "#2457C5", "#7A5A00"]
@@ -128,6 +128,67 @@ def _official_seed() -> list[dict]:
     return out
 
 
+def _dept_packs() -> list[dict]:
+    """Gói ngành 'Phòng ban AI' (đề xuất liên phòng ban đã được anh duyệt): skill + workflow + tri thức, cài một chạm."""
+    fin_notes = [{"title": "Finance OS: 5 con số chủ shop phải xem mỗi sáng", "md": "# Finance OS: 5 con số chủ shop phải xem mỗi sáng\n\n1. Tiền mặt hiện có và runway (số tháng còn sống nếu doanh thu bằng 0).\n2. Doanh thu 7 ngày so với 7 ngày trước.\n3. Biên gộp sau phí sàn, vận chuyển, hoàn.\n4. Phải thu quá hạn và phải trả sắp đến hạn.\n5. Tỷ lệ hoàn/huỷ theo sản phẩm.\n"},
+                 {"title": "Mẫu dự báo dòng tiền 13 tuần", "md": "# Mẫu dự báo dòng tiền 13 tuần\n\nMỗi tuần: tiền đầu kỳ + thu dự kiến (đơn đã chốt, công nợ về) − chi cố định − chi biến đổi − thuế = tiền cuối kỳ. Đánh dấu tuần nào âm để xử lý trước 2 tuần.\n"},
+                 {"title": "Kịch bản what-if hay dùng", "md": "# Kịch bản what-if hay dùng\n\n- Mất khách lớn nhất (−20% doanh thu).\n- Tăng giá 10%: mất bao nhiêu đơn thì hoà vốn.\n- Thuê thêm 1 người: chi phí đầy đủ gồm bảo hiểm, công cụ.\n- Chạy quảng cáo: ROAS tối thiểu để không lỗ.\n"}]
+    sales_notes = [{"title": "Sales Desk: ICP và kịch bản theo đuổi 5 chạm", "md": "# Sales Desk: ICP và kịch bản theo đuổi 5 chạm\n\nXác định khách lý tưởng (ngành, quy mô, nỗi đau, ngân sách). 5 chạm trong 14 ngày: chào hỏi giá trị, case tương tự, demo 15 phút, xử lý băn khoăn, đề nghị dùng thử.\n"},
+                   {"title": "Mẫu email chào và nhắc lịch", "md": "# Mẫu email chào và nhắc lịch\n\nChào: 3 câu, nêu một kết quả cụ thể khách tương tự đạt được, một câu hỏi mở.\nNhắc: nhắc lại lợi ích, đề xuất 2 khung giờ, kèm link.\n"},
+                   {"title": "Phễu và chỉ số tuần", "md": "# Phễu và chỉ số tuần\n\nKhách mới → liên hệ → trao đổi → dùng thử → trả phí. Theo dõi tỷ lệ từng bước, thời gian trung bình mỗi bước, lý do rớt.\n"}]
+    law_notes = [{"title": "Law Office: quy trình tiếp nhận vụ việc", "md": "# Law Office: quy trình tiếp nhận vụ việc\n\nXung đột lợi ích → tóm tắt sự việc → tài liệu cần thu → thời hiệu → báo giá → thư cam kết. Mọi dữ liệu khách ở lại máy chủ văn phòng (gói Private).\n"},
+                 {"title": "Mẫu tóm tắt hợp đồng 1 trang", "md": "# Mẫu tóm tắt hợp đồng 1 trang\n\nCác bên, đối tượng, giá và thanh toán, thời hạn, điều khoản phạt, chấm dứt, bảo mật, luật áp dụng, rủi ro cần đàm phán lại.\n"},
+                 {"title": "Lịch thời hạn và nhắc việc", "md": "# Lịch thời hạn và nhắc việc\n\nMỗi vụ việc: thời hiệu, hạn nộp, phiên làm việc. Nhắc trước 7 ngày, 3 ngày, 1 ngày.\n"}]
+    return [
+        {"type": "pack", "name": "Finance OS cho chủ shop", "category": "dieu-hanh", "price": 299000, "color": COLORS[1],
+         "tagline": "Phòng tài chính AI: bức tranh tiền mặt mỗi sáng, dự báo 13 tuần, cảnh báo sớm.",
+         "description": ("Một người, không kế toán trưởng, vẫn có phòng tài chính: trợ lý đọc thu chi, chạy phân tích, dự báo dòng tiền và nhắc việc. "
+                         "Gồm skill 'CFO một trang', workflow 'Bản tin tài chính sáng' và 3 ghi chú tri thức. Dành cho chủ shop e-commerce, solopreneur."),
+         "tags": ["Phòng ban AI", "tài chính", "CFO"], "examples": ["Sáng nay tiền mặt và runway thế nào?", "Nếu tăng giá 10% thì mất bao nhiêu đơn mới hoà vốn?"],
+         "content": {"roles": ["Analyst: bức tranh và cảnh báo", "Forecaster: dự báo 13 tuần", "Strategist: 3 việc nên làm"],
+                     "skill": ("Khi anh hỏi về tiền, doanh thu, chi phí hay nên chi gì:\n"
+                               "1. Luôn mở đầu bằng tiền mặt hiện có và runway (tháng).\n"
+                               "2. So sánh 7 ngày với 7 ngày trước; nêu rõ nguyên nhân thay đổi lớn nhất.\n"
+                               "3. Mọi khoản chi mới: nêu ảnh hưởng tới runway và kịch bản xấu.\n"
+                               "4. Cảnh báo khi hoàn/huỷ > 10%, một khách > 60% doanh thu, chi cố định > 2 lần doanh thu.\n"
+                               "5. Kết bằng 3 việc nên làm trong tuần, mỗi việc một dòng, có số."),
+                     "steps": [{"agent": "taichinh", "action": "tongquan", "params": {}, "label": "Thu chi tháng này"},
+                               {"agent": "cfo", "action": "phan_tich", "params": {}, "label": "Analyst: cảnh báo"},
+                               {"agent": "cfo", "action": "du_bao", "params": {"months": 3}, "label": "Dự báo 3 tháng"}],
+                     "notes": fin_notes}},
+        {"type": "pack", "name": "Sales Desk cho solopreneur", "category": "ban-hang", "price": 299000, "color": COLORS[2],
+         "tagline": "Phòng bán hàng AI: chấm điểm khách, soạn thư theo đuổi chờ duyệt, phễu tuần.",
+         "description": ("Trợ lý làm 3 vai: Nghiên cứu khách (ICP), Theo đuổi (thư và tin nhắn theo kịch bản, bạn duyệt rồi gửi) và RevOps (phễu, tỷ lệ chuyển đổi). "
+                         "Gồm skill 'Bán hàng tư vấn', workflow 'Phễu sáng thứ Hai' và 3 ghi chú kịch bản."),
+         "tags": ["Phòng ban AI", "bán hàng", "CSO"], "examples": ["Khách a@congty.vn có hợp không, bước tiếp theo?", "Soạn thư nhắc dùng thử cho khách sắp hết hạn"],
+         "content": {"roles": ["Nghiên cứu: điểm ICP", "Theo đuổi: thư chờ duyệt", "RevOps: phễu và báo cáo tuần"],
+                     "skill": ("Khi nói về khách hàng, email theo đuổi hay bán hàng:\n"
+                               "1. Phân khúc khách (solopreneur / quản lý / doanh nghiệp) trước khi khuyên.\n"
+                               "2. Thư theo đuổi tối đa 120 từ, một lợi ích cụ thể, một câu hỏi, một bước tiếp theo rõ.\n"
+                               "3. Không bao giờ gửi thư thay anh; chỉ soạn nháp để anh duyệt.\n"
+                               "4. Mỗi tuần nêu tỷ lệ chuyển đổi từng bước và khách bị bỏ quên > 3 ngày.\n"
+                               "5. Ưu tiên khách sắp hết hạn dùng thử và khách có điểm ICP cao."),
+                     "steps": [{"agent": "sales", "action": "phieu", "params": {}, "label": "Phễu bán hàng"},
+                               {"agent": "khach", "action": "ds", "params": {}, "label": "Khách đăng ký mới"}],
+                     "notes": sales_notes}},
+        {"type": "pack", "name": "Law Office: văn phòng luật nhỏ", "category": "dieu-hanh", "price": 999000, "color": COLORS[0],
+         "tagline": "Tiếp nhận vụ việc, tóm tắt hợp đồng, lịch thời hạn; dữ liệu ở lại máy chủ văn phòng.",
+         "description": ("Dành cho văn phòng luật 1–5 luật sư dùng superYou Private (AI tại chỗ). Trợ lý tóm tắt hợp đồng một trang, nhắc thời hiệu, "
+                         "soạn thư cho khách theo mẫu, ghi chú vụ việc vào Second Brain. Gồm skill 'Trợ lý luật sư', workflow 'Lịch thời hạn' và 3 ghi chú quy trình."),
+         "tags": ["Phòng ban AI", "luật", "private"], "examples": ["Tóm tắt hợp đồng này, chỉ ra điều khoản rủi ro", "Vụ việc nào có hạn trong 7 ngày tới?"],
+         "content": {"roles": ["Tiếp nhận: xung đột lợi ích, tài liệu", "Phân tích: tóm tắt hợp đồng", "Thời hạn: nhắc trước 7/3/1 ngày"],
+                     "skill": ("Khi làm việc với hợp đồng, vụ việc hay khách hàng của văn phòng luật:\n"
+                               "1. Không đưa ra kết luận pháp lý thay luật sư; trình bày điều khoản, rủi ro và câu hỏi cần luật sư quyết.\n"
+                               "2. Tóm tắt hợp đồng theo mẫu 1 trang: các bên, đối tượng, giá, thời hạn, phạt, chấm dứt, bảo mật, luật áp dụng.\n"
+                               "3. Luôn hỏi và ghi thời hiệu, hạn nộp; nhắc trước 7, 3 và 1 ngày.\n"
+                               "4. Bảo mật: không trích tên khách ra ngoài ngữ cảnh vụ việc; không gửi dữ liệu ra dịch vụ ngoài.\n"
+                               "5. Mọi thư cho khách là bản nháp để luật sư duyệt."),
+                     "steps": [{"agent": "lich", "action": "ngay", "params": {"date": "tuần này"}, "label": "Hạn và lịch tuần"},
+                               {"agent": "viec", "action": "tongquan", "params": {}, "label": "Việc đang mở"}],
+                     "notes": law_notes}},
+    ]
+
+
 def _mk(src: dict, creator: dict, status: str) -> dict:
     lid = secrets.token_hex(5)
     t = src.get("type") if src.get("type") in TYPES else "skill"
@@ -149,6 +210,13 @@ def _ensure(d: dict) -> dict:
             d["listings"][x["id"]] = x
         d["seeded"] = 1
         _save(d)
+    if d.get("seeded", 0) < 2:
+        for s in _dept_packs():
+            x = _mk(s, OFFICIAL, "published")
+            x["featured"] = True
+            d["listings"][x["id"]] = x
+        d["seeded"] = 2
+        _save(d)
     return d
 
 
@@ -157,7 +225,8 @@ def _summary(x: dict, d: dict | None = None) -> dict:
     rv = x.get("reviews") or []
     avg = round(sum(r["stars"] for r in rv) / len(rv), 1) if rv else 0
     c = x.get("content") or {}
-    size = len(c.get("notes") or []) if x["type"] == "brain" else len(c.get("steps") or []) if x["type"] == "workflow" else len(c.get("skill") or "")
+    size = len(c.get("notes") or []) if x["type"] == "brain" else len(c.get("steps") or []) if x["type"] == "workflow" else \
+        (1 + len(c.get("steps") or []) + len(c.get("notes") or [])) if x["type"] == "pack" else len(c.get("skill") or "")
     inst = (d or {}).get("installs", {}).get(x["id"]) if d else None
     return {k: x.get(k) for k in ("id", "slug", "type", "name", "tagline", "category", "tags", "price", "color", "creator", "status",
                                   "version", "installs", "interest", "created", "updated")} | {
@@ -171,6 +240,9 @@ def _contents_preview(x: dict) -> list[str]:
         return [n["title"] for n in (c.get("notes") or [])]
     if x["type"] == "workflow":
         return [s.get("label") or f"{s.get('agent')}.{s.get('action')}" for s in (c.get("steps") or [])]
+    if x["type"] == "pack":
+        return (["Skill: cách làm việc của phòng ban"] + [f"Workflow: {s.get('label') or s.get('action')}" for s in (c.get("steps") or [])]
+                + [f"Tri thức: {n['title']}" for n in (c.get("notes") or [])])[:14]
     return [ln.strip() for ln in (c.get("skill") or "").split("\n") if ln.strip()][:12]
 
 
@@ -236,9 +308,20 @@ def _brain_spec(x: dict) -> dict:
             "compat": ["Trợ lý tra cứu được ngay khi trả lời", "Gỡ sản phẩm vẫn giữ ghi chú, bạn tự xoá trong Obsidian"]}
 
 
+def _pack_spec(x: dict) -> dict:
+    """Phòng ban AI: một skill (cách làm việc) + workflow chạy theo lịch + gói tri thức, cài một chạm."""
+    sk = _skill_spec(x)
+    wf = _workflow_spec(x) if (x.get("content") or {}).get("steps") else {"steps": [], "step_count": 0, "connects": []}
+    br = _brain_spec(x) if (x.get("content") or {}).get("notes") else {"toc": [], "note_count": 0}
+    return {"kind": "pack", "roles": (x.get("content") or {}).get("roles") or [], "rules": sk["rules"], "rule_count": sk["rule_count"], "examples": sk["examples"],
+            "steps": wf["steps"], "step_count": wf["step_count"], "connects": wf["connects"], "toc": br["toc"], "note_count": br["note_count"],
+            "how": "Cài một chạm: skill áp dụng ngay, workflow chạy bằng tay hoặc theo lịch, ghi chú vào Second Brain.",
+            "compat": ["Chạy trên superYou riêng (Pro trở lên)", "Chủ sàn cập nhật phiên bản, bạn nhận bản mới miễn phí"]}
+
+
 def spec(x: dict) -> dict:
     """Cấu phần hiển thị theo loại, kèm phần Thông tin chung (như App Store)."""
-    sp = {"skill": _skill_spec, "workflow": _workflow_spec, "brain": _brain_spec}[x["type"]](x)
+    sp = {"skill": _skill_spec, "workflow": _workflow_spec, "brain": _brain_spec, "pack": _pack_spec}[x["type"]](x)
     sp["info"] = [("Phiên bản", x.get("version", "1.0")), ("Cập nhật", (x.get("updated") or "")[:10]), ("Phát hành", (x.get("created") or "")[:10]),
                   ("Người tạo", (x.get("creator") or {}).get("name", "")), ("Danh mục", CATS.get(x.get("category"), "")),
                   ("Giá", "Miễn phí" if not x.get("price") else f"{x['price']:,}đ".replace(",", ".") + (" một lần" if x.get("billing", "once") == "once" else "/tháng"))]
@@ -327,7 +410,7 @@ def item(lid: str) -> dict:
     dist = {str(k): sum(1 for r in rv if r["stars"] == k) for k in range(5, 0, -1)}
     c = x.get("content") or {}
     return s | {"description": x.get("description", ""), "whats_new": x.get("whats_new", ""), "reviews": rv[-30:][::-1], "dist": dist,
-                "contents": _contents_preview(x), "skill_text": c.get("skill", "") if x["type"] == "skill" else "",
+                "contents": _contents_preview(x), "skill_text": c.get("skill", "") if x["type"] in ("skill", "pack") else "",
                 "submitter": x.get("submitter", {}), "review_note": x.get("review_note", ""),
                 "install": d["installs"].get(x["id"]), "spec": spec(x), "cloned_from": x.get("cloned_from"), "source_url": x.get("source_url", "")}
 
@@ -342,7 +425,7 @@ def install(lid: str) -> dict:
         if lid in d["installs"]:
             return {"text": f"“{x['name']}” đã được cài rồi."}
         extra = ""
-        if x["type"] == "brain":
+        if x["type"] in ("brain", "pack") and (x["content"].get("notes") or []):
             from agents import second_brain
             folder = "03 Resources/Marketplace/" + second_brain._slug(x["name"])[:60]
             n = 0
@@ -355,7 +438,8 @@ def install(lid: str) -> dict:
         x["installs"] = x.get("installs", 0) + 1
         _save(d)
     hint = {"skill": " superHuy sẽ áp dụng skill này từ câu trả lời tiếp theo.",
-            "workflow": " Bấm “Chạy” trong mục Đã cài hoặc nhờ superHuy chạy workflow này."}.get(x["type"], "")
+            "workflow": " Bấm “Chạy” trong mục Đã cài hoặc nhờ superHuy chạy workflow này.",
+            "pack": " Phòng ban đã sẵn sàng: skill áp dụng ngay, workflow bấm Chạy trong Đã cài."}.get(x["type"], "")
     return {"text": f"Đã cài “{x['name']}”.{extra}{hint}"}
 
 
@@ -397,9 +481,9 @@ def run_workflow(lid: str = "", name: str = "") -> dict:
     x = d["listings"].get(lid) if lid else None
     if not x and name:
         nl = name.strip().lower()
-        x = next((d["listings"][k] for k in d["installs"] if k in d["listings"] and d["listings"][k]["type"] == "workflow"
+        x = next((d["listings"][k] for k in d["installs"] if k in d["listings"] and d["listings"][k]["type"] in ("workflow", "pack")
                   and nl in d["listings"][k]["name"].lower()), None)
-    if not x or x["type"] != "workflow":
+    if not x or x["type"] not in ("workflow", "pack"):
         raise ValueError("Không tìm thấy workflow đã cài")
     if x["id"] not in d["installs"]:
         raise ValueError("Anh cần cài workflow này trước khi chạy")
@@ -432,7 +516,7 @@ def skills_context() -> str:
     out = []
     for k, i in d.get("installs", {}).items():
         x = d["listings"].get(k)
-        if x and x["type"] == "skill" and i.get("enabled", True) and x.get("status") == "published":
+        if x and x["type"] in ("skill", "pack") and i.get("enabled", True) and x.get("status") == "published" and (x["content"].get("skill") or ""):
             out.append(f"### Skill: {x['name']}\n{(x['content'].get('skill') or '')[:SKILL_MAX]}")
     if not out:
         return ""
@@ -473,6 +557,10 @@ def _content_from(type: str, body: str) -> dict:
         if not notes:
             notes = [{"title": "Ghi chú", "md": body}]
         return {"notes": notes[:200]}
+    if type == "pack":
+        if len(body) < 40:
+            raise ValueError("Nội dung quá ngắn")
+        return {"skill": body[:SKILL_MAX], "steps": [], "notes": []}
     if type == "workflow":
         steps = []
         for ln in body.split("\n"):
@@ -745,7 +833,7 @@ def studio_body(lid: str) -> dict:
     if not x:
         raise ValueError("Không tìm thấy sản phẩm")
     c = x.get("content") or {}
-    body = c.get("skill") if x["type"] == "skill" else "\n".join(n["md"].strip() for n in c.get("notes") or []) if x["type"] == "brain" \
+    body = c.get("skill") if x["type"] in ("skill", "pack") else "\n".join(n["md"].strip() for n in c.get("notes") or []) if x["type"] == "brain" \
         else "\n".join(f"{s['agent']}.{s['action']}: {s.get('label', '')}" for s in c.get("steps") or [])
     return {"id": lid, "type": x["type"], "name": x["name"], "tagline": x.get("tagline", ""), "description": x.get("description", ""),
             "category": x["category"], "price": x.get("price", 0), "tags": ", ".join(x.get("tags") or []), "body": body or "",

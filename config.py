@@ -33,6 +33,8 @@ DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 # superYou: instance của khách (tenant, xem deploy/tenant_vps.sh). Trên instance khách, KHÔNG gieo dữ liệu/khoá học/chiến lược
 # viết riêng cho anh Huy (Roimaxx, Leversphere, Sellnity). Nhận diện bằng SUPERYOU_TENANT=1 hoặc thư mục /superyou-tenants/.
+# Gói của instance này (tenant: pro|business|enterprise do chủ sàn cài; instance chính: enterprise). Xem core/plans.py.
+SUPERYOU_PLAN = (os.getenv("SUPERYOU_PLAN", "").strip().lower() or "")
 IS_TENANT = (os.getenv("SUPERYOU_TENANT", "").strip().lower() in ("1", "true", "yes")
              or "/superyou-tenants/" in HOME_DIR.as_posix())
 GOOGLE_CREDENTIALS_FILE = HOME_DIR / "credentials.json"   # tải từ Google Cloud

@@ -140,6 +140,8 @@ def save_workflow(wid: str = "", name: str = "", steps: str = "", schedule: str 
         d = _load()
         w = d["workflows"].get(wid) if wid else None
         if not w:
+            from core import accounts
+            accounts.check_limit("workflows", len(d["workflows"]))
             wid = secrets.token_hex(4)
             w = {"id": wid, "created": _now(), "runs": 0}
             d["workflows"][wid] = w

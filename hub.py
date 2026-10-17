@@ -7,7 +7,7 @@ import os
 import re
 
 import targets as targets_mod
-from agents import (workspace, board, cfo, pay, factory, market, leads, calendar_agent, content_agent, content_hub, strategy, learning, reel_studio, game, repo_radar, web_tools, gemini_notebook, knowledge_sources, meeting, meeting_share, email_agent, fb_connect, gcal_bridge, imagecard, lark_agent, mailbox, news_agent, publisher,
+from agents import (workspace, board, cfo, sales, ops, pay, factory, market, leads, calendar_agent, content_agent, content_hub, strategy, learning, reel_studio, game, repo_radar, web_tools, gemini_notebook, knowledge_sources, meeting, meeting_share, email_agent, fb_connect, gcal_bridge, imagecard, lark_agent, mailbox, news_agent, publisher,
                     reel_video, second_brain)
 from config import CARD_HANDLE, DATA_DIR
 from core import digests, notify, store
@@ -709,7 +709,7 @@ register(Agent("cfo", "CFO superYou", "💼", "Finance OS: phân tích, dự bá
 
 
 # ================================================================ Không gian cá nhân: hồ sơ, cài đặt, workflow riêng, passkey, thử nghiệm
-from core import flags as _flags, passkey as _passkey  # noqa: E402
+from core import flags as _flags, passkey as _passkey, private_llm as _private_llm  # noqa: E402
 register(Agent("toi", "Không gian của tôi", "👤", "Hồ sơ, cài đặt giao diện, đăng nhập Face ID/vân tay, workflow riêng kéo thả", order=58, actions=[
     Action("ho_so", "Hồ sơ và cài đặt", workspace.get, hidden=True),
     Action("ho_so_luu", "Lưu hồ sơ", workspace.set_profile, hidden=True, llm=True, desc="Cập nhật hồ sơ người dùng: tên, chức danh, công ty, ngành, mục tiêu.",
@@ -751,6 +751,55 @@ register(Agent("thunghiem", "Thử nghiệm", "🧪", "Bật tính năng theo ph
 
 # ================================================================ Người dùng, vai trò, gói (chỉ chủ sàn)
 from core import accounts as _accounts, plans as _plans  # noqa: E402
+# ================================================================ Bán hàng superYou (CSO ảo)
+register(Agent("sales", "Phòng Bán hàng (CSO)", "📈", "CSO ảo: chấm điểm khách tiềm năng, soạn thư theo đuổi chờ anh duyệt, phễu RevOps và kế hoạch tuần", order=60, actions=[
+    Action("tong_quan", "Tổng quan bán hàng", sales.overview, hidden=True),
+    Action("phieu", "RevOps: phễu bán hàng", sales.pipeline, hidden=True, llm=True,
+           desc="Phễu khách đăng ký → liên hệ → trao đổi → dùng thử → khách hàng; tỷ lệ chuyển đổi, dùng thử sắp hết hạn, khách bị bỏ quên, doanh thu."),
+    Action("nghien_cuu", "Nghiên cứu: điểm ICP một khách", sales.research, hidden=True, long=True, llm=True,
+           desc="Chấm điểm phù hợp (0–100), phân khúc (solopreneur/quản lý/doanh nghiệp) và bước tiếp theo cho một email khách.",
+           params=[Param("email", "Email khách", required=True), Param("refresh", "Chấm lại", "bool", default=False)]),
+    Action("soan", "Theo đuổi: soạn thư chờ duyệt", sales.draft, hidden=True, long=True, llm=True,
+           desc="Soạn nháp thư tiếng Việt cho khách (chào mừng, nhắc dùng thử, sắp hết hạn, nâng cấp, hỏi thăm). Chỉ lưu nháp, anh duyệt mới gửi.",
+           params=[Param("email", "Email khách", required=True),
+                   Param("kind", "Loại thư", "select", options=[{"value": k, "label": v} for k, v in sales.KINDS.items()], default="chao_mung"),
+                   Param("note", "Ý thêm", "textarea")]),
+    Action("nhap", "Danh sách nháp", sales.drafts, hidden=True,
+           params=[Param("status", "Trạng thái", "select", options=[""] + list(sales.DRAFT_STATUS), default="cho_duyet")]),
+    Action("duyet", "Duyệt và gửi thư", sales.approve, hidden=True, long=True, params=[
+        Param("did", "ID nháp", required=True), Param("send", "Gửi ngay", "bool", default=True),
+        Param("platform", "Nền tảng", "select", options=["", "lark", "gmail"], default="")]),
+    Action("tu_choi", "Bỏ nháp", sales.reject, hidden=True, params=[Param("did", "ID nháp", required=True), Param("note", "Lý do")]),
+    Action("theo_duoi_tu_dong", "Soạn nháp theo đuổi hôm nay", sales.auto_followups, hidden=True, long=True, llm=True,
+           desc="Quét khách mới chưa liên hệ và dùng thử sắp hết hạn, soạn nháp chờ anh duyệt (không tự gửi)."),
+    Action("bao_cao_tuan", "Kế hoạch bán hàng tuần", sales.weekly_report, hidden=True, long=True, llm=True,
+           desc="Tóm tắt phễu + 3 hành động đề xuất; đưa lên bảng Phòng ban nếu to_board.",
+           params=[Param("to_board", "Đưa lên bảng", "bool", default=True)]),
+]))
+
+
+# ================================================================ Vận hành superYou
+register(Agent("ops", "Vận hành superYou", "🛠", "Phòng Vận hành (AI): tenant, sức khỏe hệ thống, chi phí hạ tầng trên mỗi khách, cảnh báo theo ngưỡng", order=60, actions=[
+    Action("tong_quan", "Tổng quan vận hành", ops.overview, hidden=True),
+    Action("tenant", "Danh sách tenant", ops.tenants, hidden=True, llm=True,
+           desc="Các instance khách (systemd superyou@<slug>): trạng thái dịch vụ, dung lượng dữ liệu, log cuối; kèm instance chính."),
+    Action("suc_khoe", "Sức khỏe hệ thống", ops.system_health, hidden=True, llm=True,
+           desc="Tóm tắt kết quả QC, ổ đĩa, tải CPU, bộ nhớ bot."),
+    Action("chi_phi", "Ảnh chụp chi phí/khách", ops.cost_snapshot, hidden=True, llm=True,
+           desc="Chi phí hạ tầng cố định (từ CFO) chia cho số khách đang chạy + ước tính LLM; lưu theo ngày."),
+    Action("nguong", "Xem ngưỡng cảnh báo", ops.thresholds, hidden=True),
+    Action("dat_nguong", "Đặt ngưỡng cảnh báo", ops.set_threshold, hidden=True, llm=True,
+           desc="Ngưỡng: disk_pct (% ổ đĩa), qc_fails (số lượt lỗi QC), cost_per_customer (đ/khách/tháng), tenant_down (có báo tenant dừng).",
+           params=[Param("key", "Ngưỡng", required=True), Param("value", "Giá trị", required=True)]),
+    Action("canh_bao", "Kiểm tra cảnh báo", ops.check_alerts, hidden=True, llm=True,
+           desc="So sánh sức khỏe, chi phí, tenant với ngưỡng; vi phạm thì báo Telegram và đưa đề xuất lên bảng Phòng ban (giao Product).",
+           params=[Param("auto_propose", "Tự đưa lên bảng", "bool", default=True)]),
+    Action("bao_cao_tuan", "Báo cáo vận hành tuần", ops.weekly_report, hidden=True, long=True, llm=True,
+           desc="Báo cáo một trang: uptime, sự cố, chi phí/khách so với tuần trước, bảng tenant, ổ đĩa, 3 khuyến nghị.",
+           params=[Param("to_board", "Đưa lên bảng", "bool", default=True)]),
+]))
+
+
 register(Agent("nguoidung", "Người dùng & gói", "🪪", "Tài khoản, vai trò, gói, chính sách gói, nhật ký kiểm toán", order=59, actions=[
     Action("ds", "Danh sách người dùng", _accounts.admin_list, hidden=True, llm=True, desc="Người dùng superYou theo vai trò và gói; nhật ký kiểm toán.",
            params=[Param("q", "Tìm"), Param("role", "Vai"), Param("plan", "Gói")]),
@@ -1589,6 +1638,14 @@ register(Agent("caidat", "Cài đặt", "⚙️", "Kết nối Gmail, lịch Goo
            desc="Đăng nhập Lark 1 lần để xem lịch và duyệt lời mời họp ngay trong app."),
     Action("tinhtrang", "Tình trạng hệ thống", tinh_trang, icon="🩺", long=True, hidden=True,
            desc="QC kiểm tra máy chủ, link app, Gmail, AI, Lark, lịch."),
+    Action("ai_tai_cho", "superYou Private: AI tại chỗ", _private_llm.status, icon="🔒", hidden=True, llm=True,
+           desc="Tình trạng máy chủ AI tại chỗ (Ollama) và chế độ riêng tư: off (đám mây), hybrid (việc thường tại chỗ), strict (tất cả tại chỗ)."),
+    Action("ai_tai_cho_dat", "Đổi chế độ AI tại chỗ", _private_llm.set_mode, icon="🔒", hidden=True, llm=True,
+           desc="Chuyển chế độ riêng tư: off | hybrid | strict; có thể nhập địa chỉ máy chủ và model.",
+           params=[Param("mode", "Chế độ", "select", options=["off", "hybrid", "strict"], required=True),
+                   Param("base_url", "Địa chỉ máy chủ AI", hint="http://127.0.0.1:11434/v1"), Param("model", "Model", hint="qwen2.5:14b")]),
+    Action("ai_tai_cho_thu", "Thử AI tại chỗ", _private_llm.test, icon="🔒", hidden=True, long=True,
+           params=[Param("prompt", "Câu thử", default="Trả lời đúng một từ: xin chào")]),
     Action("doipin", "Đổi mã PIN", doi_pin, icon="🔒",
            desc="Mã PIN 4 đến 8 số, dùng để mở Mini App và super bot.",
            params=[Param("old_pin", "Mã PIN hiện tại", "password"), Param("new_pin", "Mã PIN mới", "password", required=True)]),

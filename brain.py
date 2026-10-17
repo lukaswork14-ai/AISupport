@@ -6,6 +6,7 @@ from zoneinfo import ZoneInfo
 import hub  # noqa: F401  (đăng ký toàn bộ agent vào registry)
 from core import memory, profile, registry
 from config import LLM_MODEL, TIMEZONE
+import llm as _llm
 from llm import LLM_EXTRA, make_client
 
 client = make_client()
@@ -117,9 +118,13 @@ def _loop(history: list[dict], actions: list[dict]) -> str:
                             "result": ", ".join(names)[:160], "refs": [{"note": h["note"], "path": h["path"]} for h in used]})
     messages = [{"role": "system", "content": system}] + list(history)
     for _ in range(8):  # giới hạn vòng lặp gọi tool để tránh chạy vô hạn tốn tiền
-        resp = client.chat.completions.create(
-            model=LLM_MODEL, extra_body=LLM_EXTRA, max_tokens=4000, tools=_tools(), messages=messages
-        )
+        _local, _lmodel = _llm._local_pick("chat", tools=True)
+        if _local:  # superYou Private (strict): trò chuyện chạy tại chỗ, công cụ vẫn gọi được nếu model hỗ trợ
+            resp = _llm._local_client().chat.completions.create(model=_lmodel, max_tokens=4000, tools=_tools(), messages=messages)
+        else:
+            resp = client.chat.completions.create(
+                model=LLM_MODEL, extra_body=LLM_EXTRA, max_tokens=4000, tools=_tools(), messages=messages
+            )
         msg = resp.choices[0].message
         if not msg.tool_calls:
             return (msg.content or "").strip() or "(không có phản hồi)"

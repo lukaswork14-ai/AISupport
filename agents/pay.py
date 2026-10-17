@@ -101,6 +101,89 @@ def qr_url(amount: int, code: str) -> str:
 
 
 # ------------------------------------------------------------------ đơn hàng
+ORDER_PER_DAY = 10
+DL_PER_DAY = 10
+DL_TOTAL = 60
+COMPLAINTS_TO_SUSPEND = 3
+
+
+def download_allowed(oid: str) -> bool:
+    """Chống chia sẻ link: mỗi đơn tối đa DL_PER_DAY lượt tải/ngày và DL_TOTAL lượt tổng."""
+    if not oid:
+        return True
+    with _LOCK:
+        d = _load()
+        o = d["orders"].get(oid)
+        if not o or o["status"] not in ("paid", "delivered"):
+            return False
+        today = _iso()[:10]
+        dl = o.setdefault("dl", {"total": 0, "day": today, "n": 0})
+        if dl["day"] != today:
+            dl.update({"day": today, "n": 0})
+        if dl["n"] >= DL_PER_DAY or dl["total"] >= DL_TOTAL:
+            return False
+        dl["n"] += 1
+        dl["total"] += 1
+        _save(d)
+    return True
+
+
+def complain(oid: str, email: str, reason: str) -> dict:
+    """Người mua khiếu nại một đơn (xác thực bằng email đặt mua). 3 khiếu nại/30 ngày -> tự khoá người bán, báo chủ sàn."""
+    from agents import market
+    email = (email or "").strip().lower()
+    reason = (reason or "").strip()[:500]
+    if len(reason) < 10:
+        raise ValueError("Bạn mô tả vấn đề cụ thể hơn (ít nhất 10 ký tự).")
+    with _LOCK:
+        d = _load()
+        o = d["orders"].get(oid) or next((q for q in d["orders"].values() if q.get("code", "").upper() == oid.strip().upper()), None)
+        if not o or o["email"] != email:
+            raise ValueError("Không tìm thấy đơn với email này.")
+        oid = o["id"]
+        if o.get("complaint"):
+            return {"text": "Đơn này đã có khiếu nại, chủ sàn đang xử lý."}
+        o["complaint"] = {"reason": reason, "at": _iso(), "status": "moi"}
+        cid = (o.get("seller") or {}).get("id") or ""
+        since = _iso(_now() - dt.timedelta(days=30))
+        n = sum(1 for q in d["orders"].values() if (q.get("seller") or {}).get("id") == cid and q.get("complaint") and q["complaint"]["at"] >= since)
+        _save(d)
+    suspended = False
+    if cid and not (o.get("seller") or {}).get("official") and n >= COMPLAINTS_TO_SUSPEND:
+        try:
+            market.admin_creator(cid, "khoa")
+            suspended = True
+        except Exception:
+            pass
+    try:
+        from core import security
+        security.alert_once(f"complaint:{oid}", f"⚠️ Khiếu nại đơn {o['code']} ({o['name']}) từ {email}: {reason[:160]}"
+                            + (f"\nNgười bán {o['seller'].get('name')} đã bị tạm khoá ({n} khiếu nại/30 ngày)." if suspended else ""), every=10**9)
+    except Exception:
+        pass
+    try:
+        from agents import board
+        board.propose("ops", f"Khiếu nại đơn {o['code']}: {o['name'][:50]}", f"{email}: {reason}", why="Người mua khiếu nại trên Marketplace.",
+                      impact="Hoàn tiền hoặc khoá người bán", priority="cao", by="Marketplace", auto_assign_to="product", key=f"complaint:{oid}")
+    except Exception:
+        pass
+    return {"text": "Đã ghi nhận khiếu nại. Chủ sàn sẽ phản hồi qua email trong 2 ngày làm việc; nếu đúng, bạn được hoàn tiền theo Chính sách hoàn tiền."}
+
+
+def block_buyer(email: str, on: bool = True, note: str = "") -> dict:
+    """Chủ sàn khoá / mở khoá một email mua hàng."""
+    email = (email or "").strip().lower()
+    with _LOCK:
+        d = _load()
+        b = d.setdefault("blocked", {})
+        if on:
+            b[email] = {"at": _iso(), "note": note[:200]}
+        else:
+            b.pop(email, None)
+        _save(d)
+    return {"text": f"Đã {'khoá' if on else 'mở khoá'} {email}."}
+
+
 def _code() -> str:
     return "SY" + "".join(secrets.choice("ABCDEFGHJKLMNPQRSTUVWXYZ23456789") for _ in range(6))
 
@@ -116,6 +199,12 @@ def create_order(lid: str, email: str, channel: str = "public") -> dict:
     price = int(x.get("price") or 0)
     with _LOCK:
         d = _load()
+        # chống lạm dụng: tối đa ORDER_PER_DAY đơn mỗi email mỗi ngày, người bán bị khoá thì không bán
+        today = _iso()[:10]
+        if sum(1 for o in d["orders"].values() if o["email"] == email and o["created"][:10] == today) >= ORDER_PER_DAY:
+            raise ValueError("Bạn đã tạo quá nhiều đơn hôm nay, thử lại vào ngày mai hoặc liên hệ hỗ trợ.")
+        if email in d.get("blocked", {}):
+            raise ValueError("Tài khoản mua hàng này đang bị tạm khoá, liên hệ hỗ trợ.")
         # đã mua rồi -> trả về quyền sở hữu
         ent = d["entitlements"].get(email, {})
         if lid in ent:
@@ -276,6 +365,51 @@ def _package(x: dict) -> tuple[str, bytes]:
     return f"{slug}-workflow.json", json.dumps({"name": x["name"], "version": x.get("version"), "steps": c.get("steps") or []}, ensure_ascii=False, indent=1).encode("utf-8")
 
 
+def create_plan_order(email: str, plan: str, uid: str = "") -> dict:
+    """Đơn nâng cấp gói (pro / business): thanh toán VietQR như sản phẩm; khi tiền về, tài khoản được chuyển gói ngay."""
+    from agents import leads
+    from core import plans
+    email = (email or "").strip().lower()[:254]
+    if not leads.EMAIL_RE.match(email):
+        raise ValueError("Email chưa đúng.")
+    P = plans.all_plans()["plans"]
+    if plan not in ("pro", "business") or not int(P[plan].get("price") or 0):
+        raise ValueError("Gói này liên hệ superYou để kích hoạt.")
+    with _LOCK:
+        d = _load()
+        for o in d["orders"].values():
+            if o["email"] == email and o.get("kind") == "plan" and o.get("plan") == plan and o["status"] == "pending" and o["expires"] > _iso():
+                return {"owned": False, "order": _public_order(o)}
+        o = {"id": secrets.token_hex(6), "code": _code(), "lid": "plan:" + plan, "kind": "plan", "plan": plan, "uid": uid, "name": f"Gói {P[plan]['name']} · 1 tháng",
+             "type": "plan", "email": email, "amount": int(P[plan]["price"]), "billing": "monthly", "seller": {"id": "", "name": "superYou", "official": True},
+             "status": "pending", "channel": "account", "created": _iso(), "expires": _iso(_now() + dt.timedelta(hours=ORDER_TTL_H)), "method": "vietqr"}
+        d["orders"][o["id"]] = o
+        _save(d)
+    return {"owned": False, "order": _public_order(o)}
+
+
+def _deliver_plan(o: dict) -> dict:
+    from core import accounts
+    u = accounts.by_email(o["email"]) if not o.get("uid") else accounts.get(o["uid"])
+    if u:
+        accounts.admin_set(u["id"], plan=o["plan"], note=f"thanh toán đơn {o['code']}")
+    with _LOCK:
+        d = _load()
+        oo = d["orders"][o["id"]]
+        oo["status"] = "delivered"
+        oo["delivered_at"] = _iso()
+        oo["receipt"] = receipt_url(oo)
+        oo["plan_until"] = (_now() + dt.timedelta(days=31)).strftime("%Y-%m-%d")
+        _save(d)
+        o = oo
+    try:
+        from core import security
+        security.alert_once(f"sale:{o['id']}", f"💎 Nâng cấp gói: {o['email']} đã trả {vnd(o['amount'])} cho {o['name']}.", every=10**9)
+    except Exception:
+        pass
+    return {"text": "Đã kích hoạt gói", "downloads": []}
+
+
 def deliver(oid: str) -> dict:
     from agents import market
     from webapp import server
@@ -284,6 +418,13 @@ def deliver(oid: str) -> dict:
         o = d["orders"].get(oid)
         if not o or o["status"] not in ("paid", "delivered"):
             raise ValueError("Đơn chưa thanh toán")
+        if o.get("kind") == "plan":
+            o = dict(o)
+    if o.get("kind") == "plan":
+        return _deliver_plan(o)
+    with _LOCK:
+        d = _load()
+        o = d["orders"][oid]
         x = market.get_listing(o["lid"])
         if not x:
             raise ValueError("Sản phẩm không còn")
@@ -291,7 +432,7 @@ def deliver(oid: str) -> dict:
         fname, data = _package(x)
         p = PKG_DIR / f"{x['id']}-{x.get('version', '1')}-{fname}"
         p.write_bytes(data)
-        link = server.sign_download(str(p), fname, ttl=7 * 86400)
+        link = server.sign_download(str(p), fname, ttl=7 * 86400) + "&o=" + o["id"]
         o["downloads"] = [{"name": fname, "url": link, "expires": _iso(_now() + dt.timedelta(days=7))}]
         o["receipt"] = receipt_url(o)
         o["status"] = "delivered"

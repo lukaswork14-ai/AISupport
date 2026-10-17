@@ -133,7 +133,12 @@ def _me() -> dict:
         from agents import workspace
         from core import flags
         d = workspace._load()
-        return {"profile": d["profile"], "prefs": d["prefs"], "flags": flags.for_user()["flags"], "variants": flags.for_user()["variants"]}
+        from core import accounts
+        try:
+            plan = accounts.current_plan()
+        except Exception:
+            plan = {}
+        return {"profile": d["profile"], "prefs": d["prefs"], "flags": flags.for_user()["flags"], "variants": flags.for_user()["variants"], "plan": plan}
     except Exception:
         return {}
 
@@ -298,6 +303,40 @@ async def job_strategy_weekly():
                      "Mở app › Nội dung › Chiến lược để xem.")
 
 
+async def job_cso_daily():
+    """Mỗi sáng: CSO superYou soạn nháp theo đuổi (chào mừng khách mới, nhắc dùng thử sắp hết hạn) chờ anh duyệt;
+    thứ Hai thêm kế hoạch bán hàng tuần lên bảng Phòng ban. Không bao giờ tự gửi thư."""
+    from agents import sales
+    try:
+        if dt.date.today().weekday() == 0:
+            await asyncio.to_thread(sales.weekly_report, True)
+        await asyncio.to_thread(sales.auto_followups)
+    except Exception:
+        log.exception("CSO daily lỗi")
+
+
+async def job_ops_weekly():
+    """Sáng thứ Hai: phòng Vận hành (AI) kiểm tra cảnh báo rồi gửi báo cáo tuần một trang, đưa lên bảng Phòng ban."""
+    from agents import ops
+    from core import notify
+    try:
+        await asyncio.to_thread(ops.check_alerts, True)
+        r = await asyncio.to_thread(ops.weekly_report, True)
+        notify.send(text=r["text"][:3500])
+    except Exception:
+        log.exception("Báo cáo vận hành tuần lỗi")
+
+
+async def job_ops_cost_snapshot():
+    """Mỗi tối: chụp chi phí hạ tầng/khách (giữ 90 ngày) và kiểm tra ngưỡng; chỉ nhắn khi có vi phạm (alert_once 6 giờ)."""
+    from agents import ops
+    try:
+        await asyncio.to_thread(ops.cost_snapshot)
+        await asyncio.to_thread(ops.check_alerts, True)
+    except Exception:
+        log.exception("Ảnh chụp chi phí vận hành lỗi")
+
+
 async def job_cfo_brief():
     """Mỗi sáng: CFO superYou gửi bản tin tài chính một trang; thứ Hai thêm 3 hành động đề xuất lên bảng Phòng ban."""
     from agents import cfo
@@ -449,6 +488,10 @@ async def post_init(app: Application):
         scheduler.add_job(job_strategy_weekly, CronTrigger(day_of_week="mon", hour=6, minute=20), misfire_grace_time=6 * 3600, coalesce=True)
         scheduler.add_job(job_repo_weekly, CronTrigger(day_of_week="mon", hour=6, minute=40), misfire_grace_time=6 * 3600, coalesce=True)
     scheduler.add_job(job_cfo_brief, CronTrigger(hour=7, minute=30), misfire_grace_time=3 * 3600, coalesce=True)
+    scheduler.add_job(job_cso_daily, CronTrigger(hour=7, minute=45), misfire_grace_time=3 * 3600, coalesce=True)
+    if not IS_TENANT:
+        scheduler.add_job(job_ops_weekly, CronTrigger(day_of_week="mon", hour=6, minute=55), misfire_grace_time=6 * 3600, coalesce=True)
+        scheduler.add_job(job_ops_cost_snapshot, CronTrigger(hour=23, minute=40), misfire_grace_time=3 * 3600, coalesce=True)
     scheduler.add_job(job_ws_sched, CronTrigger(hour=7, minute=15), args=["morning"], misfire_grace_time=3600, coalesce=True)
     scheduler.add_job(job_ws_sched, CronTrigger(hour=20, minute=30), args=["evening"], misfire_grace_time=3600, coalesce=True)
     scheduler.add_job(job_ws_sched, CronTrigger(day_of_week="mon", hour=7, minute=0), args=["monday"], misfire_grace_time=3600, coalesce=True)

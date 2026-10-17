@@ -20,7 +20,7 @@ import secrets
 import threading
 import time
 
-from config import DATA_DIR, OWNER_CHAT_ID
+from config import DATA_DIR, IS_TENANT, OWNER_CHAT_ID, SUPERYOU_PLAN
 
 FILE = DATA_DIR / "accounts.json"
 _LOCK = threading.Lock()
@@ -42,9 +42,49 @@ def _load() -> dict:
     d.setdefault("audit", [])
     oid = f"u{OWNER_CHAT_ID}"
     if oid not in d["users"]:
-        d["users"][oid] = {"id": oid, "email": "", "name": "Huy", "roles": ["owner", "seller", "member"], "plan": "enterprise", "status": "active",
-                           "created": _now(), "last_login": "", "last_role": "owner", "owner": True}
+        d["users"][oid] = {"id": oid, "email": "", "name": "Huy" if not IS_TENANT else "Chủ nhân", "roles": ["owner", "seller", "member"] if not IS_TENANT else ["owner", "member"],
+                           "plan": _instance_plan(), "status": "active", "created": _now(), "last_login": "", "last_role": "owner", "owner": True}
+    if IS_TENANT and SUPERYOU_PLAN in ("free", "trial", "pro", "business", "enterprise") and d["users"][oid].get("plan") != SUPERYOU_PLAN:
+        d["users"][oid]["plan"] = SUPERYOU_PLAN  # chủ sàn đổi gói trong .env của tenant
     return d
+
+
+def _instance_plan() -> str:
+    from core import plans
+    if IS_TENANT:
+        return SUPERYOU_PLAN if SUPERYOU_PLAN in plans.PLANS else "pro"
+    return "enterprise"
+
+
+def current_plan() -> dict:
+    """Gói đang áp dụng cho chủ nhân instance này + giới hạn và mức dùng (để UI hiện 'Gói Pro · 3/20 workflow' và nút nâng cấp)."""
+    from core import plans
+    u = _load()["users"][f"u{OWNER_CHAT_ID}"]
+    plan = u.get("plan") if u.get("plan") in plans.PLANS else "free"
+    if plan == "trial" and u.get("trial_until") and u["trial_until"] < dt.date.today().isoformat():
+        plan = "free"
+    P = plans.all_plans()["plans"][plan]
+    used = {}
+    try:
+        from agents import workspace
+        used["workflows"] = len(workspace._load().get("workflows") or {})
+    except Exception:
+        used["workflows"] = 0
+    nxt = {"free": "pro", "trial": "pro", "pro": "business", "business": "enterprise"}.get(plan)
+    return {"plan": plan, "name": P["name"], "color": P["color"], "limits": P["limits"], "features": P["features"], "used": used,
+            "trial_until": u.get("trial_until", ""), "next": nxt, "next_name": plans.all_plans()["plans"][nxt]["name"] if nxt else "",
+            "upgrade_url": "https://app.roimaxxhub.com/account#plans"}
+
+
+def check_limit(key: str, current: int) -> None:
+    """Chặn khi vượt giới hạn gói (0 = không giới hạn). Ném ValueError có hướng dẫn nâng cấp."""
+    cp = current_plan()
+    lim = int((cp["limits"] or {}).get(key, 0))
+    if lim and current >= lim:
+        raise ValueError(f"Gói {cp['name']} cho tối đa {lim} {LIMIT_LABEL.get(key, key)}. Nâng cấp lên {cp['next_name'] or 'gói cao hơn'} tại Tài khoản › Gói và nâng cấp.")
+
+
+LIMIT_LABEL = {"workflows": "workflow riêng", "meetings_month": "cuộc họp mỗi tháng", "seats": "người dùng"}
 
 
 def _save(d: dict):

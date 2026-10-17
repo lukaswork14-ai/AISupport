@@ -98,6 +98,20 @@ def parse_json(text: str, kind: str = "{"):
     return None
 
 
+def _local_pick(task: str, tools: bool = False):
+    """superYou Private: chạy tại chỗ nếu chế độ hybrid/strict cho phép (xem core/private_llm)."""
+    try:
+        from core import private_llm
+        return private_llm.pick(task, tools)
+    except Exception:
+        return False, ""
+
+
+def _local_client():
+    from core import private_llm
+    return private_llm.client()
+
+
 def ask_json(prompt: str, max_tokens: int = 6000, tries: int = 2, ok=None, tag: str = "json", kind: str = "{"):
     """Gọi model lấy JSON; ok(res)->bool để kiểm tra. Lỗi thì ghi nguyên văn vào data/llm_fail.log để chẩn đoán."""
     import datetime as _dt
@@ -108,8 +122,13 @@ def ask_json(prompt: str, max_tokens: int = 6000, tries: int = 2, ok=None, tag: 
         kw = {"response_format": {"type": "json_object"}} if kind == "{" and n == 0 else {}
         extra = {"reasoning": {"enabled": False}} if n == 0 else {"reasoning": {"effort": "low", "max_tokens": 1500}}
         try:
-            r = make_client().chat.completions.create(model=LLM_MODEL, extra_body=extra, max_tokens=max_tokens, **PRECISE,
-                                                      messages=[{"role": "user", "content": prompt}], **kw)
+            local, lmodel = _local_pick("json" if max_tokens <= 2500 else "long")
+            if local:
+                r = _local_client().chat.completions.create(model=lmodel, max_tokens=max_tokens, **PRECISE,
+                                                            messages=[{"role": "user", "content": prompt}], **kw)
+            else:
+                r = make_client().chat.completions.create(model=LLM_MODEL, extra_body=extra, max_tokens=max_tokens, **PRECISE,
+                                                          messages=[{"role": "user", "content": prompt}], **kw)
             last += f"\n--- lượt {n + 1}\n" + (r.choices[0].message.content or "")[-1800:] + f"\n[finish={r.choices[0].finish_reason} usage={getattr(r, 'usage', '')}]"
             res = parse_json(r.choices[0].message.content, kind)
             if res is not None and (ok is None or ok(res)):

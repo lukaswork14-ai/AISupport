@@ -268,8 +268,30 @@ Trả về DUY NHẤT JSON: {{"name": "tên công thức ngắn", "summary": "1-
 "hooks": ["2-3 mẫu hook rút từ kịch bản (dạng khuôn mẫu)"], "dos": ["..."], "donts": ["..."]}}"""
 
 
+DEPT_RECIPE = {
+    "id": "dept-ai", "name": "Phòng ban AI (founder-led, 60–90s)", "seed": True, "default": False,
+    "summary": "Mỗi video một phòng ban AI, một vấn đề thật của anh, một kết quả có số, kết bằng lời mời nhận blueprint.",
+    "settings": {"voice": "NamMinh", "speed": "nhanh", "music": "vua", "len": 75},
+    "structure": ["Hook: 'Tôi điều hành <công ty> không có <phòng ban> — bằng superYou'", "Vấn đề thật 1 câu (trước đây mất bao lâu / sai ở đâu)",
+                  "Cho xem phòng ban AI làm việc: 3 vai, mỗi vai 1 câu, quay màn hình app", "Kết quả có số: thời gian tiết kiệm, tiền, tỷ lệ",
+                  "Bài học 1 câu cho người xem", "Kêu gọi: bình luận 'blueprint' để nhận gói phòng ban này trên superYou Marketplace"],
+    "rules": ["Người thật nói, ngôi thứ nhất, không đọc slide", "Luôn có một con số cụ thể trước giây 20", "Một phòng ban mỗi video, không gom nhiều tính năng",
+              "Câu ngắn dưới 14 từ, nói như đang kể cho bạn", "Kết bằng lời mời nhận blueprint, không bán gói trực tiếp", "Chèn nhãn góc trái: tên phòng ban AI"],
+    "hooks": ["Tôi không có CFO. Tôi có cái này.", "Phòng bán hàng của tôi làm việc 24/7 và chưa từng xin nghỉ.", "Đây là cách một người chạy cả phòng tài chính."],
+    "dos": ["Quay màn hình HQ hoặc Telegram thật", "Nêu rõ việc gì AI làm, việc gì anh vẫn duyệt"], "donts": ["Không hứa thay thế con người", "Không dùng số liệu bịa"],
+    "at": "2026-10-17T09:00:00", "notes": "Mẫu theo kênh ReStructure AI, đề xuất liên phòng ban đã được anh duyệt.",
+}
+
+
+def _with_seed(rows: list) -> list:
+    if not any(r.get("id") == DEPT_RECIPE["id"] for r in rows):
+        rows = rows + [dict(DEPT_RECIPE)]
+        _wj(RECIPES, rows[-30:])
+    return rows
+
+
 def recipes() -> dict:
-    rows = _rj(RECIPES, [])
+    rows = _with_seed(_rj(RECIPES, []))
     return {"items": rows, "default": next((r["id"] for r in rows if r.get("default")), ""), "skill": skill_view().get("updated", "")}
 
 
