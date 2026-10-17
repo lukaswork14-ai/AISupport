@@ -65,26 +65,23 @@ register(Agent("market", "Marketplace", "🛍", "Khám phá, cài và bán skill
 ]))
 
 
-# ================================================================ Xưởng sản phẩm số (Clone Factory, chỉ chủ nhân)
-register(Agent("xuong", "Xưởng sản phẩm số", "🏭", "Quét app/repo đang thắng thị trường, clone thành sản phẩm của riêng anh", order=59, actions=[
-    Action("quet", "Quét thị trường", factory.scan, hidden=True, long=True, llm=True,
-           desc="Quét bảng xếp hạng App Store (iPhone/Mac, theo nước và danh mục), GitHub Trending, Product Hunt; hoặc tìm theo từ khoá. src=ios|mac|github|ph.",
-           params=[Param("src", "Nguồn", default="ios"), Param("country", "Nước", default="vn"), Param("chart", "Bảng", default="free"),
-                   Param("genre", "Danh mục"), Param("q", "Từ khoá"), Param("limit", "Số lượng", "number", default=50)]),
-    Action("xem", "Chi tiết sản phẩm gốc", factory.detail, hidden=True, long=True,
-           params=[Param("key", "Mã", required=True), Param("country", "Nước", default="vn")]),
-    Action("theodoi", "Theo dõi sản phẩm", factory.star, hidden=True, params=[Param("key", "Mã", required=True)]),
+# ================================================================ Xưởng Tài sản số (chỉ chủ sàn; mảng Xưởng Tài sản số, docs/xuong-tai-san-so.md)
+register(Agent("xuong", "Xưởng Tài sản số", "🏭", "Tìm nguồn có giấy phép rõ, chấm điểm, giao đội clone thành skill, Second Brain, OS theo vai trò", order=59, actions=[
+    Action("quet", "Quét nguồn", factory.scan, hidden=True, long=True, llm=True,
+           desc="Quét nguồn tài sản số có điểm 0–100: kho skill/prompt mở trên GitHub (giấy phép rõ), template Obsidian/Notion, khung làm việc theo vai trò, bán chạy trên chợ. src=github|template|framework|market; lọc industry, role.",
+           params=[Param("src", "Nguồn", default="github"), Param("q", "Từ khoá"), Param("industry", "Ngành"), Param("role", "Vai trò"),
+                   Param("limit", "Số lượng", "number", default=30), Param("min_score", "Điểm tối thiểu", "number", default=0)]),
+    Action("xem", "Chi tiết nguồn", factory.detail, hidden=True, long=True, params=[Param("key", "Mã", required=True)]),
+    Action("theodoi", "Theo dõi nguồn", factory.star, hidden=True, params=[Param("key", "Mã", required=True)]),
     Action("ghichu", "Lưu ghi chú clone", factory.save_note, hidden=True, params=[Param("text", "Ghi chú", "textarea", required=True)]),
-    Action("clone", "Clone thành bản thiết kế", factory.clone, hidden=True, long=True,
-           params=[Param("key", "Mã", required=True), Param("target", "Nền tảng đích", default="web"), Param("options", "Tuỳ chọn"),
-                   Param("notes", "Ghi chú", "textarea"), Param("project", "Tên dự án"), Param("country", "Nước", default="vn")]),
+    Action("clone", "Giao đội clone", factory.clone, hidden=True, long=True,
+           params=[Param("key", "Mã", required=True), Param("notes", "Ghi chú", "textarea")]),
+    Action("goi_y_tuan", "Gợi ý nguồn tuần này", factory.weekly_suggest, hidden=True, long=True, params=[Param("notify", "Nhắn Telegram", "bool", default=True)]),
     Action("duan_ds", "Dự án trong xưởng", factory.projects, hidden=True),
     Action("duan", "Chi tiết dự án", factory.project, hidden=True, params=[Param("pid", "ID", required=True)]),
     Action("duan_sua", "Đổi trạng thái dự án", factory.project_set, hidden=True,
            params=[Param("pid", "ID", required=True), Param("status", "Trạng thái"), Param("note", "Ghi chú", "textarea")]),
     Action("duan_xoa", "Xoá dự án", factory.project_delete, hidden=True, params=[Param("pid", "ID", required=True)]),
-    Action("len_cho", "Đưa dự án lên Marketplace", factory.to_market, hidden=True,
-           params=[Param("pid", "ID", required=True), Param("publish", "Lên kệ", "bool", default=False), Param("price", "Giá", "number", default=0)]),
     Action("goi_y_gia", "Gợi ý giá cho dự án", factory.price_reco, hidden=True, params=[Param("pid", "ID", required=True)]),
 ]))
 

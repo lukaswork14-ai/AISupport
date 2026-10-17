@@ -1,101 +1,91 @@
-/* =================================================================== Phòng Phát triển sản phẩm số (chỉ chủ nhân) */
-S.lb = { view:'xuong', src:'ios', country:'vn', chart:'free', genre:'', q:'', scan:null, mine:null, proj:null, opts:['feature_clone','vn_local','fix_pain','ai_native'] };
+/* =================================================================== Xưởng Tài sản số (chỉ chủ sàn): nguồn có điểm, đội clone, thẻ duyệt */
+S.lb = { view:'xuong', src:'github', industry:'', role:'', q:'', scan:null, mine:null, proj:null, opts:[] };
+const LB_SRC = {github:'Kho skill & prompt mở', template:'Template Obsidian / Notion', framework:'Khung làm việc theo vai trò', market:'Bán chạy trên chợ'};
+const LB_PART = {nang_suat:['Năng suất ngay',30], brain:['Second Brain',25], cai_mot_cham:['Cài một chạm',20], giay_phep:['Giấy phép',25]};
 async function lbScan(force){
   if(S.lb.scan && !force) return;
   S.lb.scan = {loading:true};
   if(S.tab==='lab') render();
-  try{ S.lb.scan = await run('xuong','quet',{src:S.lb.src, country:S.lb.country, chart:S.lb.chart, genre:S.lb.genre, q:S.lb.q},'',true); }catch(e){ S.lb.scan = {error:e.message, items:[]}; }
+  try{ S.lb.scan = await run('xuong','quet',{src:S.lb.src, q:S.lb.q, industry:S.lb.industry, role:S.lb.role},'',true); }catch(e){ S.lb.scan = {error:e.message, items:[]}; }
   if((S.tab==='lab'||(S.tab==='mkt'&&S.mk.view==='xuong')) && !$('#sheet').classList.contains('on')) render();
 }
-async function lbMine(){ try{ const [m, p] = await Promise.all([run('market','cuatoi',{},'',true), run('xuong','duan_ds',{},'',true)]); S.lb.mine = m; S.lb.proj = p; }catch(e){ toast(e.message); S.lb.mine={mine:[],queue:[],stats:{}}; S.lb.proj={items:[],statuses:{},targets:{}}; } if((S.tab==='lab'||(S.tab==='mkt'&&S.mk.view==='xuong')) && !$('#sheet').classList.contains('on')) render(); }
+async function lbMine(){ try{ const [m, p] = await Promise.all([run('market','cuatoi',{},'',true), run('xuong','duan_ds',{},'',true)]); S.lb.mine = m; S.lb.proj = p; }catch(e){ toast(e.message); S.lb.mine={mine:[],queue:[],stats:{}}; S.lb.proj={items:[],statuses:{},kinds:{}}; } if((S.tab==='lab'||(S.tab==='mkt'&&S.mk.view==='xuong')) && !$('#sheet').classList.contains('on')) render(); }
 function vLab(){
-  const head = `<div class="date">Phòng Phát triển sản phẩm số · chỉ anh thấy</div><h1>Sản phẩm số</h1>
+  const head = `<div class="date">Xưởng Tài sản số · chỉ anh thấy</div><h1>Xưởng</h1>
     <div class="row" style="margin-bottom:14px;justify-content:flex-end"><button class="btn sm pri" onclick="lbNew()">${ico('plus',16)} Tạo tài sản</button><button class="btn sm" onclick="go('mkt')">Marketplace</button></div>`;
   return head + vLabInner();
 }
+function lbScoreBadge(x, big){ const c = x.score>=80?'var(--jade)':x.score>=60?'#2457C5':'var(--danger)'; return `<span class="lbscore ${big?'big':''}" style="--c:${c}" title="Điểm nguồn">${x.score}</span>`; }
 function vLabInner(){
   const v = S.lb.view;
-  const head = `<div class="seg" style="margin-bottom:12px"><button class="${v==='xuong'?'on':''}" onclick="S.lb.view='xuong';render()">Săn sản phẩm</button><button class="${v==='duan'?'on':''}" onclick="S.lb.view='duan';render()">Dự án${S.lb.proj?.items?.length?` ${S.lb.proj.items.length}`:''}</button><button class="${v==='taisan'?'on':''}" onclick="S.lb.view='taisan';render()">Tài sản của anh</button></div>`;
+  const head = `<div class="seg" style="margin-bottom:12px"><button class="${v==='xuong'?'on':''}" onclick="S.lb.view='xuong';render()">Nguồn</button><button class="${v==='duan'?'on':''}" onclick="S.lb.view='duan';render()">Dự án${S.lb.proj?.items?.length?` ${S.lb.proj.items.length}`:''}</button><button class="${v==='taisan'?'on':''}" onclick="S.lb.view='taisan';render()">Tài sản của anh</button></div>`;
   if(!S.lb.mine) lbMine();
   if(v==='taisan') return head + lbAssets();
   if(v==='duan') return head + lbProjects();
   const sc = S.lb.scan; if(!sc) lbScan();
-  const f = sc?.filters || {sources:{ios:'App Store iPhone',mac:'Mac App Store',github:'GitHub Trending',ph:'Product Hunt'}, countries:{vn:'Việt Nam',us:'Mỹ'}, charts:{free:'Miễn phí hàng đầu',paid:'Trả phí hàng đầu',grossing:'Doanh thu cao nhất'}, genres:{'':'Mọi danh mục'}};
-  const apple = ['ios','mac'].includes(S.lb.src);
-  const sel = (id, obj, cur, on) => `<select id="${id}" aria-label="${id}" onchange="${on}">${Object.entries(obj).map(([k,l])=>`<option value="${k}" ${k===cur?'selected':''}>${esc(l)}</option>`).join('')}</select>`;
+  const f = sc?.filters || {sources:LB_SRC, industries:{}, roles:{}};
+  const sel = (id, obj, cur, on, all) => `<select id="${id}" aria-label="${id}" onchange="${on}"><option value="">${all}</option>${Object.entries(obj).map(([k,l])=>`<option value="${k}" ${k===cur?'selected':''}>${esc(l)}</option>`).join('')}</select>`;
   const bar = `<div class="lbbar"><div class="seg">${Object.entries(f.sources).map(([k,l])=>`<button class="${S.lb.src===k?'on':''}" onclick="S.lb.src='${k}';S.lb.q='';lbScan(true)">${esc(l)}</button>`).join('')}</div>
-    <div class="row">${apple?sel('lbC', f.countries, S.lb.country, "S.lb.country=this.value;lbScan(true)") + sel('lbK', f.charts, S.lb.chart, "S.lb.chart=this.value;lbScan(true)") + sel('lbG', f.genres, S.lb.genre, "S.lb.genre=this.value;lbScan(true)"):''}</div>
-    ${S.lb.src!=='ph'?`<form class="hask" style="margin:0" onsubmit="event.preventDefault();S.lb.q=$('#lbq').value.trim();lbScan(true)"><input id="lbq" value="${esc(S.lb.q)}" placeholder="${apple?'Tìm app theo từ khoá…':'Tìm repo theo chủ đề…'}" autocomplete="off" enterkeyhint="search"><button class="go" aria-label="Tìm">${ico('arrow',20)}</button></form>`:''}</div>`;
-  if(!sc || sc.loading) return head + bar + `<div class="card empty"><span class="spin" style="width:16px;height:16px;display:inline-block;vertical-align:-3px"></span> Đang quét ${esc(f.sources[S.lb.src]||'')}…</div>`;
-  if(sc.error) return head + bar + `<div class="card empty">${esc(sc.error)} <button class="link" onclick="lbScan(true)">Thử lại</button></div>`;
-  return head + bar + `<p class="meta" style="margin:10px 2px">${esc(sc.label||'')} · ${sc.items.length} sản phẩm. Bấm một sản phẩm để xem và clone.</p>
-    <div class="lbgrid">${sc.items.map(x=>`<button class="card lbcard ${x.cloned?'cloned':''}" onclick="lbOpen('${esc(x.key)}')">${x.cloned?'<span class="lbtag">Đã clone</span>':''}
-      ${x.icon?`<img src="${esc(x.icon)}" alt="" loading="lazy" referrerpolicy="no-referrer">`:`<span class="mkicon" style="--c:#2457C5;width:56px;height:56px">${ico(x.src==='github'?'code':'spark',24)}</span>`}
-      <b class="clamp2">${esc(x.name)}</b><span class="meta clamp1">${esc(x.dev||'')}</span>
-      <span class="meta">${x.rank?`#${x.rank} · `:''}${x.rating?`★ ${x.rating} `:''}${x.ratings?`(${nf(x.ratings)}${x.src==='github'?' sao':''}) `:''}${esc(x.price||'')}</span><span class="tag lo">${esc(x.cat||'')}</span></button>`).join('')}</div>`;
+    <div class="row">${sel('lbI', f.industries, S.lb.industry, "S.lb.industry=this.value;lbScan(true)", 'Mọi ngành')}${sel('lbR', f.roles, S.lb.role, "S.lb.role=this.value;lbScan(true)", 'Mọi vai trò')}</div>
+    <form class="hask" style="margin:0" onsubmit="event.preventDefault();S.lb.q=$('#lbq').value.trim();lbScan(true)"><input id="lbq" value="${esc(S.lb.q)}" placeholder="Tìm nguồn theo chủ đề…" autocomplete="off" enterkeyhint="search"><button class="go" aria-label="Tìm">${ico('arrow',20)}</button></form></div>`;
+  const sug = S.lb.proj?.suggest?.items?.length ? `<div class="card pad lbsug"><b>${ico('spark',15)} Gợi ý tuần này (${esc((S.lb.proj.suggest.at||'').slice(0,10))})</b><div class="row" style="margin-top:6px">${S.lb.proj.suggest.items.map(t=>`<button class="chip" onclick="lbOpen('${esc(t.key)}')">${esc(t.name)} · ${t.score}</button>`).join('')}</div></div>` : '';
+  if(!sc || sc.loading) return head + bar + sug + `<div class="card empty"><span class="spin" style="width:16px;height:16px;display:inline-block;vertical-align:-3px"></span> Đang quét ${esc(f.sources[S.lb.src]||'')}…</div>`;
+  if(sc.error) return head + bar + sug + `<div class="card empty">${esc(sc.error)} <button class="link" onclick="lbScan(true)">Thử lại</button></div>`;
+  return head + bar + sug + `<p class="meta" style="margin:10px 2px">${esc(sc.label||'')} · ${sc.items.length} nguồn, ${sc.items.filter(i=>i.clone_ok).length} đủ ${sc.min_score||60} điểm. Bấm để xem điểm từng tiêu chí và giao cho đội clone.</p>
+    <div class="lbgrid">${sc.items.map(x=>`<button class="card lbcard ${x.cloned?'cloned':''} ${x.clone_ok?'':'low'}" onclick="lbOpen('${esc(x.key)}')">${x.cloned?'<span class="lbtag">Đã clone</span>':''}
+      <div class="row" style="width:100%;justify-content:space-between;align-items:flex-start">${x.icon?`<img src="${esc(x.icon)}" alt="" loading="lazy" referrerpolicy="no-referrer">`:`<span class="mkicon" style="--c:${x.color||'#2457C5'};width:48px;height:48px">${ico(x.src==='framework'?'layers':x.src==='market'?'bag':x.src==='template'?'brain':'code',22)}</span>`}${lbScoreBadge(x)}</div>
+      <b class="clamp2">${esc(x.name)}</b><span class="meta clamp2">${esc(x.summary||x.dev||'')}</span>
+      <span class="row" style="gap:4px;flex-wrap:wrap"><span class="tag lo">${esc(f.industries?.[x.industry]||x.industry||'')}</span><span class="tag lo">${esc(f.roles?.[x.role]||x.role||'')}</span><span class="tag ${x.license?'role':'lo'}">${esc(x.license_label||'Không rõ')}</span></span>
+      <span class="meta">${esc(f.kinds?.[x.kind]||x.kind||'')}${x.ratings?` · ${nf(x.ratings)}${x.src==='market'?' cài':' sao'}`:''}</span></button>`).join('')}</div>`;
 }
 async function lbOpen(key, tab){
   S.lb.cur = S.lb.cur && S.lb.cur.key===key ? S.lb.cur : null; S.lb.tab = tab || S.lb.tab || 'info';
-  if(!S.lb.cur){ sheet(`<div class="empty"><span class="spin" style="width:16px;height:16px;display:inline-block;vertical-align:-3px"></span> Đang đọc chi tiết, ảnh và đánh giá…</div>`);
-    try{ S.lb.cur = await run('xuong','xem',{key, country:S.lb.country},'',true); }catch(e){ return sheet(`<div class="empty">${esc(e.message)}</div>`); } }
-  const x = S.lb.cur, t = S.lb.tab;
-  const tabs = [['info','Thông tin'],['shots',`Ảnh ${x.shots?.length||0}`],['clone','Clone'],['reviews',`Đánh giá ${x.reviews?.length||0}`],['dev',`Nhà phát triển ${x.dev_apps?.length||0}`]];
+  if(!S.lb.cur){ sheet(`<div class="empty"><span class="spin" style="width:16px;height:16px;display:inline-block;vertical-align:-3px"></span> Đang đọc nguồn và chấm điểm…</div>`);
+    try{ S.lb.cur = await run('xuong','xem',{key},'',true); }catch(e){ return sheet(`<div class="empty">${esc(e.message)}</div>`); } }
+  const x = S.lb.cur, t = S.lb.tab, f = S.lb.scan?.filters || {industries:x.industries||{}, roles:x.roles||{}, kinds:x.kinds||{}};
+  const tabs = [['info','Thông tin'],['score','Điểm nguồn'],['clone','Clone']];
   let b = '';
-  if(t==='info') b = `<div class="mkfacts"><div><b>${x.rating||'–'}</b><span>${nf(x.ratings||0)} ${x.src==='github'?'sao':'đánh giá'}</span></div><div><b>${esc(x.price||'–')}</b><span>${x.src==='github'?'Giấy phép':'Giá'}</span></div><div><b>${esc(x.cat||'')}</b><span>Danh mục</span></div><div><b>${esc(x.updated||'–')}</b><span>Cập nhật</span></div></div>
-    ${x.url?`<button class="btn sm" onclick="openLink('${esc(x.url)}')">${ico('link',15)} Mở trang gốc</button>`:''}
-    ${x.pain?.length?`<h3 class="mkh">Người dùng đang phàn nàn</h3>${x.pain.map(r=>`<div class="card pad" style="margin-top:6px"><b>${'★'.repeat(r.stars)}</b> ${esc(r.title)}<p class="meta" style="margin:4px 0 0">${esc(r.text)}</p></div>`).join('')}`:''}
+  if(t==='info') b = `<div class="mkfacts"><div><b>${esc(x.license_label||'Không rõ')}</b><span>Giấy phép</span></div><div><b>${esc(f.industries[x.industry]||x.industry||'')}</b><span>Ngành</span></div><div><b>${esc(f.roles[x.role]||x.role||'')}</b><span>Vai trò</span></div><div><b>${esc(x.kinds?.[x.kind]||x.kind||'')}</b><span>Sẽ thành</span></div></div>
+    ${x.url?`<button class="btn sm" onclick="openLink('${esc(x.url)}')">${ico('link',15)} Mở nguồn gốc</button>`:''}
+    ${x.questions?.length?`<h3 class="mkh">Người dùng sẽ hỏi</h3><ul class="mkcontents">${x.questions.map(q=>`<li>${esc(q)}</li>`).join('')}</ul>`:''}
     <h3 class="mkh">Mô tả</h3><p style="white-space:pre-line">${esc((x.description||x.summary||'').slice(0,3000))}</p>`;
-  if(t==='shots') b = x.shots?.length ? `<div class="lbshots">${x.shots.map(u=>`<img src="${esc(u)}" alt="Ảnh màn hình" loading="lazy" referrerpolicy="no-referrer">`).join('')}</div>` : `<div class="empty">Nguồn này không có ảnh màn hình.</div>`;
-  if(t==='reviews') b = x.reviews?.length ? `<p class="meta">Trung bình ${x.review_avg}★ trên ${x.reviews.length} đánh giá gần đây.</p>${x.reviews.map(r=>`<div class="card pad" style="margin-top:6px"><div class="row" style="justify-content:space-between"><b>${'★'.repeat(r.stars)}${'☆'.repeat(5-r.stars)} ${esc(r.title)}</b><span class="meta">${esc(r.author)}</span></div><p style="margin:4px 0 0">${esc(r.text)}</p></div>`).join('')}` : `<div class="empty">Chưa có đánh giá ở cửa hàng này.</div>`;
-  if(t==='dev') b = x.dev_apps?.length ? `<p class="meta">Sản phẩm khác của ${esc(x.dev)}</p><div class="lbgrid" style="margin-top:8px">${x.dev_apps.map(a=>`<button class="card lbcard" onclick="S.lb.cur=null;S.lb.tab='info';lbOpen('${esc(a.key)}')"><img src="${esc(a.icon)}" alt="" loading="lazy" referrerpolicy="no-referrer"><b class="clamp2">${esc(a.name)}</b><span class="meta">${a.rating?`★ ${a.rating} `:''}${esc(a.price||'')}</span></button>`).join('')}</div>` : `<div class="empty">Không có thông tin nhà phát triển.</div>`;
-  if(t==='clone') b = `${x.cloned?`<div class="card pad" style="margin-bottom:10px">Đã clone sản phẩm này. <button class="link" onclick="lbProject('${x.project}')">Mở dự án</button></div>`:''}
-    <h3 class="mkh" style="margin-top:4px">Nền tảng đích</h3><div class="lbtargets">${Object.entries(x.targets).map(([k,l],i)=>`<label class="lbt"><input type="radio" name="lbT" value="${k}" ${(S.lb.target||'web')===k?'checked':''} onchange="S.lb.target=this.value"><span>${esc(l)}</span></label>`).join('')}</div>
-    <label class="field" style="margin-top:12px"><span>Tên dự án</span><input type="text" id="lbP" value="${esc((x.name||'').replace(/[^\p{L}\p{N} ]/gu,'').split(' ').slice(0,2).join(''))}Clone"></label>
-    <h3 class="mkh">Cấu hình clone</h3>${Object.entries(x.options).map(([k,l])=>`<label class="lbopt"><input type="checkbox" value="${k}" ${S.lb.opts.includes(k)?'checked':''} onchange="S.lb.opts=this.checked?[...new Set([...S.lb.opts,'${k}'])]:S.lb.opts.filter(o=>o!=='${k}')"><span>${esc(l)}</span></label>`).join('')}
-    <h3 class="mkh">Ghi chú và yêu cầu riêng</h3>
+  if(t==='score') b = `<div class="row" style="align-items:center;gap:14px">${lbScoreBadge(x,true)}<div><b>${x.clone_ok?'Đủ điểm vào xưởng':'Chưa đủ '+(x.min_score||60)+' điểm'}</b><p class="meta" style="margin:2px 0 0">Theo 4 tiêu chí của đặc tả Xưởng.</p></div></div>
+    <div class="lbparts">${Object.entries(LB_PART).map(([k,[l,m]])=>`<div class="lbpart"><div class="row" style="justify-content:space-between"><span>${l}</span><b>${x.parts?.[k]??0}/${m}</b></div><div class="bar"><i style="width:${Math.round(100*(x.parts?.[k]||0)/m)}%"></i></div></div>`).join('')}</div>
+    ${x.reasons?.length?`<h3 class="mkh">Vì sao chưa cao hơn</h3><ul class="mkcontents">${x.reasons.map(r=>`<li>${esc(r)}</li>`).join('')}</ul>`:''}
+    <p class="muted small">Giấy phép cho phép làm lại: ${esc((x.license_ok||[]).join(', '))}. Không rõ giấy phép thì loại ngay.</p>`;
+  if(t==='clone') b = x.clone_ok ? `${x.cloned?`<div class="card pad" style="margin-bottom:10px">Đã clone nguồn này. <button class="link" onclick="lbProject('${x.project}')">Mở dự án</button></div>`:''}
+    <div class="card pad"><b>Đội clone sẽ làm 6 bước</b><p class="meta" style="margin:4px 0 0">BA → PO → Dev → Designer → Tester → Kiểm duyệt. Mỗi bước lưu vào dự án; anh bấm Sửa ở bước nào thì đội làm lại từ bước đó. Xong có thẻ duyệt, anh bấm Publish mới lên chợ.</p></div>
+    <h3 class="mkh">Ghi chú cho đội</h3>
     ${x.notes?.length?`<select id="lbSaved" onchange="if(this.value){$('#lbN').value=($('#lbN').value?$('#lbN').value+'\\n':'')+this.value;this.value=''}"><option value="">Ghi chú đã lưu (${x.notes.length})…</option>${x.notes.map(n=>`<option value="${esc(n)}">${esc(n.slice(0,60))}</option>`).join('')}</select>`:''}
-    <label class="field" style="margin-top:8px"><span class="sr">Ghi chú</span><textarea id="lbN" style="min-height:90px" placeholder="Tính năng muốn nhấn mạnh, phong cách giao diện, kiến trúc…"></textarea></label>
-    <div class="chips" style="padding-top:0">${x.chips.map(c=>`<button class="chip" onclick="$('#lbN').value=($('#lbN').value?$('#lbN').value+', ':'')+'${esc(c)}'">+ ${esc(c)}</button>`).join('')}</div>
+    <label class="field" style="margin-top:8px"><span class="sr">Ghi chú</span><textarea id="lbN" style="min-height:90px" placeholder="Ngành muốn nhắm, điểm cần nhấn mạnh, giá mong muốn…"></textarea></label>
     <div class="row" style="margin-top:8px"><button class="btn sm" onclick="run('xuong','ghichu',{text:$('#lbN').value},'',true).then(r=>toast(r.text)).catch(e=>toast(e.message))">${ico('save',15)} Lưu ghi chú</button></div>
-    <button class="btn pri full" style="margin-top:14px" onclick="lbDoClone('${esc(x.key)}')">${ico('spark',17)} Dựng bản thiết kế bằng AI</button>
-    <p class="muted small">superHuy giữ ý tưởng và tính năng đã được kiểm chứng, sửa điểm người dùng phàn nàn, còn tên, giao diện, câu chữ và hình ảnh là của anh.</p>`;
-  sheet(`<div class="mkdet">${x.icon?`<img class="lbicon" src="${esc(x.icon)}" alt="" referrerpolicy="no-referrer">`:mkIcon({type:'skill',color:'#2457C5'},72)}<div class="grow"><h2 style="font-size:20px">${esc(x.name)}</h2><div class="meta">${esc(x.dev||'')} · ${esc(x.cat||'')}</div>
-      <div class="row" style="margin-top:8px"><button class="btn sm" onclick="run('xuong','theodoi',{key:'${esc(x.key)}'},'',true).then(r=>{toast(r.text);S.lb.cur.starred=r.starred})">${ico('star',15)} ${x.starred?'Đang theo dõi':'Theo dõi'}</button></div></div></div>
+    <button class="btn pri full" style="margin-top:14px" onclick="lbDoClone('${esc(x.key)}')">${ico('spark',17)} Giao cho đội clone</button>
+    <p class="muted small">Dev viết lại hoàn toàn bằng lời mình, Kiểm duyệt chặn trùng câu, thương hiệu và dữ liệu riêng. Chưa Publish thì chưa ai thấy.</p>`
+    : `<div class="empty">Nguồn này chưa đủ ${x.min_score||60} điểm${x.license?'':' (giấy phép không rõ)'} nên không vào xưởng. Xem tab Điểm nguồn.</div>`;
+  sheet(`<div class="mkdet">${x.icon?`<img class="lbicon" src="${esc(x.icon)}" alt="" referrerpolicy="no-referrer">`:mkIcon({type:x.kind==='brain'?'brain':x.kind==='pack'?'pack':'skill',color:x.color||'#2457C5'},72)}<div class="grow"><h2 style="font-size:20px">${esc(x.name)}</h2><div class="meta">${esc(x.dev||'')} · ${esc(LB_SRC[x.src]||x.src)}</div>
+      <div class="row" style="margin-top:8px">${lbScoreBadge(x)}<button class="btn sm" onclick="run('xuong','theodoi',{key:'${esc(x.key)}'},'',true).then(r=>{toast(r.text);S.lb.cur.starred=r.starred})">${ico('star',15)} ${x.starred?'Đang theo dõi':'Theo dõi'}</button></div></div></div>
     <div class="seg lbtabs" role="tablist">${tabs.map(([k,l])=>`<button role="tab" aria-selected="${t===k}" class="${t===k?'on':''}" onclick="lbOpen('${esc(x.key)}','${k}')">${l}</button>`).join('')}</div><div style="margin-top:12px">${b}</div>`);
 }
 async function lbDoClone(key){
-  const target = (document.querySelector('input[name=lbT]:checked')||{}).value || 'web';
-  const notes = $('#lbN')?.value||'', project = $('#lbP')?.value||'';
-  closeSheet(); toast('superHuy đang dựng bản thiết kế, khoảng 1–2 phút', 4000);
-  try{ const r = await run('xuong','clone',{key, target, options:S.lb.opts.join(','), notes, project, country:S.lb.country},'Dựng bản thiết kế');
+  const notes = $('#lbN')?.value||'';
+  closeSheet(); toast('Đội clone bắt đầu làm, anh theo dõi tiến độ trong Dự án', 4000);
+  try{ const r = await run('xuong','clone',{key, notes},'Đội clone đang làm');
     notifyH('success'); S.lb.cur=null; S.lb.proj=null; lbMine(); if(S.lb.scan?.items){ const it=S.lb.scan.items.find(i=>i.key===key); if(it) it.cloned=true; } lbProject(r.project.id); }catch(e){ toast(e.message, 4000); }
 }
 function lbProjects(){
   const p = S.lb.proj; if(!p) return `<div class="card empty">Đang tải dự án…</div>`;
-  if(!p.items.length) return `<div class="done"><b>Chưa có dự án nào</b>Vào Xưởng clone, chọn một sản phẩm đang thắng thị trường rồi bấm Clone. superHuy sẽ dựng bản thiết kế và prompt để dựng sản phẩm của anh.<div class="row" style="justify-content:center;margin-top:16px"><button class="btn pri" onclick="S.lb.view='xuong';render()">Mở Xưởng clone</button></div></div>`;
-  return `<div class="card mklist">${p.items.map(x=>`<div class="mkrow" role="button" tabindex="0" onclick="lbProject('${x.id}')">${x.source?.icon?`<img class="lbmini" src="${esc(x.source.icon)}" alt="" referrerpolicy="no-referrer">`:`<span class="thumb">${ico('layers',20)}</span>`}<div class="grow"><div class="ttl2">${esc(x.name)}</div><div class="meta">Từ ${esc(x.source?.name||'')} · ${esc(p.targets[x.target]||x.target)}${x.mvp_days?` · khoảng ${x.mvp_days} ngày`:''}</div></div><span class="tag ${x.status==='da_ra_mat'?'role':x.status==='bo'?'lo':'mid'}">${esc(p.statuses[x.status]||x.status)}</span></div>`).join('')}</div>`;
+  if(!p.items.length) return `<div class="done"><b>Chưa có dự án nào</b>Vào tab Nguồn, chọn một nguồn đủ điểm rồi bấm Giao cho đội clone. Đội BA → PO → Dev → Designer → Tester → Kiểm duyệt sẽ làm và đưa thẻ duyệt cho anh.<div class="row" style="justify-content:center;margin-top:16px"><button class="btn pri" onclick="S.lb.view='xuong';render()">Mở Nguồn</button></div></div>`;
+  const tagc = s => s==='da_len_cho'||s==='da_ra_mat'?'role':s==='bo'?'lo':s==='cho_duyet'?'hot':'mid';
+  return `<div class="card mklist">${p.items.map(x=>`<div class="mkrow" role="button" tabindex="0" onclick="lbProject('${x.id}')">${x.source?.icon?`<img class="lbmini" src="${esc(x.source.icon)}" alt="" referrerpolicy="no-referrer">`:`<span class="thumb">${ico('layers',20)}</span>`}<div class="grow"><div class="ttl2">${esc(x.name)}</div><div class="meta">Từ ${esc(x.source?.name||'')} · ${esc(p.kinds?.[x.kind]||x.kind||'')}${x.industry?` · ${esc(p.industries?.[x.industry]||x.industry)}`:''}${x.test_score!=null?` · test ${x.test_score}`:''}</div></div><span class="tag ${tagc(x.status)}">${esc(p.statuses[x.status]||x.status)}</span></div>`).join('')}</div>`;
 }
 async function lbProject(pid){
   let p; try{ p = await run('xuong','duan',{pid},'',true); }catch(e){ return toast(e.message); }
-  const mk = ['skill','workflow','brain'].includes(p.target); S.lb.prompt = p.build_prompt||'';
-  sheet(`<div class="date">Dự án từ ${esc(p.source?.name||'')} · ${esc(p.targets[p.target]||'')}</div><h2 style="font-size:22px;margin-top:4px">${esc(p.name)}</h2><p style="margin:6px 0 0">${esc(p.pitch||'')}</p>
-    <div class="row" style="margin-top:10px">${Object.entries(p.statuses).map(([k,l])=>`<button class="chip ${p.status===k?'on':''}" onclick="run('xuong','duan_sua',{pid:'${p.id}',status:'${k}'},'',true).then(r=>{toast(r.text);S.lb.proj=null;lbMine();lbProject('${p.id}')})">${esc(l)}</button>`).join('')}</div>
-    <h3 class="mkh">Cơ hội</h3><p>${esc(p.opportunity||'')}</p>
-    <h3 class="mkh">Tính năng</h3><ol class="mkcontents">${(p.features||[]).map(f=>`<li>${esc(f)}</li>`).join('')}</ol>
-    ${p.improvements?.length?`<h3 class="mkh">Làm tốt hơn bản gốc</h3><ul class="mkcontents">${p.improvements.map(f=>`<li>${esc(f)}</li>`).join('')}</ul>`:''}
-    <h3 class="mkh">Kiếm tiền</h3><p>${esc(p.monetization||'')}</p>
-    <h3 class="mkh">${mk?'Nội dung sản phẩm':'Prompt dựng sản phẩm'}</h3><pre class="lbprompt">${esc(p.build_prompt||'')}</pre>
-    <div class="row" style="margin-top:10px"><button class="btn pri" onclick="copyText(S.lb.prompt||'')">${ico('copy',15)} Sao chép prompt</button>
-      ${mk?`<button class="btn pri" onclick="lbPriceApprove('${p.id}')">${ico('spark',15)} Gợi ý giá và lên kệ</button><button class="btn" onclick="lbToMarket('${p.id}')">${ico('send',15)} Lưu nháp vào Marketplace</button>`:''}
-      <button class="btn" onclick="if(confirmTap(this))run('xuong','duan_xoa',{pid:'${p.id}'},'',true).then(r=>{toast(r.text);closeSheet();S.lb.proj=null;lbMine()})">Xoá dự án</button></div>
-    ${!mk?`<p class="muted small">Dán prompt này vào Claude Code (hoặc giao cho em trong phiên Product) để dựng bản đầu tiên.</p>`:''}`);
+  sheet(`<div class="date">Dự án từ ${esc(p.source?.name||'')} · ${esc(p.kinds?.[p.kind]||p.kind||'')}</div><h2 style="font-size:22px;margin-top:4px">${esc(p.name)}</h2><p style="margin:6px 0 0">${esc(p.pitch||'')}</p>
+    <div class="row" style="margin-top:10px">${['nhap','cho_duyet','bo'].map(k=>`<button class="chip ${p.status===k?'on':''}" onclick="run('xuong','duan_sua',{pid:'${p.id}',status:'${k}'},'',true).then(r=>{toast(r.text);S.lb.proj=null;lbMine();lbProject('${p.id}')})">${esc(p.statuses[k]||k)}</button>`).join('')}</div>
+    ${p.notes?`<h3 class="mkh">Ghi chú của anh</h3><p style="white-space:pre-line">${esc(p.notes)}</p>`:''}
+    <div class="row" style="margin-top:10px"><button class="btn" onclick="if(confirmTap(this))run('xuong','duan_xoa',{pid:'${p.id}'},'',true).then(r=>{toast(r.text);closeSheet();S.lb.proj=null;lbMine()})">Xoá dự án</button></div>`);
 }
 function confirmTap(b){ if(b.dataset.ok) return true; b.dataset.ok='1'; b.textContent='Bấm lần nữa để xoá'; setTimeout(()=>{ delete b.dataset.ok; b.textContent='Xoá dự án'; }, 3000); return false; }
-async function lbPriceApprove(pid){
-  let r; try{ r = await run('xuong','goi_y_gia',{pid},'',true); }catch(e){ return toast(e.message); }
-  priceSheet(r, async (price, billing, featured)=>{ try{ const x = await run('xuong','len_cho',{pid, publish:true, price},'',true); if(billing==='monthly'||featured) await run('market','qt_duyet_gia',{lid:x.id, price, billing, featured},'',true); toast('Đã lên kệ với giá '+(price?vnd(price):'miễn phí'), 4000); closeSheet(); S.lb.mine=null; S.lb.proj=null; S.mk.data=null; lbMine(); mkLoad(true); }catch(e){ toast(e.message); } });
-}
-async function lbToMarket(pid){ try{ const r = await run('xuong','len_cho',{pid},'',true); toast(r.text+' Xem ở Tài sản của anh.', 4000); closeSheet(); S.lb.view='taisan'; S.lb.mine=null; S.lb.proj=null; lbMine(); render(); }catch(e){ toast(e.message); } }
 function lbAssets(){
   const m = S.lb.mine; if(!m) return `<div class="card empty">Đang tải…</div>`;
   const ST = {published:'Đang bán', review:'Chờ duyệt', draft:'Nháp', rejected:'Từ chối', archived:'Đã gỡ'};
@@ -109,7 +99,7 @@ function lbNew(){
     <div class="lbways"><button class="card pad" onclick="lbPackSheet(false)"><b>${ico('spark',18)} Dán và để AI đóng gói</b><span class="meta">Dán SKILL.md, ghi chú, quy trình hay prompt. AI đặt tên, viết mô tả, chia nội dung.</span></button>
     <button class="card pad" onclick="lbPackSheet(true)"><b>${ico('link',18)} Dựng từ một nguồn</b><span class="meta">Dán link bài viết, repo hay trang sản phẩm. AI dựng bản của anh, ghi nguồn tham khảo.</span></button>
     <button class="card pad" onclick="lbEditor({type:'skill',name:'',tagline:'',description:'',body:'',category:'nang-suat',price:0,tags:''})"><b>${ico('pen',18)} Tự viết</b><span class="meta">Mở trình soạn trống.</span></button>
-    <button class="card pad" onclick="closeSheet();S.lb.view='xuong';render()"><b>${ico('layers',18)} Clone sản phẩm đang thắng</b><span class="meta">Vào Xưởng clone: App Store, GitHub, Product Hunt.</span></button></div>`);
+    <button class="card pad" onclick="closeSheet();S.lb.view='xuong';render()"><b>${ico('layers',18)} Giao đội clone từ một nguồn</b><span class="meta">Kho skill mở, template Obsidian/Notion, khung làm việc, bán chạy trên chợ.</span></button></div>`);
 }
 function lbPackSheet(fromUrl){
   sheet(`<h2>${fromUrl?'Dựng từ một nguồn':'Dán và để AI đóng gói'}</h2>

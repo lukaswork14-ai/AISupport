@@ -2,7 +2,7 @@
 .lbbar{ display:flex; flex-direction:column; gap:10px } .lbbar .seg{ flex-wrap:wrap } .lbbar select, .mkrow select{ font:inherit; font-size:13.5px; padding:7px 10px; border-radius:11px; border:1px solid var(--line); background:var(--surface); color:var(--text) }
 .lbgrid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:10px }
 .lbcard{ position:relative; display:flex; flex-direction:column; align-items:flex-start; gap:4px; padding:14px; text-align:left; min-width:0 }
-.lbcard img{ width:56px; height:56px; border-radius:28%; object-fit:cover; background:var(--fill) } .lbcard b{ font-size:14px; line-height:1.3 }
+.lbcard img{ width:56px; height:56px; border-radius:28%; object-fit:cover; background:var(--fill) } .lbcard b{ font-size:14px; line-height:1.3 } .lbcard .tag{ max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
 .lbcard.cloned{ box-shadow:0 0 0 2px var(--danger) }
 .lbtag{ position:absolute; top:8px; right:8px; font-size:10.5px; font-weight:700; background:var(--danger); color:#fff; border-radius:7px; padding:2px 6px }
 .lbicon{ width:72px; height:72px; border-radius:28%; object-fit:cover; flex:none } .lbmini{ width:40px; height:40px; border-radius:28%; object-fit:cover; flex:none }
@@ -14,3 +14,9 @@
 .lbopt{ display:flex; gap:10px; align-items:flex-start; padding:7px 2px; font-size:14px; cursor:pointer } .lbopt input{ margin-top:3px }
 .lbprompt{ white-space:pre-wrap; font:12.5px/1.55 ui-monospace,Menlo,monospace; background:var(--fill); padding:14px; border-radius:14px; max-height:360px; overflow:auto }
 .lbways{ display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:10px; margin-top:12px } .lbways button{ text-align:left; display:flex; flex-direction:column; gap:6px } .lbways b{ display:flex; gap:8px; align-items:center }
+/* điểm nguồn, tiêu chí, gợi ý tuần */
+.lbscore{ display:inline-flex; align-items:center; justify-content:center; min-width:34px; height:24px; padding:0 7px; border-radius:12px; font-weight:800; font-size:13px; color:#fff; background:var(--c,#2457C5); flex:none }
+.lbscore.big{ min-width:56px; height:56px; border-radius:28px; font-size:22px }
+.lbcard.low{ opacity:.72 } .lbcard.low:hover{ opacity:1 }
+.lbparts{ display:grid; gap:10px; margin-top:14px } .lbpart .bar{ height:8px; border-radius:4px; background:var(--fill); overflow:hidden; margin-top:4px } .lbpart .bar i{ display:block; height:100%; background:var(--jade); border-radius:4px }
+.lbsug{ margin-bottom:10px } .lbsug b{ display:flex; gap:6px; align-items:center }
