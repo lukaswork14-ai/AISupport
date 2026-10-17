@@ -347,7 +347,8 @@ class Handler(BaseHTTPRequestHandler):
         n = int(self.headers.get("Content-Length") or 0)
         if n > 2_000_000:
             raise ValueError("payload too large")
-        return json.loads(self.rfile.read(n) or b"{}")
+        self._raw = self.rfile.read(n) or b"{}"  # giữ thân gốc cho webhook ký trên raw body (Lemon Squeezy)
+        return json.loads(self._raw)
 
     def _tok(self, q: dict) -> str:
         return self.headers.get("X-Session") or q.get("s", "")
@@ -469,9 +470,11 @@ class Handler(BaseHTTPRequestHandler):
             return self._account(u.path, data if isinstance(data, dict) else {})
         if u.path.startswith("/api/creator/"):  # console người tạo Marketplace (khoá truy cập riêng, không dùng phiên của chủ nhân)
             return self._creator(u.path, data if isinstance(data, dict) else {})
-        if u.path in ("/api/pay/webhook", "/api/pay/webhook/payos"):  # đối soát tự động (Casso/SePay/PayOS)
+        if u.path in ("/api/pay/webhook", "/api/pay/webhook/payos", "/api/pay/webhook/lemonsqueezy"):  # đối soát tự động (Casso/SePay/PayOS/Lemon Squeezy)
             from agents import pay
             try:
+                if u.path.endswith("/lemonsqueezy"):
+                    return self._json(200, pay.ls_webhook(getattr(self, "_raw", b""), self.headers.get("X-Signature", "")))
                 if u.path.endswith("/payos"):
                     return self._json(200, pay.payos_webhook(data if isinstance(data, dict) else {}))
                 tok = self.headers.get("Authorization", "").replace("Apikey ", "").replace("Bearer ", "").strip() or self.headers.get("Secure-Token", "") or self.headers.get("X-Webhook-Token", "")
@@ -719,7 +722,7 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(200, {"user": au, "entitlements": ent, "plan": plans.PLANS.get(au.get("plan"), plans.PLANS["free"]),
                                         "plans": plans.all_plans(), "flags": flags.for_user(au["id"] if not au.get("owner") else OWNER_CHAT_ID),
                                         "roles": accounts.ROLES, "has_owner_app": bool(au.get("owner")), "payments_open": pay.payments_open(),
-                                        "buys_mail": pay._mail_ready()})
+                                        "buys_mail": pay._mail_ready(), "intl_open": pay.intl_enabled()})
             if path == "/api/account/try":  # thẻ 15: biên bản thử ngay sau đăng ký (chỉ văn bản, không lưu nội dung)
                 from agents import trial_minutes
                 return self._json(200, trial_minutes.make("acc:" + au["id"], str(data.get("text", ""))[:20000], data.get("sample") is True))
@@ -748,6 +751,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(200, {"text": f"Đã bật dùng thử Pro {plans.TRIAL_DAYS} ngày.", "user": r["user"]})
             if path == "/api/account/upgrade":
                 from agents import pay
+                if data.get("method") == "intl":  # thẻ quốc tế qua Lemon Squeezy (chỉ khi SUPERYOU_INTL=1 và đủ cấu hình)
+                    return self._json(200, pay.intl_checkout(au["id"], au["email"], str(data.get("plan", ""))[:20]))
                 return self._json(200, pay.create_plan_order(au["email"], str(data.get("plan", ""))[:20], au["id"]))
             if path in ("/api/account/orders", "/api/account/redownload", "/api/account/resend", "/api/account/complain"):  # Tài khoản › Sản phẩm đã mua
                 from agents import pay

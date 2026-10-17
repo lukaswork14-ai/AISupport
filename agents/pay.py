@@ -87,8 +87,12 @@ def config() -> dict:
             "name": (os.getenv("BANK_ACCOUNT_NAME") or "").strip()}
     return {"fee_pct": FEE_PCT, "min_price": MIN_PRICE, "tiers": TIERS, "refund_days": REFUND_DAYS, "payout_min": PAYOUT_MIN, "payout_day": PAYOUT_DAY, "payments_open": payments_open(),
             "bank": bank, "vietqr_ready": all(bank.values()), "webhook_ready": bool(os.getenv("PAY_WEBHOOK_TOKEN")),
-            "payos_ready": all(os.getenv(k) for k in ("PAYOS_CLIENT_ID", "PAYOS_API_KEY", "PAYOS_CHECKSUM_KEY")),
-            "mail_ready": _mail_ready()}
+            "payos_ready": _payos_ready(),
+            "mail_ready": _mail_ready(), "phase2": gateways_status()}
+
+
+def _payos_ready() -> bool:
+    return all(os.getenv(k) for k in ("PAYOS_CLIENT_ID", "PAYOS_API_KEY", "PAYOS_CHECKSUM_KEY"))
 
 
 def _mail_ready() -> bool:
@@ -342,17 +346,183 @@ def payos_webhook(payload: dict) -> dict:
     sig = hmac.new(key.encode(), msg.encode(), hashlib.sha256).hexdigest()
     if not hmac.compare_digest(sig, str(payload.get("signature") or "")):
         raise PermissionError("Sai chữ ký PayOS")
+    if str(data.get("code", "00")) != "00":
+        return {"ok": True, "matched": 0}
     code = str(data.get("description") or "")
     m = re.search(r"SY[A-Z2-9]{6}", code.upper())
+    oc = data.get("orderCode")
     with _LOCK:
         d = _load()
-        o = next((o for o in d["orders"].values() if m and o["code"] == m.group(0) and o["status"] == "pending"), None)
+        o = next((o for o in d["orders"].values() if o["status"] == "pending" and ((oc and o.get("payos_code") == oc) or (m and o["code"] == m.group(0)))), None)
         if not o:
             return {"ok": True, "matched": 0}
         _mark_paid(d, o, "payos", str(data.get("reference") or data.get("paymentLinkId") or ""))
         _save(d)
     deliver(o["id"])
     return {"ok": True, "matched": 1}
+
+
+# ------------------------------------------------------------------ giai đoạn 2 (CHƯA BẬT): gia hạn qua PayOS, bán quốc tế qua Lemon Squeezy
+# Thiết kế: docs/superyou-thanh-toan.md › "Giai đoạn 2". Hai cổng đều tắt mặc định và chỉ chạy khi ĐỦ cả ba điều kiện:
+#   thanh toán đã mở (SUPERYOU_PAYMENTS=1) + cờ riêng (SUPERYOU_AUTORENEW=1 / SUPERYOU_INTL=1) + khoá cổng trong .env trên VPS.
+# Anh duyệt đề xuất "[Thương mại] Gia hạn PayOS và bán quốc tế" trên bảng trước khi bật. Mã chưa chạy với tài khoản thật.
+PAYOS_API = "https://api-merchant.payos.vn"
+LS_API = "https://api.lemonsqueezy.com/v1"
+
+
+def autorenew_enabled() -> bool:
+    return payments_open() and os.getenv("SUPERYOU_AUTORENEW", "0").strip() == "1" and _payos_ready()
+
+
+def intl_ready() -> bool:
+    return all(os.getenv(k) for k in ("LEMONSQUEEZY_API_KEY", "LEMONSQUEEZY_STORE_ID", "LEMONSQUEEZY_WEBHOOK_SECRET")) and bool(_ls_variants())
+
+
+def intl_enabled() -> bool:
+    return payments_open() and os.getenv("SUPERYOU_INTL", "0").strip() == "1" and intl_ready()
+
+
+def gateways_status() -> dict:
+    """Tình trạng giai đoạn 2 cho Quản trị › Giao dịch (không lộ khoá)."""
+    return {"autorenew": {"enabled": autorenew_enabled(), "flag": os.getenv("SUPERYOU_AUTORENEW", "0").strip() == "1", "payos_ready": _payos_ready()},
+            "intl": {"enabled": intl_enabled(), "flag": os.getenv("SUPERYOU_INTL", "0").strip() == "1", "ready": intl_ready(),
+                     "plans": sorted(_ls_variants())}}
+
+
+def _http_post(url: str, body: dict, headers: dict) -> dict:
+    """Gọi cổng thanh toán (tách riêng để test thay thế, test không bao giờ gọi mạng)."""
+    import urllib.request
+    req = urllib.request.Request(url, data=json.dumps(body).encode(), method="POST", headers={"Content-Type": "application/json", **headers})
+    with urllib.request.urlopen(req, timeout=20) as r:
+        return json.loads(r.read() or b"{}")
+
+
+def _payos_sign(fields: dict) -> str:
+    """Chữ ký tạo link PayOS: HMAC-SHA256 trên amount, cancelUrl, description, orderCode, returnUrl theo thứ tự chữ cái."""
+    msg = "&".join(f"{k}={fields[k]}" for k in ("amount", "cancelUrl", "description", "orderCode", "returnUrl"))
+    return hmac.new(os.getenv("PAYOS_CHECKSUM_KEY", "").encode(), msg.encode(), hashlib.sha256).hexdigest()
+
+
+def payos_link(oid: str, base: str = "https://app.roimaxxhub.com") -> str:
+    """Tạo link thanh toán PayOS cho một đơn đang chờ (dùng cho gia hạn gói). Trả URL checkout; lỗi thì trả ''."""
+    if not autorenew_enabled():
+        return ""
+    with _LOCK:
+        d = _load()
+        o = d["orders"].get(oid)
+        if not o or o["status"] != "pending":
+            return ""
+        if o.get("payos_url"):
+            return o["payos_url"]
+        o["payos_code"] = o.get("payos_code") or (int(_now().strftime("%y%m%d")) * 1000000 + secrets.randbelow(1000000))
+        _save(d)
+    f = {"orderCode": o["payos_code"], "amount": int(o["amount"]), "description": o["code"][:9],
+         "returnUrl": base + "/account#plan", "cancelUrl": base + "/account#plan"}
+    f["signature"] = _payos_sign(f)
+    try:
+        r = _http_post(PAYOS_API + "/v2/payment-requests", f, {"x-client-id": os.getenv("PAYOS_CLIENT_ID", ""), "x-api-key": os.getenv("PAYOS_API_KEY", "")})
+    except Exception:
+        import logging
+        logging.getLogger("pay").exception("Tạo link PayOS lỗi")
+        return ""
+    url = ((r or {}).get("data") or {}).get("checkoutUrl", "") if str((r or {}).get("code", "")) == "00" else ""
+    if url:
+        with _LOCK:
+            d = _load()
+            d["orders"][oid]["payos_url"] = url
+            _save(d)
+    return url
+
+
+def renewal_order(uid: str, email: str, plan: str) -> dict:
+    """Đơn gia hạn (giai đoạn 2): tạo đơn gói như bình thường rồi gắn link PayOS để khách trả một chạm từ email nhắc."""
+    r = create_plan_order(email, plan, uid)
+    oid = r["order"]["id"]
+    with _LOCK:
+        d = _load()
+        d["orders"][oid]["renewal"] = True
+        _save(d)
+    return {"order": r["order"], "url": payos_link(oid)}
+
+
+def _ls_variants() -> dict:
+    """Gói -> variant Lemon Squeezy, ví dụ LEMONSQUEEZY_VARIANT_PRO=123456 (mã sản phẩm, không phải khoá)."""
+    out = {}
+    for plan in ("pro", "business"):
+        v = (os.getenv(f"LEMONSQUEEZY_VARIANT_{plan.upper()}") or "").strip()
+        if v.isdigit():
+            out[plan] = v
+    return out
+
+
+def intl_checkout(uid: str, email: str, plan: str) -> dict:
+    """Thanh toán quốc tế bằng thẻ qua Lemon Squeezy (Merchant of Record, tự gia hạn hằng tháng). Chỉ khi intl_enabled()."""
+    if not intl_enabled():
+        raise ValueError("Thanh toán quốc tế chưa mở.")
+    variant = _ls_variants().get(plan)
+    if not variant:
+        raise ValueError("Gói này chưa bán quốc tế.")
+    body = {"data": {"type": "checkouts",
+                     "attributes": {"checkout_data": {"email": email, "custom": {"uid": uid, "plan": plan}},
+                                    "product_options": {"redirect_url": "https://app.roimaxxhub.com/account#plan"}},
+                     "relationships": {"store": {"data": {"type": "stores", "id": os.getenv("LEMONSQUEEZY_STORE_ID", "")}},
+                                       "variant": {"data": {"type": "variants", "id": variant}}}}}
+    r = _http_post(LS_API + "/checkouts", body, {"Authorization": "Bearer " + os.getenv("LEMONSQUEEZY_API_KEY", ""),
+                                                 "Accept": "application/vnd.api+json", "Content-Type": "application/vnd.api+json"})
+    url = (((r or {}).get("data") or {}).get("attributes") or {}).get("url", "")
+    if not url:
+        raise ValueError("Chưa tạo được trang thanh toán, thử lại sau.")
+    return {"url": url}
+
+
+LS_ACTIVE = {"subscription_created", "subscription_payment_success", "subscription_resumed", "subscription_updated"}
+
+
+def ls_webhook(raw: bytes, signature: str) -> dict:
+    """Webhook Lemon Squeezy: X-Signature = HMAC-SHA256(thân yêu cầu gốc, LEMONSQUEEZY_WEBHOOK_SECRET).
+    Thuê bao đang chạy -> gói có hạn tới renews_at (+1 ngày dự phòng); huỷ -> tắt tự gia hạn, dùng tới hết kỳ đã trả."""
+    from core import accounts
+    secret = os.getenv("LEMONSQUEEZY_WEBHOOK_SECRET", "")
+    if not secret:
+        raise PermissionError("Lemon Squeezy chưa cấu hình")
+    if not hmac.compare_digest(hmac.new(secret.encode(), raw or b"", hashlib.sha256).hexdigest(), (signature or "").strip()):
+        raise PermissionError("Sai chữ ký Lemon Squeezy")
+    p = json.loads(raw or b"{}")
+    meta = p.get("meta") or {}
+    ev, cd = meta.get("event_name", ""), meta.get("custom_data") or {}
+    attr = (p.get("data") or {}).get("attributes") or {}
+    uid, plan = str(cd.get("uid") or ""), str(cd.get("plan") or "")
+    eid = f"ls:{ev}:{(p.get('data') or {}).get('id', '')}:{attr.get('updated_at') or attr.get('created_at') or ''}"
+    with _LOCK:
+        d = _load()
+        seen = d.setdefault("ls_events", [])
+        if eid in seen:
+            return {"ok": True, "dup": True}
+        seen.append(eid)
+        d["ls_events"] = seen[-500:]
+        _save(d)
+    u = accounts.get(uid) if uid else None
+    if not u or plan not in ("pro", "business"):
+        return {"ok": True, "matched": 0}
+    if ev in LS_ACTIVE and attr.get("status", "active") in ("active", "on_trial", "past_due"):
+        ren = str(attr.get("renews_at") or "")[:10]
+        try:
+            until = (dt.date.fromisoformat(ren) + dt.timedelta(days=1)).isoformat()
+        except ValueError:
+            until = plan_until_for(u, plan)
+        accounts.set_paid_plan(uid, plan, until, note=f"Lemon Squeezy {ev}")
+        if ev in ("subscription_created", "subscription_payment_success"):
+            with _LOCK:
+                d = _load()
+                d.setdefault("intl", []).append({"at": _iso(), "uid": uid, "email": u.get("email", ""), "plan": plan, "event": ev,
+                                                 "total": attr.get("total") or attr.get("subtotal") or 0, "currency": attr.get("currency", "USD"),
+                                                 "sub": (p.get("data") or {}).get("id", "")})
+                d["intl"] = d["intl"][-2000:]
+                _save(d)
+        return {"ok": True, "matched": 1, "until": until}
+    if ev in ("subscription_cancelled", "subscription_expired"):
+        return {"ok": True, "matched": 1, "note": "dùng tới hết plan_until rồi tự về Miễn phí"}
+    return {"ok": True, "matched": 0}
 
 
 # ------------------------------------------------------------------ giao hàng
@@ -451,7 +621,8 @@ def _remind_email(r: dict) -> bool:
         when = "hôm nay" if r["left"] == 0 else f"sau {r['left']} ngày"
         until = dt.date.fromisoformat(r["until"]).strftime("%d/%m/%Y")
         body = (f"Chào {r['name'] or 'bạn'},\n\nGói {name} của bạn trên superYou hết hạn {when} (hết ngày {until}).\n\n"
-                f"Gia hạn tại: https://app.roimaxxhub.com/account#plans (Tài khoản › Gói và nâng cấp › Gia hạn).\n\n"
+                + (f"Gia hạn một chạm (PayOS): {r['pay_url']}\n\n" if r.get("pay_url") else "")
+                + f"Gia hạn tại: https://app.roimaxxhub.com/account#plans (Tài khoản › Gói và nâng cấp › Gia hạn).\n\n"
                 "Nếu không gia hạn, tài khoản tự về gói Miễn phí; dữ liệu, sản phẩm đã mua và workflow của bạn vẫn được giữ nguyên.\n\nsuperYou · Roimaxx")
         platform = "gmail" if mailbox.gmail_ready() else "lark"
         mailbox.send(platform, r["email"], f"[superYou] Gói {name} hết hạn {when}", body)
@@ -468,6 +639,11 @@ def plan_sweep() -> dict:
     expired = accounts.expire_plans()
     sent, skipped = [], []
     for r in accounts.due_reminders():
+        if autorenew_enabled() and _mail_ready():
+            try:
+                r["pay_url"] = renewal_order(r["id"], r["email"], r["plan"])["url"]
+            except Exception:
+                r["pay_url"] = ""
         if _remind_email(r):
             accounts.mark_reminded(r["id"], r["until"])
             sent.append(r["email"])

@@ -35,6 +35,21 @@ Anh Huy duyệt ngày 17/10/2026.
 - Anh xử lý ở HQ › Marketplace › Quản trị › **Khiếu nại**: chấp nhận (ghi hoàn tiền, sổ cái ghi dòng âm, gỡ quyền sở hữu; đơn gói thì tài khoản về Miễn phí) hoặc từ chối (bắt buộc ghi lý do, khách nhận được). Mở/khoá người bán, khoá/mở email mua ngay trên thẻ khiếu nại.
 - Phản hồi gửi email cho khách khi mail đã kết nối; luôn hiện trong Tài khoản của khách. Tiền hoàn anh chuyển khoản thủ công.
 
+## Giai đoạn 2 (đã có mã, CHƯA BẬT, chờ anh duyệt đề xuất trên bảng)
+Mỗi cổng chỉ chạy khi đủ ba điều kiện: `SUPERYOU_PAYMENTS=1` + cờ riêng + cấu hình cổng trong `.env` trên VPS. Thiếu một là tắt; mọi bản QA/test không gọi mạng.
+
+**Gia hạn một chạm qua PayOS** (`SUPERYOU_AUTORENEW=1`)
+- PayOS là cổng VietQR, không có trừ tiền tự động từ thẻ/tài khoản. Vì vậy "tự gia hạn" ở đây nghĩa là: trước 3 ngày hết hạn, superYou tự tạo đơn gia hạn + link PayOS và gửi trong email nhắc; khách bấm, quét QR, webhook có chữ ký báo về, gói cộng nối tiếp 31 ngày. Khách không trả thì về Miễn phí như thường.
+- Cấu hình: `PAYOS_CLIENT_ID`, `PAYOS_API_KEY`, `PAYOS_CHECKSUM_KEY` (đã có ở mục Anh cần làm), webhook PayOS trỏ về `/api/pay/webhook/payos`. Webhook khớp đơn theo `orderCode` hoặc mã đơn `SY…` trong nội dung.
+
+**Thẻ quốc tế qua Lemon Squeezy** (`SUPERYOU_INTL=1`)
+- Lemon Squeezy là Merchant of Record: họ thu tiền thẻ, tự trừ định kỳ hằng tháng, lo thuế bán hàng quốc tế, rồi trả về cho Roimaxx (phí của họ theo bảng giá hiện hành). Phù hợp khách ngoài Việt Nam trả USD.
+- Luồng: Tài khoản › Gói › **Thẻ quốc tế (USD)** → trang checkout Lemon Squeezy (gắn `uid`, `plan` trong `custom`) → webhook `/api/pay/webhook/lemonsqueezy` (kiểm `X-Signature` = HMAC-SHA256 của thân gốc) → gói có hạn tới `renews_at` + 1 ngày. Huỷ thuê bao thì dùng tới hết kỳ đã trả rồi về Miễn phí. Sự kiện trùng bị bỏ qua.
+- Cấu hình: `LEMONSQUEEZY_API_KEY`, `LEMONSQUEEZY_STORE_ID`, `LEMONSQUEEZY_WEBHOOK_SECRET`, và mã variant theo gói `LEMONSQUEEZY_VARIANT_PRO` (tuỳ chọn `LEMONSQUEEZY_VARIANT_BUSINESS`). Giá USD đặt trong Lemon Squeezy. Webhook bật các sự kiện subscription_created, subscription_payment_success, subscription_updated, subscription_cancelled, subscription_expired.
+- Doanh thu quốc tế ghi riêng (`intl`, theo USD), chưa vào sổ cái VND và chưa áp cho sản phẩm Marketplace của người bán khác.
+
+Tình trạng cả hai hiện ở Quản trị › Giao dịch › Thiết lập thanh toán (không lộ khoá).
+
 ## Anh cần làm (không ai làm thay được)
 1. Điền vào `/opt/superhuy/shared/.env` trên VPS: `BANK_ID` (mã ngân hàng VietQR, ví dụ MB, VCB, TCB), `BANK_ACCOUNT`, `BANK_ACCOUNT_NAME`, rồi khởi động lại superHuy.
 2. Đăng ký Casso (casso.vn) hoặc SePay (sepay.vn), nối tài khoản ngân hàng, tạo webhook trỏ về `https://app.roimaxxhub.com/api/pay/webhook`, đặt token và điền `PAY_WEBHOOK_TOKEN`.
