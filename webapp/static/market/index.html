@@ -126,7 +126,7 @@ label.f small{ font-weight:500; color:var(--muted) }
 <body>
 <header><div class="w"><nav aria-label="Chính">
   <a class="logo" href="/market"><img src="/icons/huy-128.png" alt="">superYou <em>Marketplace</em></a>
-  <div class="nav-l"><a class="hide" href="/market#kham-pha">Khám phá</a><a href="#" id="myo">Đơn của tôi</a><a href="/market/console">Bán trên superYou</a></div>
+  <div class="nav-l"><a class="hide" href="/market#kham-pha">Khám phá</a><a href="#" id="myo">Đơn của tôi</a><a href="/market/console">Bán trên superYou</a><a href="/account">Tài khoản</a></div>
   <a class="btn y sm" href="/landing">Dùng thử superYou</a>
 </nav></div></header>
 <main id="main"></main>
@@ -142,7 +142,7 @@ var TYPE_IC = { skill:'S', workflow:'W', brain:'B' };
 function lsGet(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
 function lsSet(k, v){ try{ if(v == null) localStorage.removeItem(k); else localStorage.setItem(k, v); }catch(e){} }
 function api(path, body, key){
-  var h = {'Content-Type':'application/json'}; if(key) h['X-Creator-Key'] = key;
+  var h = {'Content-Type':'application/json'}; if(key && key !== 'acc') h['X-Creator-Key'] = key; var acc = lsGet('sy-acc'); if(acc) h['X-Account'] = acc;
   return fetch(path, body === undefined ? {headers:h} : {method:'POST', headers:h, body:JSON.stringify(body)})
     .then(function(r){ return r.json().catch(function(){ return {error:'Phản hồi không hợp lệ'}; }).then(function(j){ if(!r.ok || j.error){ var e = new Error(j.error || 'Có lỗi'); e.status = r.status; throw e; } return j; }); });
 }
@@ -246,16 +246,16 @@ $('#dlg').addEventListener('close', function(){ clearInterval(POLL); if(/^\/mark
 $('#dlg').addEventListener('click', function(e){ if(e.target === this) this.close(); });
 
 /* ================================================== console người tạo */
-var C = { key: lsGet('sy-key'), data:null, draft:null, step:1 };
+var C = { key: lsGet('sy-key') || (lsGet('sy-acc') ? 'acc' : null), data:null, draft:null, step:1 };
 function consoleView(){
   if(!C.key) return loginView();
   $('#main').innerHTML = '<div class="w cwrap"><div class="empty">Đang mở console…</div></div>';
-  api('/api/creator/console', {}, C.key).then(function(d){ C.data = d; dash(); }).catch(function(e){ if(e.status === 401){ lsSet('sy-key', null); C.key = null; loginView(e.message); } else $('#main').innerHTML = '<div class="w cwrap"><div class="empty">'+esc(e.message)+'</div></div>'; });
+  api('/api/creator/console', {}, C.key).then(function(d){ C.data = d; dash(); }).catch(function(e){ if(e.status === 401){ lsSet('sy-key', null); C.key = null; loginView(C.key==='acc' ? 'Tài khoản này chưa có vai Người bán. Vào Tài khoản › chuyển vai › Mở vai Người bán.' : e.message); } else $('#main').innerHTML = '<div class="w cwrap"><div class="empty">'+esc(e.message)+'</div></div>'; });
 }
 function loginView(err){
   $('#main').innerHTML = '<div class="w cwrap"><div><h2 style="margin-top:10px">Bán trên superYou</h2><p style="max-width:62ch;color:#3D3550">Đóng gói kinh nghiệm làm việc của bạn thành skill, workflow hoặc gói tri thức. Người dùng superYou cài và dùng ngay. Bạn theo dõi lượt quan tâm, lượt cài và đánh giá ở đây.</p></div>'
     + (err ? '<p class="msg err">'+esc(err)+'</p>' : '')
-    + '<div class="panes"><form class="pane" id="su"><h2>Tạo tài khoản người bán</h2><label class="f">Tên hiển thị<input id="sn" required maxlength="60" autocomplete="name"></label><label class="f">Email<input id="se" type="email" required autocomplete="email"></label><label class="f">Giới thiệu ngắn<input id="sb" maxlength="300" placeholder="Ví dụ: 8 năm vận hành shop POD"></label><button class="btn y">Tạo tài khoản</button><p class="msg" id="sm" role="status"></p></form>'
+    + '<div class="hint" style="margin-bottom:4px">Đã có tài khoản superYou? <a href="/login?next=/market/console">Đăng nhập một cửa</a> rồi chuyển vai Người bán. Hoặc tạo tài khoản người bán nhanh bên dưới (nhận khoá truy cập).</div><div class="panes"><form class="pane" id="su"><h2>Tạo tài khoản người bán</h2><label class="f">Tên hiển thị<input id="sn" required maxlength="60" autocomplete="name"></label><label class="f">Email<input id="se" type="email" required autocomplete="email"></label><label class="f">Giới thiệu ngắn<input id="sb" maxlength="300" placeholder="Ví dụ: 8 năm vận hành shop POD"></label><button class="btn y">Tạo tài khoản</button><p class="msg" id="sm" role="status"></p></form>'
     + '<form class="pane" id="li"><h2>Đã có khoá truy cập</h2><label class="f">Khoá truy cập<input id="lk" required placeholder="shc_…" autocomplete="off"><small>Khoá được cấp khi tạo tài khoản. Mất khoá thì liên hệ superYou để được cấp lại.</small></label><button class="btn k">Vào console</button></form></div></div>';
   $('#su').addEventListener('submit', function(e){ e.preventDefault(); var m = $('#sm'), btn = e.target.querySelector('button'); btn.disabled = true; m.className = 'msg'; m.textContent = 'Đang tạo…';
     api('/api/creator/signup', {name:$('#sn').value, email:$('#se').value, bio:$('#sb').value}).then(function(r){ showKey(r.key); })
@@ -288,7 +288,8 @@ function dash(){
       api('/api/creator/bank', {bank:$('#bb').value, account:$('#ba').value, name:$('#bn').value}, C.key).then(function(r){ m.className='msg ok'; m.textContent = r.text; }).catch(function(err){ m.className='msg err'; m.textContent = err.message; }); });
   }).catch(function(e){ $('#rev').innerHTML = '<h2>Doanh thu</h2><p class="msg err">'+esc(e.message)+'</p>'; });
   $('#nw').onclick = function(){ C.draft = {type:'skill', name:'', tagline:'', description:'', body:'', category:'nang-suat', price:0, tags:''}; C.step = 1; wizard(); };
-  $('#lo').onclick = function(){ lsSet('sy-key', null); C.key = null; loginView(); };
+  $('#lo').onclick = function(){ lsSet('sy-key', null); if(C.key==='acc'){ lsSet('sy-acc', null); } C.key = null; loginView(); };
+  var th = document.createElement('a'); th.className='btn sm ghost'; th.href='/account'; th.textContent='Tài khoản'; $('#lo').parentNode.insertBefore(th, $('#lo'));
   document.querySelectorAll('[data-e]').forEach(function(b){ b.onclick = function(){ api('/api/creator/get', {lid:b.dataset.e}, C.key).then(function(p){ C.draft = p; C.step = 2; wizard(); }).catch(function(e){ alertMsg(e.message); }); }; });
 }
 function alertMsg(t){ var m = document.createElement('p'); m.className = 'msg err'; m.textContent = t; $('#main .cwrap').prepend(m); }

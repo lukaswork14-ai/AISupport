@@ -16,7 +16,7 @@ def get(u):
 
 
 base = "https://app.roimaxxhub.com"
-for path in ("/market", "/market/console", "/landing"):
+for path in ("/market", "/market/console", "/landing", "/login", "/account", "/hq"):
     st, b = get(base + path)
     print(f"page {path}: {st} {len(b)}")
 st, b = get(base + "/api/market/public")
@@ -47,3 +47,11 @@ for src, kw in (("ios", {"country": "vn", "chart": "free", "genre": "6007"}), ("
             print("  detail:", x["name"], len(x["shots"]), "ảnh,", len(x["reviews"]), "đánh giá,", len(x["dev_apps"]), "app cùng nhà phát triển")
     except Exception as e:
         print(f"scan {src} lỗi:", str(e)[:160])
+
+try:
+    from core import accounts, plans
+    o = accounts.owner_user()
+    print("accounts:", {"owner": bool(o), "roles": (o or {}).get("roles"), "users": len(accounts.admin_list().get("items", []))})
+    print("plans:", plans.all_plans()["order"])
+except Exception as e:
+    print("accounts: LỖI", e)

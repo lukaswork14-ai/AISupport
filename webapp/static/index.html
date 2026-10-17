@@ -849,6 +849,10 @@ html.compact{ font-size:14px } html.compact .card{ --r-card:14px } html.compact 
 .wflib{ max-height:70vh; overflow:auto } .wflib input[type=search]{ font:inherit; padding:9px 12px; border-radius:11px; border:1px solid var(--line); background:var(--bg); color:var(--text) }
 .wfgroup{ margin-bottom:10px } .wfgroup > b{ display:block; font-size:12.5px; color:var(--muted); margin:6px 0 4px; text-transform:none }
 .wfitem{ display:flex; justify-content:space-between; align-items:center; width:100%; padding:8px 10px; border-radius:10px; text-align:left; font-size:14px; cursor:grab } .wfitem:hover{ background:var(--fill) }
+.rolecaret{ font-size:12px; color:var(--muted); font-weight:400 } .sbrand{ cursor:pointer; border-radius:14px } .sbrand:hover{ background:var(--fill) }
+.hqmods{ display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:10px; margin:14px 0 6px } .hqmod{ display:flex; flex-direction:column; align-items:flex-start; gap:6px; text-align:left } .hqmod i{ width:34px; height:34px; border-radius:10px; background:var(--c); color:#fff; display:grid; place-items:center } .hqmod b{ font-size:14.5px }
+.fun{ display:grid; grid-template-columns:120px 1fr 40px; gap:10px; align-items:center; font-size:13.5px; margin:6px 0 } .fun i{ height:10px; border-radius:5px; background:var(--fill); overflow:hidden; display:block } .fun em{ display:block; height:100%; background:var(--jade); border-radius:5px } .fun b{ text-align:right; font-variant-numeric:tabular-nums }
+.plans-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:12px }
 .sr{ position:absolute!important; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0) }
 </style>
 </head>
@@ -961,7 +965,7 @@ function copyText(t){
 }
 
 /* ---------- điều hướng */
-const TABS = HQ ? [['hq','Tổng quan','home'],['board','Phòng ban','users'],['ai','superHuy','spark'],['mkt','Marketplace','bag'],['cfo','Tài chính','wallet']]
+const TABS = HQ ? [['hq','Tổng quan','home'],['board','Phòng ban','users'],['ai','superHuy','spark'],['mkt','Marketplace','bag'],['users','Người dùng','users']]
   : [['home','Hôm nay','home'],['tasks','Việc','tasks'],['ai','superHuy','spark'],['meet','Họp','mic'],['growth','Phát triển','sprout']];
 function nav(){
   const n = $('#nav'); n.hidden = false;
@@ -980,14 +984,14 @@ function nav(){
 }
 /* thanh bên cho màn hình rộng (Mac, iPad ngang, máy tính) */
 const SIDE = HQ ? [['hq','Tổng quan','home',"go('hq')"],['board','Phòng ban','users',"go('board')"],['mkt','Marketplace','bag',"go('mkt')"],['gd','Giao dịch','wallet',"S.mk.view='qt';S.mk.admTab='gd';go('mkt')"],
-  ['leads','Khách hàng','inbox',"go('leads')"],['lab','Xưởng clone','factory',"go('lab')"],['cfo','Tài chính CFO','chart',"go('cfo')"],['ex','Thử nghiệm','sprout',"go('ex')"],['_qc','Hệ thống','check',"openQC()"],['_app','Mở superHuy','spark',"openLink(location.origin+'/app')"]]
+  ['leads','Khách hàng','inbox',"go('leads')"],['lab','Xưởng clone','factory',"go('lab')"],['cfo','Tài chính CFO','chart',"go('cfo')"],['users','Người dùng & gói','users',"go('users')"],['ex','Thử nghiệm','sprout',"go('ex')"],['_qc','Hệ thống','check',"openQC()"],['_app','Mở superHuy','spark',"openLink(location.origin+'/app')"]]
   : [['home','Hôm nay','home',"go('home')"],['tasks','Việc','tasks',"go('tasks')"],['meet','Họp','mic',"go('meet')"],['content','Nội dung','film',"go('content')"],
   ['growth','Phát triển','sprout',"go('growth')"],['mail','Hộp thư','inbox',"go('mail')"],['money','Tài chính','wallet',"go('money')"],['chat','Trò chuyện','chat',"go('chat')"],
   ['mkt','Marketplace','bag',"go('mkt')"],['wf','Workflow của tôi','layers',"go('wf')"],['_brain','Second Brain','brain',"openBrain()"],['_lark','Lark','lark',"openAgent('lark')"],['_hq','superYou HQ','factory',"openLink(location.origin+'/hq')"],['me','Hồ sơ','users',"go('me')"],['more','Cài đặt','gear',"go('more')"]];
 function sideNav(){
   const el = $('#side'); if(!el) return;
   const badge = {tasks:S.tk?.data?.stats?.today, content:S.data?.cq?.new?.length, meet:(S.mt?.items||[]).filter(m=>m.status==='working'||m.status==='queued').length};
-  el.innerHTML = `<div class="sbrand"><img class="brandimg" src="/icons/huy-128.png?v=3" alt=""><div><b>${HQ?'superYou HQ':'superHuy'}</b><span>${HQ?'Bảng điều hành của anh':esc(viDate(new Date()))}</span></div></div>
+  el.innerHTML = `<div class="sbrand" role="button" tabindex="0" onclick="roleMenu()" aria-label="Chuyển vai"><img class="brandimg" src="/icons/huy-128.png?v=3" alt=""><div><b>${HQ?'superYou HQ':'superHuy'} <span class="rolecaret">▾</span></b><span>${HQ?'Vai: Chủ sàn':'Vai: Người dùng'}</span></div></div>
     <button class="sask" onclick="S.dockOpen=true;dock();setTimeout(()=>$('#dIn')?.focus(),150)">${ico('spark',18)}<span>Hỏi superHuy</span><kbd>⌘K</kbd></button>
     <div class="snav">${SIDE.map(([id,l,i,f])=>`<button class="${S.tab===id||(id==='content'&&['news','studio'].includes(S.tab))?'on':''}" onclick="${f}">${ico(i,19)}<span>${l}</span>${badge[id]?`<em>${badge[id]>99?'99+':badge[id]}</em>`:''}</button>`).join('')}</div>
     <div class="sfoot"><button onclick="openQC()">${ico('check',16)} Tình trạng hệ thống</button><button onclick="lockNow(true)">${ico('lock',16)} Khoá</button></div>`;
@@ -1000,7 +1004,7 @@ function render(){
   nav();
   const app = $('#app');
   if(S.enter){ S.enter = false; app.classList.remove('enter'); void app.offsetWidth; app.classList.add('enter'); clearTimeout(S.enterT); S.enterT = setTimeout(()=>app.classList.remove('enter'), 900); }
-  $('#app').innerHTML = ({home:vHome, meet:vMeet, mail:vMail, chat:vChat, content:vContent, news:vContent, studio:vContent, more:vMore, tasks:vTasks, money:vMoney, growth:vGrowth, mkt:vMkt, lab:vLab, leads:vLeads, hq:vHq, board:vBoard, cfo:vCfo, me:vMe, wf:vWf, ex:vEx})[S.tab]();
+  $('#app').innerHTML = ({home:vHome, meet:vMeet, mail:vMail, chat:vChat, content:vContent, news:vContent, studio:vContent, more:vMore, tasks:vTasks, money:vMoney, growth:vGrowth, mkt:vMkt, lab:vLab, leads:vLeads, hq:vHq, board:vBoard, cfo:vCfo, me:vMe, wf:vWf, ex:vEx, users:vUsers})[S.tab]();
   paintBusy();
   if(S.tab==='home'){ loadCal(true); loadInv(true); liveDigests(); loadHomeStats(); }
   if(S.tab==='tasks') tasksEnter();
@@ -1012,6 +1016,7 @@ function render(){
   if(S.tab==='me' && !S.me) meLoad();
   if(S.tab==='wf' && !S.wf.lib) wfLoad();
   if(S.tab==='ex' && !S.ex) exLoad();
+  if(S.tab==='users' && !S.us) usLoad();
   if(S.tab==='board' && !S.bd) bdLoad();
   if(S.tab==='cfo'){ if(!S.cf) cfLoad(); else tipBind(); }
   if(S.tab==='mail'){ mailEnter(); bindSwipe(); }
@@ -2921,6 +2926,18 @@ async function ldSaveNote(email){ const it = S.ld.data.items.find(x=>x.email===e
 
 
 
+/* ---------- chuyển vai (như Facebook đổi giữa trang cá nhân và Page) */
+async function roleMenu(){
+  const cur = HQ ? 'owner' : 'member';
+  const items = [['member','superHuy','Trợ lý riêng, công việc hằng ngày','#6A3DF0',location.origin+'/app'],['owner','superYou HQ','Điều hành toàn bộ business','#B42346',location.origin+'/hq'],['seller','Console người bán','Sản phẩm và doanh thu của anh trên Marketplace','#0E7C6B',location.origin+'/market/console'],['account','Trung tâm tài khoản','Gói, sản phẩm đã mua, bảo mật','#7A5A00',location.origin+'/account']];
+  sheet(`<h2>Chuyển vai</h2><p class="meta">Một tài khoản, nhiều vai. Chọn vai để mở đúng bảng điều khiển.</p><div class="card list" style="margin-top:10px">${items.map(([k,l,d,c,u])=>`<button onclick="roleGo('${k}','${u}')"><span class="thumb" style="background:${c};color:#fff;font-weight:800">${l[0]}</span><div class="grow"><div style="font-weight:600">${l}${k===cur?' <span class="tag role">Đang dùng</span>':''}</div><div class="meta">${d}</div></div><span class="chev">${ico('chev',18)}</span></button>`).join('')}</div>`);
+}
+async function roleGo(k, url){
+  closeSheet();
+  if((k==='member' && !HQ) || (k==='owner' && HQ)) return;
+  try{ const r = await api('/api/account/owner', {}); lsSet('sy-acc', r.session); if(k==='owner' || k==='member'){ /* giữ phiên PIN qua sessionStorage để không phải nhập lại */ try{ sessionStorage.setItem('sh_tok', S.tok||''); }catch(e){} } }catch(e){}
+  if(IN_TG && tg?.openLink) tg.openLink(url); else location.href = url;
+}
 /* =================================================================== Hồ sơ, cài đặt, passkey, workflow riêng (Không gian của tôi) */
 const ACC = {violet:'#6A3DF0', jade:'#0B9877', blue:'#2457C5', rose:'#C21F78', amber:'#C98205', ink:'#15171A'};
 function applyPrefs(p){
@@ -3012,9 +3029,32 @@ async function wfCoach(){ const goal = $('#wfGoal').value.trim(); if(!goal) retu
 
 /* =================================================================== superYou HQ: Tổng quan, Phòng ban, Tài chính CFO */
 S.hqd = null; S.bd = null; S.cf = null;
-async function hqLoad(){ try{ const [a, g, b, l] = await Promise.all([run('market','quantri',{},'',true), run('market','gd',{},'',true), run('phongban','bang',{},'',true), run('khach','ds',{},'',true)]); S.hqd = {a, g, b, l}; }catch(e){ toast(e.message); S.hqd = {a:{kpi:{}}, g:{kpi:{}, orders:[]}, b:{counts:{}, items:[], depts:{}}, l:{total:0, by_status:{}}}; } if(S.tab==='hq') render(); }
+async function hqLoad(){ try{ const [a, g, b, l, u, c] = await Promise.all([run('market','quantri',{},'',true), run('market','gd',{},'',true), run('phongban','bang',{},'',true), run('khach','ds',{},'',true), run('nguoidung','ds',{},'',true), run('cfo','phan_tich',{},'',true)]); S.hqd = {a, g, b, l, u, c}; }catch(e){ toast(e.message); S.hqd = {a:{kpi:{}}, g:{kpi:{}, orders:[]}, b:{counts:{}, items:[], depts:{}}, l:{total:0, by_status:{}}, u:{total:0,by_plan:{},plans:{}}, c:{flags:[],cash:{},fixed_costs:0}}; } if(S.tab==='hq') render(); }
+S.us = null;
+async function usLoad(){ try{ const [u, p] = await Promise.all([run('nguoidung','ds',{q:S.usQ||'', role:S.usR||'', plan:S.usP||''},'',true), run('nguoidung','goi',{},'',true)]); S.us = {u, p}; }catch(e){ toast(e.message); S.us={u:{items:[],by_plan:{},by_role:{},roles:{},plans:{},audit:[]},p:{plans:{},order:[]}}; } if(S.tab==='users' && !$('#sheet').classList.contains('on')) render(); }
+function vUsers(){
+  const x = S.us, head = `<div class="date">Tài khoản, vai trò, gói và chính sách gói</div><h1>Người dùng & gói</h1>`;
+  if(!x) return head + `<div class="card empty">Đang tải…</div>`;
+  const u = x.u, P = x.p.plans, v = S.usView||'ds';
+  return head + `<div class="seg" style="margin-bottom:12px"><button class="${v==='ds'?'on':''}" onclick="S.usView='ds';render()">Người dùng ${u.total}</button><button class="${v==='goi'?'on':''}" onclick="S.usView='goi';render()">Chính sách gói</button><button class="${v==='nk'?'on':''}" onclick="S.usView='nk';render()">Nhật ký kiểm toán</button></div>
+    ${v==='ds'?`<div class="kpis mkkpis">${Object.entries(u.by_plan).map(([k,n])=>`<div class="card kpi"><b>${n}</b><span>${esc(u.plans[k]||k)}</span></div>`).join('')}${Object.entries(u.by_role).map(([k,n])=>`<div class="card kpi"><b>${n}</b><span>${esc(u.roles[k]||k)}</span></div>`).join('')}</div>
+      <form class="hask" style="margin:12px 0 8px" onsubmit="event.preventDefault();S.usQ=$('#usq').value;S.us=null;usLoad()"><input id="usq" value="${esc(S.usQ||'')}" placeholder="Tìm theo email, tên, công ty…"><button class="go" aria-label="Tìm">${ico('arrow',20)}</button></form>
+      <div class="chips"><button class="chip ${!S.usP?'on':''}" onclick="S.usP='';S.us=null;usLoad()">Mọi gói</button>${Object.entries(u.plans).map(([k,l])=>`<button class="chip ${S.usP===k?'on':''}" onclick="S.usP='${k}';S.us=null;usLoad()">${esc(l)}</button>`).join('')}</div>
+      <div class="card mklist">${u.items.map(a=>`<div class="mkrow"><span class="thumb" style="font-weight:800">${esc((a.name||'?')[0])}</span><div class="grow"><div class="ttl2">${esc(a.name)} ${a.owner?'<b class="mkoff">Chủ sàn</b>':''}${a.status==='suspended'?' <span class="tag hi">Khoá</span>':''}</div><div class="meta">${esc(a.email||'PIN / passkey')} · ${esc(u.plans[a.plan]||a.plan)}${a.trial_until?` đến ${esc(a.trial_until)}`:''} · ${(a.roles||[]).map(r=>u.roles[r]||r).join(', ')} · ${esc((a.created||'').slice(0,10))}${a.last_login?` · đăng nhập ${esc(ago(a.last_login))}`:''}</div></div><div class="row"><button class="btn sm" onclick="usEdit('${a.id}')">Sửa</button></div></div>`).join('')||'<div class="empty">Chưa có người dùng ngoài anh. Người đăng ký ở /login sẽ hiện ở đây.</div>'}</div>`:''}
+    ${v==='goi'?`<p class="meta" style="margin:0 4px 10px">Nguồn sự thật cho landing, trung tâm tài khoản và Marketplace. Giá và tính năng do phòng GTM đề xuất, anh chốt ở đây.</p><div class="plans-grid">${x.p.order.map(k=>{ const pl = P[k]; return `<div class="card pad" style="border-top:4px solid ${pl.color}"><div class="row" style="justify-content:space-between"><b style="font-size:17px">${esc(pl.name)}</b><button class="btn sm" onclick="usPlan('${k}')">Sửa</button></div><div class="meta">${esc(pl.tagline)}</div><div style="font-size:22px;font-weight:700;margin:6px 0">${pl.price?vnd(pl.price):(k==='enterprise'?'Theo hợp đồng':'0đ')} <span class="meta">${esc(pl.period||'')}</span></div><ul class="mkcontents">${pl.features.map(f=>`<li>${esc(f)}</li>`).join('')}</ul><div class="meta" style="margin-top:6px">Giới hạn: ${Object.entries(pl.limits).map(([a,b])=>`${a}=${b||'∞'}`).join(' · ')}</div></div>`; }).join('')}</div>`:''}
+    ${v==='nk'?`<div class="card mklist">${u.audit.map(l=>`<div class="mkrow"><div class="grow"><div>${esc(l.what)}${l.meta?` <span class="meta">· ${esc(l.meta)}</span>`:''}</div><div class="meta">${esc(l.who)} · ${esc(ago(l.at))}</div></div></div>`).join('')||'<div class="empty">Chưa có hoạt động.</div>'}</div>`:''}`;
+}
+function usEdit(id){ const a = S.us.u.items.find(x=>x.id===id); if(!a) return; const u = S.us.u;
+  sheet(`<h2>${esc(a.name)}</h2><p class="meta">${esc(a.email||'')}</p><label class="field" style="margin-top:12px"><span>Gói</span><select id="usPl">${Object.entries(u.plans).map(([k,l])=>`<option value="${k}" ${a.plan===k?'selected':''}>${esc(l)}</option>`).join('')}</select></label>
+    <label class="field"><span>Vai trò</span><div class="row">${['member','seller'].map(r=>`<label class="lbopt"><input type="checkbox" value="${r}" ${(a.roles||[]).includes(r)?'checked':''}><span>${esc(u.roles[r])}</span></label>`).join('')}</div></label>
+    ${a.owner?'':`<label class="field"><span>Trạng thái</span><select id="usSt"><option value="active" ${a.status==='active'?'selected':''}>Hoạt động</option><option value="suspended" ${a.status==='suspended'?'selected':''}>Tạm khoá</option></select></label>`}
+    <label class="field"><span>Ghi chú</span><input type="text" id="usN"></label>
+    <button class="btn pri full" onclick="closeSheet();run('nguoidung','sua',{uid:'${a.id}',plan:$('#usPl').value,status:$('#usSt')?$('#usSt').value:'',roles:[...document.querySelectorAll('#sheet input[type=checkbox]:checked')].map(i=>i.value).join(','),note:$('#usN').value},'',true).then(r=>{toast(r.text,3500);S.us=null;usLoad()}).catch(e=>toast(e.message))">Lưu</button>`); }
+function usPlan(k){ const pl = S.us.p.plans[k];
+  sheet(`<h2>Gói ${esc(pl.name)}</h2><label class="field" style="margin-top:12px"><span>Giá (đồng)</span><input type="number" id="plP" value="${pl.price}" min="0" step="1000"></label><label class="field"><span>Mô tả ngắn</span><input type="text" id="plT" value="${esc(pl.tagline)}"></label><label class="field"><span>Tính năng (mỗi dòng)</span><textarea id="plF" style="min-height:140px">${esc(pl.features.join('\n'))}</textarea></label><label class="field"><span>Giới hạn (JSON)</span><input type="text" id="plL" value="${esc(JSON.stringify(pl.limits))}"></label>
+    <button class="btn pri full" onclick="closeSheet();run('nguoidung','goi_sua',{plan:'${k}',price:$('#plP').value,tagline:$('#plT').value,features:$('#plF').value,limits:$('#plL').value},'',true).then(r=>{toast(r.text);S.us=null;usLoad()}).catch(e=>toast(e.message,4500))">Lưu chính sách</button>`); }
 function vHq(){
-  const d = S.hqd, head = `<div class="date">superYou HQ · ${esc(viDate(new Date()))}</div><h1>Tổng quan</h1>`;
+  const d = S.hqd, head = `<div class="date">superYou HQ · ${esc(viDate(new Date()))}</div><h1>Trung tâm điều hành</h1>`;
   if(!d) return head + `<div class="card empty">Đang tải…</div>`;
   const a = d.a.kpi||{}, g = d.g.kpi||{}, b = d.b, l = d.l;
   const wait = (b.items||[]).filter(x=>x.status==='cho_duyet'||x.status==='can_lam_ro');
@@ -3026,10 +3066,17 @@ function vHq(){
   if(g.owed>0) need.push([`Nợ người bán ${money(g.owed)}`, "S.mk.view='qt';S.mk.admTab='gd';go('mkt')"]);
   const cfg = d.g.config||{};
   if(!cfg.vietqr_ready) need.push(['Chưa có tài khoản nhận tiền (VietQR)', "S.mk.view='qt';S.mk.admTab='gd';go('mkt')"]);
-  return head + `<div class="kpis mkkpis"><div class="card kpi"><b>${money(g.gross||0)}</b><span>Tổng bán</span></div><div class="card kpi"><b>${money(g.month||0)}</b><span>Doanh thu tháng</span></div><div class="card kpi"><b>${a.published||0}</b><span>Sản phẩm đang bán</span></div><div class="card kpi"><b>${a.creators||0}</b><span>Người bán</span></div><div class="card kpi"><b>${l.total||0}</b><span>Khách đăng ký</span></div><div class="card kpi"><b>${(a.installs||0)+(a.interest||0)}</b><span>Lượt cài + quan tâm</span></div></div>
-    <div class="sec"><h2>Cần anh quyết</h2></div><div class="card list">${need.length?need.map(([t,f])=>`<button onclick="${f}"><span class="thumb">${ico('check',20)}</span><div class="grow"><div style="font-weight:600">${t}</div></div><span class="chev">${ico('chev',18)}</span></button>`).join(''):'<div class="empty">Không có gì chờ anh. Các phòng ban đang làm việc.</div>'}</div>
-    <div class="sec"><h2>Phòng ban</h2><button class="link" onclick="go('board')">Mở bảng</button></div><div class="hqdepts">${Object.entries(b.depts||{}).map(([k,v])=>`<button class="card pad hqdept" style="--c:${v.color}" onclick="S.bdDept='${k}';go('board')"><b>${esc(v.name)}</b><span class="meta">${esc(v.desc)}</span><span class="meta"><b>${v.waiting}</b> chờ duyệt · <b>${v.open}</b> đang làm</span></button>`).join('')}</div>
-    <div class="sec"><h2>Giao dịch gần đây</h2><button class="link" onclick="S.mk.view='qt';S.mk.admTab='gd';go('mkt')">Tất cả</button></div><div class="card mklist">${(d.g.orders||[]).slice(0,6).map(o=>`<div class="mkrow"><div class="grow"><div class="ttl2">${esc(o.code)} · ${esc(o.name)}</div><div class="meta">${esc(o.email)} · ${vnd(o.amount)} · ${esc(o.status_text)} · ${esc(ago(o.paid_at||o.created))}</div></div></div>`).join('')||'<div class="empty">Chưa có giao dịch.</div>'}</div>`;
+  const us = d.u||{}, cf = d.c||{};
+  const funnel = [['Khách đăng ký', l.total||0],['Tài khoản', us.total||0],['Dùng thử', (us.by_plan||{}).trial||0],['Trả phí', ((us.by_plan||{}).pro||0)+((us.by_plan||{}).business||0)],['Lượt mua', g.sales||0]];
+  const fmax = Math.max(1, ...funnel.map(f=>f[1]));
+  const mods = [['users','Người dùng & gói','users','#2457C5',`${us.total||0} tài khoản`],['board','Phòng ban','users','#5B3FD9',`${wait.length} chờ duyệt`],['mkt','Marketplace','bag','#0E7C6B',`${a.published||0} đang bán`],['lab','Xưởng clone','factory','#C2410C','Săn và clone'],['cfo','Tài chính CFO','chart','#B4236B',cf.cash?.amount?money(cf.cash.amount)+' tiền mặt':'Chưa ghi tiền mặt'],['leads','Khách hàng','inbox','#7A5A00',`${l.by_status?.moi||0} chưa liên hệ`],['ex','Thử nghiệm','sprout','#199e70','Phạm vi, A/B'],['gd','Giao dịch','wallet','#d95926',`${g.pending||0} chờ tiền`]];
+  return head + `<div class="kpis mkkpis"><div class="card kpi"><b>${money(g.gross||0)}</b><span>Tổng bán</span></div><div class="card kpi"><b>${money(g.month||0)}</b><span>Doanh thu tháng</span></div><div class="card kpi"><b>${us.total||0}</b><span>Tài khoản</span></div><div class="card kpi"><b>${((us.by_plan||{}).pro||0)+((us.by_plan||{}).business||0)}</b><span>Khách trả phí</span></div><div class="card kpi"><b>${a.published||0}</b><span>Sản phẩm đang bán</span></div><div class="card kpi"><b>${a.creators||0}</b><span>Người bán</span></div><div class="card kpi"><b>${l.total||0}</b><span>Khách đăng ký</span></div><div class="card kpi ${(cf.flags||[]).length?'warn':''}"><b>${(cf.flags||[]).length}</b><span>Cảnh báo tài chính</span></div></div>
+    <div class="hqmods">${mods.map(([t,l2,i,c,sub])=>`<button class="card pad hqmod" onclick="${t==='gd'?"S.mk.view='qt';S.mk.admTab='gd';go('mkt')":t==='mkt'?"S.mk.view='qt';go('mkt')":`go('${t}')`}"><i style="--c:${c}">${ico(i,20)}</i><b>${l2}</b><span class="meta">${sub}</span></button>`).join('')}</div>
+    <div class="hgrid" style="margin-top:4px"><div class="hcol hcol-l"><section class="hb"><div class="sec"><h2>Phễu kinh doanh</h2></div><div class="card pad chart">${funnel.map(([n,v])=>`<div class="fun"><span>${n}</span><i><em style="width:${Math.max(3,Math.round(v/fmax*100))}%"></em></i><b>${v}</b></div>`).join('')}</div></section>
+    <section class="hb"><div class="sec"><h2>Phòng ban</h2><button class="link" onclick="go('board')">Mở bảng</button></div><div class="hqdepts">${Object.entries(b.depts||{}).map(([k,v])=>`<button class="card pad hqdept" style="--c:${v.color}" onclick="S.bdDept='${k}';go('board')"><b>${esc(v.name)}</b><span class="meta"><b>${v.waiting}</b> chờ duyệt · <b>${v.open}</b> đang làm</span></button>`).join('')}</div></section></div>
+    <div class="hcol hcol-r"><section class="hb"><div class="sec"><h2>Cần anh quyết</h2></div><div class="card list">${need.length?need.map(([t,f])=>`<button onclick="${f}"><span class="thumb">${ico('check',20)}</span><div class="grow"><div style="font-weight:600">${t}</div></div><span class="chev">${ico('chev',18)}</span></button>`).join(''):'<div class="empty">Không có gì chờ anh. Các phòng ban đang làm việc.</div>'}</div></section>
+    ${(cf.flags||[]).length?`<section class="hb"><div class="sec"><h2>CFO cảnh báo</h2><button class="link" onclick="go('cfo')">Tài chính</button></div><div class="card pad" style="background:var(--amber-soft)"><ul style="margin:0;padding-left:18px">${cf.flags.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div></section>`:''}
+    <section class="hb"><div class="sec"><h2>Giao dịch gần đây</h2><button class="link" onclick="S.mk.view='qt';S.mk.admTab='gd';go('mkt')">Tất cả</button></div><div class="card mklist">${(d.g.orders||[]).slice(0,6).map(o=>`<div class="mkrow"><div class="grow"><div class="ttl2">${esc(o.code)} · ${esc(o.name)}</div><div class="meta">${esc(o.email)} · ${vnd(o.amount)} · ${esc(o.status_text)} · ${esc(ago(o.paid_at||o.created))}</div></div></div>`).join('')||'<div class="empty">Chưa có giao dịch.</div>'}</div></section></div></div>`;
 }
 async function bdLoad(){ try{ S.bd = await run('phongban','bang',{},'',true); }catch(e){ toast(e.message); S.bd={items:[],counts:{},depts:{},statuses:{},prios:{},log:[]}; } if(S.tab==='board' && !$('#sheet').classList.contains('on')) render(); }
 function vBoard(){
@@ -4008,6 +4055,7 @@ document.addEventListener('keydown', e => { if(!lockOn()) return; if(/^\d$/.test
 function deviceId(){ try{ let d = localStorage.getItem('sh_dev'); if(!d){ d = (crypto.randomUUID?.() || String(Math.random()).slice(2)) ; localStorage.setItem('sh_dev', d); } return d; }catch(e){ return ''; } }
 const authStart = () => IN_TG ? api('/api/auth', {initData: tg.initData}) : api('/api/app/hello', {});
 async function unlockFlow(){
+  try{ const t = sessionStorage.getItem('sh_tok'); if(t && !IN_TG){ S.tok = t; await api('/api/bootstrap'); sessionStorage.removeItem('sh_tok'); return; } }catch(e){ S.tok = null; }
   const a = await authStart();
   S.first = a.user?.first_name || S.first;
   if(a.need_pin) await showLock(a); else S.tok = a.session;

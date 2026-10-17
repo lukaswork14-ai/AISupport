@@ -64,6 +64,32 @@ def make_session(uid: int) -> str:
     return tok
 
 
+ACC_SESSIONS: dict[str, dict] = {}  # phiên tài khoản người dùng thường / người bán (uid chuỗi), 30 ngày, lưu cookie-less qua header X-Account
+ACC_TTL = 30 * 86400
+
+
+def make_acc_session(uid: str, role: str) -> str:
+    tok = secrets.token_urlsafe(32)
+    now = time.time()
+    for k in [k for k, v in ACC_SESSIONS.items() if v["exp"] < now]:
+        ACC_SESSIONS.pop(k, None)
+    ACC_SESSIONS[tok] = {"uid": uid, "role": role, "exp": now + ACC_TTL}
+    return tok
+
+
+def acc_user(tok: str):
+    v = ACC_SESSIONS.get(tok or "")
+    if not v or v["exp"] < time.time():
+        ACC_SESSIONS.pop(tok or "", None)
+        return None
+    from core import accounts
+    u = accounts.get(v["uid"])
+    if not u or u.get("status") == "suspended":
+        return None
+    u["role"] = v["role"] if v["role"] in u.get("roles", []) else u["roles"][0]
+    return u
+
+
 def check_session(tok: str) -> bool:
     v = SESSIONS.get(tok or "")
     now = time.time()
@@ -287,6 +313,8 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         u = urlparse(self.path)
         q = dict(parse_qsl(u.query))
+        if u.path in ("/login", "/login/", "/account", "/account/", "/dang-nhap", "/tai-khoan"):
+            return self._file(STATIC / "account/index.html", cache=False)
         if u.path in ("/", "/index.html", "/app", "/hq", "/hq/"):
             return self._file(STATIC / "index.html", cache=False)
         if u.path.startswith("/market/") and re.fullmatch(r"/market/[a-z0-9-]{1,80}", u.path):  # trang chi tiết sản phẩm công khai
@@ -391,6 +419,8 @@ class Handler(BaseHTTPRequestHandler):
             except Exception:
                 pass
             return self._json(200, {"ok": True})
+        if u.path.startswith("/api/account/"):  # tài khoản người dùng thường / người bán / chủ sàn (một cửa đăng nhập)
+            return self._account(u.path, data if isinstance(data, dict) else {})
         if u.path.startswith("/api/creator/"):  # console người tạo Marketplace (khoá truy cập riêng, không dùng phiên của chủ nhân)
             return self._creator(u.path, data if isinstance(data, dict) else {})
         if u.path in ("/api/pay/webhook", "/api/pay/webhook/payos"):  # đối soát tự động (Casso/SePay/PayOS)
@@ -600,6 +630,69 @@ class Handler(BaseHTTPRequestHandler):
         meeting_share.hit(rec["token"])
         return self._page(meeting_share.render(rec))
 
+    def _account(self, path: str, data: dict):
+        from core import accounts, plans, flags
+        from agents import pay
+        ip = self.headers.get("X-Real-IP") or self.client_address[0]
+        try:
+            if path == "/api/account/plans":
+                return self._json(200, plans.all_plans())
+            if path == "/api/account/signup":
+                if not _hello_ok("acc:" + ip):
+                    return self._json(429, {"error": "Thao tác quá nhanh, thử lại sau ít phút."})
+                r = accounts.signup(str(data.get("email", "")), str(data.get("password", "")), str(data.get("name", "")), str(data.get("role", "member")),
+                                    str(data.get("company", "")), str(data.get("plan", "free")))
+                tok = make_acc_session(r["user"]["id"], r["user"]["last_role"])
+                return self._json(200, {"session": tok, "user": r["user"]})
+            if path == "/api/account/login":
+                if not _hello_ok("acc:" + ip):
+                    return self._json(429, {"error": "Thao tác quá nhanh, thử lại sau ít phút."})
+                r = accounts.login(str(data.get("email", "")), str(data.get("password", "")), ip)
+                tok = make_acc_session(r["user"]["id"], r["user"].get("last_role") or r["user"]["roles"][0])
+                return self._json(200, {"session": tok, "user": r["user"]})
+            if path == "/api/account/owner":  # chủ sàn đã mở khoá bằng PIN/passkey -> phiên tài khoản để chuyển vai
+                if not check_session(self.headers.get("X-Session", "")):
+                    return self._json(401, {"error": "Cần mở khoá bằng PIN hoặc Face ID trước"})
+                o = accounts.owner_user()
+                return self._json(200, {"session": make_acc_session(o["id"], "owner"), "user": o})
+            au = acc_user(self.headers.get("X-Account", ""))
+            if not au:
+                return self._json(401, {"error": "Phiên hết hạn, hãy đăng nhập lại."})
+            if path == "/api/account/me":
+                ent = pay.entitlements(au["email"])["items"] if au.get("email") else []
+                return self._json(200, {"user": au, "entitlements": ent, "plan": plans.PLANS.get(au.get("plan"), plans.PLANS["free"]),
+                                        "plans": plans.all_plans(), "flags": flags.for_user(au["id"] if not au.get("owner") else OWNER_CHAT_ID),
+                                        "roles": accounts.ROLES, "has_owner_app": bool(au.get("owner"))})
+            if path == "/api/account/role":
+                role = str(data.get("role", ""))
+                if role not in au.get("roles", []):
+                    return self._json(403, {"error": "Tài khoản chưa có vai này"})
+                accounts.set_last_role(au["id"], role)
+                ACC_SESSIONS[self.headers.get("X-Account", "")]["role"] = role
+                return self._json(200, {"ok": True, "role": role})
+            if path == "/api/account/add_role":
+                return self._json(200, accounts.add_role(au["id"], str(data.get("role", ""))))
+            if path == "/api/account/profile":
+                return self._json(200, accounts.update_profile(au["id"], str(data.get("name", "")), str(data.get("company", "")), str(data.get("title", ""))))
+            if path == "/api/account/password":
+                return self._json(200, accounts.set_password(au["id"], str(data.get("old", "")), str(data.get("new", ""))))
+            if path == "/api/account/logout":
+                ACC_SESSIONS.pop(self.headers.get("X-Account", ""), None)
+                return self._json(200, {"ok": True})
+            if path == "/api/account/trial":
+                if au.get("plan") != "free":
+                    return self._json(400, {"error": "Chỉ gói Miễn phí mới bật dùng thử"})
+                r = accounts.admin_set(au["id"], plan="trial", note="tự bật dùng thử")
+                return self._json(200, {"text": f"Đã bật dùng thử Pro {plans.TRIAL_DAYS} ngày.", "user": r["user"]})
+            return self._json(404, {"error": "not found"})
+        except PermissionError as e:
+            return self._json(401, {"error": str(e)})
+        except ValueError as e:
+            return self._json(400, {"error": str(e)[:300]})
+        except Exception:
+            log.exception("Tài khoản lỗi")
+            return self._json(500, {"error": "Có lỗi, thử lại sau ít phút."})
+
     def _creator(self, path: str, data: dict):
         from agents import market
         ip = self.headers.get("X-Real-IP") or self.client_address[0]
@@ -608,7 +701,13 @@ class Handler(BaseHTTPRequestHandler):
         try:
             if path == "/api/creator/signup":
                 return self._json(200, market.creator_signup(str(data.get("name", "")), str(data.get("email", "")), str(data.get("bio", ""))))
-            c = market.creator_auth(self.headers.get("X-Creator-Key", ""))
+            c = None
+            au = acc_user(self.headers.get("X-Account", ""))
+            if au and "seller" in au.get("roles", []):
+                from core import accounts
+                c = accounts.seller_creator(au["id"])
+            if not c:
+                c = market.creator_auth(self.headers.get("X-Creator-Key", ""))
             if path == "/api/creator/console":
                 return self._json(200, market.creator_console(c))
             if path == "/api/creator/get":
