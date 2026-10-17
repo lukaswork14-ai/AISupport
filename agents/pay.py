@@ -195,11 +195,44 @@ def block_buyer(email: str, on: bool = True, note: str = "") -> dict:
     return {"text": f"Đã {'khoá' if on else 'mở khoá'} {email}."}
 
 
+MST_RE = re.compile(r"^\d{10}(-\d{3})?$")
+
+
+def clean_vat(v) -> dict | None:
+    """Thông tin xuất hoá đơn VAT khách nhập khi mua (chỉ lưu vào đơn; superYou CHƯA phát hành hoá đơn điện tử).
+    None nếu khách không cần. MST 10 số hoặc 10 số + '-' + 3 số (chi nhánh)."""
+    if not isinstance(v, dict) or not any(str(v.get(k) or "").strip() for k in ("company", "tax_code", "address")):
+        return None
+    out = {"company": str(v.get("company") or "").strip()[:160], "tax_code": re.sub(r"\s", "", str(v.get("tax_code") or ""))[:14],
+           "address": str(v.get("address") or "").strip()[:250], "email": str(v.get("email") or "").strip().lower()[:254]}
+    if len(out["company"]) < 3:
+        raise ValueError("Cần tên công ty để xuất hoá đơn VAT.")
+    if not MST_RE.match(out["tax_code"]):
+        raise ValueError("Mã số thuế gồm 10 số (hoặc 10 số kèm -xxx cho chi nhánh).")
+    if len(out["address"]) < 8:
+        raise ValueError("Cần địa chỉ công ty để xuất hoá đơn VAT.")
+    if out["email"]:
+        from agents import leads
+        if not leads.EMAIL_RE.match(out["email"]):
+            raise ValueError("Email nhận hoá đơn chưa đúng.")
+    out["status"] = "cho_xuat"
+    return out
+
+
+def _remember_vat(uid: str, vat: dict | None):
+    if uid and vat:
+        try:
+            from core import accounts
+            accounts.set_vat(uid, vat)
+        except Exception:
+            pass
+
+
 def _code() -> str:
     return "SY" + "".join(secrets.choice("ABCDEFGHJKLMNPQRSTUVWXYZ23456789") for _ in range(6))
 
 
-def create_order(lid: str, email: str, channel: str = "public", uid: str = "") -> dict:
+def create_order(lid: str, email: str, channel: str = "public", uid: str = "", vat: dict | None = None) -> dict:
     from agents import leads, market
     email = (email or "").strip().lower()[:254]
     if not leads.EMAIL_RE.match(email):
@@ -208,6 +241,7 @@ def create_order(lid: str, email: str, channel: str = "public", uid: str = "") -
     if not x or x["status"] != "published":
         raise ValueError("Sản phẩm chưa lên kệ")
     price = int(x.get("price") or 0)
+    vat = clean_vat(vat) if price > 0 else None
     if price > 0 and not payments_open():
         raise ValueError(PAYMENTS_CLOSED_TEXT)
     with _LOCK:
@@ -226,6 +260,9 @@ def create_order(lid: str, email: str, channel: str = "public", uid: str = "") -
         # dùng lại đơn đang chờ
         for o in d["orders"].values():
             if o["email"] == email and o["lid"] == lid and o["status"] == "pending" and o["expires"] > _iso():
+                if vat:
+                    o["vat"] = vat
+                    _save(d)
                 return {"owned": False, "order": _public_order(o)}
         if price == 0:
             o = {"id": secrets.token_hex(6), "code": _code(), "lid": lid, "name": x["name"], "type": x["type"], "email": email, "amount": 0, "uid": uid,
@@ -238,8 +275,11 @@ def create_order(lid: str, email: str, channel: str = "public", uid: str = "") -
             o = {"id": secrets.token_hex(6), "code": _code(), "lid": lid, "name": x["name"], "type": x["type"], "email": email, "amount": price, "uid": uid,
                  "billing": x.get("billing", "once"), "seller": _seller(x), "status": "pending", "channel": channel, "created": _iso(),
                  "expires": _iso(_now() + dt.timedelta(hours=ORDER_TTL_H)), "method": "vietqr"}
+            if vat:
+                o["vat"] = vat
             d["orders"][o["id"]] = o
             _save(d)
+            _remember_vat(uid, vat)
     if o["status"] == "paid":
         deliver(o["id"])
         return {"owned": True, "text": "Sản phẩm miễn phí, link tải ở dưới" + (" và đã gửi qua email." if _mail_ready() else "."), "order": _public_order(_load()["orders"][o["id"]])}
@@ -544,7 +584,7 @@ def _package(x: dict) -> tuple[str, bytes]:
     return f"{slug}-workflow.json", json.dumps({"name": x["name"], "version": x.get("version"), "steps": c.get("steps") or []}, ensure_ascii=False, indent=1).encode("utf-8")
 
 
-def create_plan_order(email: str, plan: str, uid: str = "") -> dict:
+def create_plan_order(email: str, plan: str, uid: str = "", vat: dict | None = None) -> dict:
     """Đơn nâng cấp gói (pro / business): thanh toán VietQR như sản phẩm; khi tiền về, tài khoản được chuyển gói ngay."""
     from agents import leads
     from core import plans
@@ -556,16 +596,23 @@ def create_plan_order(email: str, plan: str, uid: str = "") -> dict:
     P = plans.all_plans()["plans"]
     if plan not in ("pro", "business") or not int(P[plan].get("price") or 0):
         raise ValueError("Gói này liên hệ superYou để kích hoạt.")
+    vat = clean_vat(vat)
     with _LOCK:
         d = _load()
         for o in d["orders"].values():
             if o["email"] == email and o.get("kind") == "plan" and o.get("plan") == plan and o["status"] == "pending" and o["expires"] > _iso():
+                if vat:
+                    o["vat"] = vat
+                    _save(d)
                 return {"owned": False, "order": _public_order(o)}
         o = {"id": secrets.token_hex(6), "code": _code(), "lid": "plan:" + plan, "kind": "plan", "plan": plan, "uid": uid, "name": f"Gói {P[plan]['name']} · 1 tháng",
              "type": "plan", "email": email, "amount": int(P[plan]["price"]), "billing": "monthly", "seller": {"id": "", "name": "superYou", "official": True},
              "status": "pending", "channel": "account", "created": _iso(), "expires": _iso(_now() + dt.timedelta(hours=ORDER_TTL_H)), "method": "vietqr"}
+        if vat:
+            o["vat"] = vat
         d["orders"][o["id"]] = o
         _save(d)
+    _remember_vat(uid, vat)
     return {"owned": False, "order": _public_order(o)}
 
 
@@ -746,6 +793,10 @@ def receipt_html(oid: str, sig: str) -> str:
     rows = [("Mã đơn", o["code"]), ("Sản phẩm", o["name"]), ("Email", o["email"]), ("Số tiền", vnd(o["amount"])),
             ("Thanh toán", (o.get("paid_at") or "")[:16].replace("T", " ") + " · " + {"vietqr": "VietQR", "bank_webhook": "Chuyển khoản", "manual": "Chuyển khoản", "payos": "PayOS"}.get(o.get("method", ""), o.get("method", ""))),
             ("Trạng thái", STATUS.get(o["status"], o["status"]))]
+    if o.get("vat"):
+        v = o["vat"]
+        rows += [("Đơn vị mua", v["company"]), ("Mã số thuế", v["tax_code"]), ("Địa chỉ", v["address"]),
+                 ("Hoá đơn VAT", "Đã ghi nhận yêu cầu, hoá đơn điện tử gửi riêng" if v.get("status") != "da_xuat" else "Đã xuất " + v.get("number", ""))]
     dl = "".join(f'<p><a href="{H.escape(x["url"])}">Tải {H.escape(x["name"])}</a> (hết hạn {x["expires"][:10]})</p>' for x in o.get("downloads") or [])
     return (f"<h1 style='font-size:22px'>Hoá đơn superYou Marketplace</h1><table style='border-collapse:collapse'>"
             + "".join(f"<tr><td style='padding:6px 14px 6px 0;color:#666'>{H.escape(k)}</td><td style='padding:6px 0'><b>{H.escape(str(v))}</b></td></tr>" for k, v in rows)
@@ -874,10 +925,23 @@ def admin_overview() -> dict:
     cfg = config()
     return {"kpi": {"gross": gross, "fee": fee, "net_sellers": gross - fee, "month": sum(e["amount"] for e in d["ledger"] if e["at"][:7] == month),
                     "orders": len(orders), "pending": sum(1 for o in orders if o["status"] == "pending"), "sales": len(sales), "refunds": len(refunds),
-                    "owed": sum(v["balance"] for v in owed.values())},
-            "orders": [{k: o.get(k) for k in ("id", "code", "name", "email", "amount", "status", "created", "paid_at", "method", "seller", "fee", "seller_amount")}
+                    "owed": sum(v["balance"] for v in owed.values()),
+                    "vat_pending": sum(1 for o in orders if (o.get("vat") or {}).get("status") == "cho_xuat" and o["status"] in ("paid", "delivered"))},
+            "orders": [{k: o.get(k) for k in ("id", "code", "name", "email", "amount", "status", "created", "paid_at", "method", "seller", "fee", "seller_amount", "vat")}
                        | {"status_text": STATUS.get(o["status"], o["status"])} for o in orders[:200]],
             "owed": sorted(owed.values(), key=lambda v: -v["balance"]), "payouts": d["payouts"][-30:][::-1], "config": cfg, "statuses": STATUS}
+
+
+def vat_mark(oid: str, number: str = "", note: str = "") -> dict:
+    """Chủ sàn ghi đã xuất hoá đơn VAT (xuất ngoài superYou, ví dụ phần mềm hoá đơn điện tử của Roimaxx)."""
+    with _LOCK:
+        d = _load()
+        o = d["orders"].get(oid)
+        if not o or not o.get("vat"):
+            raise ValueError("Đơn này không yêu cầu hoá đơn VAT")
+        o["vat"].update({"status": "da_xuat", "number": (number or "").strip()[:40], "issued_at": _iso(), "note": (note or "")[:200]})
+        _save(d)
+    return {"text": f"Đã ghi xuất hoá đơn VAT cho đơn {o['code']}" + (f" (số {o['vat']['number']})" if o["vat"]["number"] else "") + "."}
 
 
 def payout_mark(sid: str, amount: int, ref: str = "") -> dict:
@@ -958,7 +1022,7 @@ def account_orders(uid: str, email: str) -> dict:
         c = o.get("complaint") or {}
         items.append({"id": o["id"], "code": o["code"], "name": o["name"], "type": o.get("type", ""), "kind": o.get("kind", "product"),
                       "amount": o["amount"], "amount_text": vnd(o["amount"]), "status": o["status"], "status_text": STATUS.get(o["status"], o["status"]),
-                      "paid_at": paid, "downloads": dls, "receipt": o.get("receipt", ""), "plan_until": o.get("plan_until", ""),
+                      "paid_at": paid, "downloads": dls, "vat": o.get("vat"), "receipt": o.get("receipt", ""), "plan_until": o.get("plan_until", ""),
                       "can_download": o["status"] == "delivered" and o.get("kind") != "plan",
                       "refund_until": refund_until if o["amount"] and o["status"] == "delivered" else "",
                       "refundable": bool(o["amount"]) and o["status"] == "delivered" and now <= refund_until,

@@ -30,6 +30,10 @@ Anh Huy duyệt ngày 17/10/2026.
 - Console người bán › Doanh thu: số dư, tháng này, lượt bán, 6 tháng gần nhất, doanh thu theo sản phẩm, lịch sử, tài khoản nhận tiền; kỳ trả tới kèm số tiền dự kiến (số dư từ 200.000đ), phần còn trong hạn hoàn tiền 7 ngày (chỉ để người bán biết, không giữ lại tiền).
 - Người bán tạo được Phòng ban AI (pack): skill bắt buộc + workflow (cùng luật an toàn) + ghi chú tri thức + vai; xem trước trang chi tiết theo đúng loại trước khi gửi duyệt.
 
+## Thông tin xuất hoá đơn VAT
+- Khi mua sản phẩm có phí (trang /market) hoặc nâng cấp/gia hạn gói (Tài khoản), khách mở mục "Cần xuất hoá đơn VAT cho công ty" và nhập tên công ty, mã số thuế (10 số hoặc 10 số kèm -xxx), địa chỉ, email nhận hoá đơn nếu khác. Thông tin lưu vào đơn (`vat`) và hiện trên hoá đơn `/pay/receipt`. Tài khoản ghi nhớ để điền sẵn lần sau.
+- superYou **chưa phát hành hoá đơn điện tử**. Anh xuất ở phần mềm hoá đơn của Roimaxx, rồi bấm Quản trị › Giao dịch › **Đã xuất HĐ** và ghi số hoá đơn. Khách thấy trạng thái trong Tài khoản › Sản phẩm đã mua.
+
 ## Khiếu nại và hoàn tiền
 - Khách khiếu nại từ Tài khoản › Sản phẩm đã mua (lý do có sẵn) hoặc trang công khai (email + mã đơn). Người bán bị 3 khiếu nại/30 ngày tự bị khoá.
 - Anh xử lý ở HQ › Marketplace › Quản trị › **Khiếu nại**: chấp nhận (ghi hoàn tiền, sổ cái ghi dòng âm, gỡ quyền sở hữu; đơn gói thì tài khoản về Miễn phí) hoặc từ chối (bắt buộc ghi lý do, khách nhận được). Mở/khoá người bán, khoá/mở email mua ngay trên thẻ khiếu nại.

@@ -492,7 +492,8 @@ class Handler(BaseHTTPRequestHandler):
                 from agents import pay
                 if u.path == "/api/pay/order":
                     au = acc_user(self.headers.get("X-Account", ""))  # đang đăng nhập Tài khoản -> đơn gắn với tài khoản
-                    return self._json(200, pay.create_order(str(data.get("lid", ""))[:20], str(data.get("email", "")), "public", uid=au["id"] if au else ""))
+                    return self._json(200, pay.create_order(str(data.get("lid", ""))[:20], str(data.get("email", "")), "public", uid=au["id"] if au else "",
+                                                                    vat=data.get("vat") if isinstance(data.get("vat"), dict) else None))
                 if u.path == "/api/pay/resend":
                     return self._json(200, pay.resend(str(data.get("email", ""))))
                 if u.path == "/api/pay/complain":
@@ -753,7 +754,8 @@ class Handler(BaseHTTPRequestHandler):
                 from agents import pay
                 if data.get("method") == "intl":  # thẻ quốc tế qua Lemon Squeezy (chỉ khi SUPERYOU_INTL=1 và đủ cấu hình)
                     return self._json(200, pay.intl_checkout(au["id"], au["email"], str(data.get("plan", ""))[:20]))
-                return self._json(200, pay.create_plan_order(au["email"], str(data.get("plan", ""))[:20], au["id"]))
+                return self._json(200, pay.create_plan_order(au["email"], str(data.get("plan", ""))[:20], au["id"],
+                                                             vat=data.get("vat") if isinstance(data.get("vat"), dict) else None))
             if path in ("/api/account/orders", "/api/account/redownload", "/api/account/resend", "/api/account/complain"):  # Tài khoản › Sản phẩm đã mua
                 from agents import pay
                 em, oid = au.get("email") or "", str(data.get("oid", ""))[:20]

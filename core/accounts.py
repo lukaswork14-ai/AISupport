@@ -116,7 +116,7 @@ def audit(d: dict, who: str, what: str, meta: str = ""):
 
 
 def _pub(u: dict) -> dict:
-    out = {k: u.get(k) for k in ("id", "email", "name", "roles", "plan", "status", "created", "last_login", "last_role", "company", "title", "trial_until", "plan_until")}
+    out = {k: u.get(k) for k in ("id", "email", "name", "roles", "plan", "status", "created", "last_login", "last_role", "company", "title", "trial_until", "plan_until", "vat")}
     out["plan"] = effective_plan(u)
     if out["plan"] != u.get("plan"):  # vừa hết hạn, chưa được quét: hiện như Free ngay, dữ liệu giữ nguyên
         out["plan_expired"] = {"plan": u.get("plan"), "until": u.get("plan_until") or u.get("trial_until") or ""}
@@ -358,6 +358,16 @@ def update_profile(uid: str, name: str = "", company: str = "", title: str = "")
             u["title"] = title.strip()[:60]
         _save(d)
     return {"text": "Đã lưu.", "user": _pub(u)}
+
+
+def set_vat(uid: str, vat: dict):
+    """Ghi nhớ thông tin xuất hoá đơn VAT lần gần nhất để điền sẵn ở lần mua sau."""
+    with _LOCK:
+        d = _load()
+        u = d["users"].get(uid)
+        if u:
+            u["vat"] = {k: vat.get(k, "") for k in ("company", "tax_code", "address", "email")}
+            _save(d)
 
 
 def set_last_role(uid: str, role: str):

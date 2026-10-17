@@ -121,7 +121,7 @@ label.f small{ font-weight:500; color:var(--muted) }
 .drop{ border:2px dashed var(--ink); border-radius:16px; padding:16px; text-align:center; color:var(--muted); background:var(--soft) }
 .drop.on{ background:#FFF4CC }
 @media (max-width:860px){ .hero{ grid-template-columns:1fr } .stack{ display:none } .hero h1{ font-size:40px } .sell{ grid-template-columns:1fr } .wiz{ grid-template-columns:1fr } .nav-l a.hide{ display:none } h2{ font-size:28px } }
-.pvs{ margin-top:12px } .rev-tiles .tile b{ font-size:clamp(18px,5.6vw,28px); overflow-wrap:anywhere } .pvspec{ padding:14px } .pvspec .spec{ grid-template-columns:1fr }
+.pvs{ margin-top:12px } .vatf{ margin-top:10px } .vatf summary{ cursor:pointer; font-weight:600; font-size:14px } .vatg{ display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px } @media (max-width:600px){ .vatg{ grid-template-columns:1fr } } .rev-tiles .tile b{ font-size:clamp(18px,5.6vw,28px); overflow-wrap:anywhere } .pvspec{ padding:14px } .pvspec .spec{ grid-template-columns:1fr }
 .revm{ display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:6px; align-items:end; margin-bottom:6px }
 .revm div{ display:flex; flex-direction:column; align-items:center; gap:3px; min-width:0 } .revm span{ width:70%; max-width:36px; background:var(--violet); border-radius:6px 6px 2px 2px }
 .revm b{ font-size:11px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100% } .revm i{ font-style:normal; font-size:11px; color:var(--muted) }
@@ -208,6 +208,9 @@ function payBox(r, x){
 }
 function dlList(o){ if(!o || !(o.downloads||[]).length) return '<p class="by">Link tải sẽ gửi qua email.</p>';
   return '<div class="box" style="margin-top:10px"><b>Tải sản phẩm</b>'+o.downloads.map(function(d){ return '<p><a href="'+esc(d.url)+'">'+esc(d.name)+'</a> <span class="by">· dùng đến '+esc((d.expires||'').slice(0,10))+'</span></p>'; }).join('')+(o.receipt ? '<p><a href="'+esc(o.receipt)+'" target="_blank" rel="noopener">Xem hoá đơn</a></p>' : '')+'</div>'; }
+function vatForm(p, v){ v = v || {}; return '<details class="vatf" id="'+p+'vat"'+(v.company ? ' open' : '')+'><summary>Cần xuất hoá đơn VAT cho công ty</summary><div class="vatg"><label class="f">Tên công ty<input id="'+p+'vc" maxlength="160" value="'+esc(v.company||'')+'" autocomplete="organization"></label><label class="f">Mã số thuế<input id="'+p+'vt" maxlength="14" inputmode="numeric" placeholder="0101234567" value="'+esc(v.tax_code||'')+'"></label><label class="f" style="grid-column:1/-1">Địa chỉ<input id="'+p+'va" maxlength="250" value="'+esc(v.address||'')+'" autocomplete="street-address"></label><label class="f" style="grid-column:1/-1">Email nhận hoá đơn (nếu khác)<input id="'+p+'ve" type="email" maxlength="254" value="'+esc(v.email||'')+'"></label></div><p class="by" style="margin:4px 0 0;font-size:12px">superYou ghi nhận thông tin và gửi hoá đơn điện tử riêng.</p></details>'; }
+function vatRead(p){ var d = $('#'+p+'vat'); if(!d || !d.open) return null; var v = {company:$('#'+p+'vc').value.trim(), tax_code:$('#'+p+'vt').value.trim(), address:$('#'+p+'va').value.trim(), email:$('#'+p+'ve').value.trim()};
+  if(!v.company && !v.tax_code && !v.address) return null; if(!v.company || !v.tax_code || !v.address) return false; return v; }
 function myOrders(){
   if(lsGet('sy-acc')){ location.href = '/account#buys'; return; }
   var em = lsGet('sy-email') || '';
@@ -240,7 +243,7 @@ function detail(x, fromPath){
   b.innerHTML = '<button class="x" id="dx" aria-label="Đóng">×</button><div class="top">'+icon(x,80)+'<div><span class="typ">'+esc(x.type_label)+(x.featured ? ' · Nổi bật' : '')+'</span><h2 style="margin:6px 0 0;font-size:28px">'+esc(x.name)+'</h2><div class="by">'+esc(x.creator && x.creator.name)+(x.creator && x.creator.official ? '<span class="off">Chính chủ</span>' : '')+' · '+esc(x.cat_label)+'</div><div class="tg" style="-webkit-line-clamp:unset">'+esc(x.tagline||'')+'</div></div></div>'
     + '<div class="facts"><div><b>'+(x.rating ? String(x.rating).replace('.',',') : '–')+'</b><span>'+x.rating_n+' đánh giá</span></div><div><b>'+(x.installs+x.interest)+'</b><span>Người dùng</span></div><div><b>'+(x.type==='brain' ? sp.note_count+' ghi chú' : x.type==='workflow' ? sp.step_count+' bước' : x.type==='pack' ? '3 phần' : (sp.rule_count||'')+' quy tắc')+'</b><span>Nội dung</span></div><div><b>'+esc(x.version)+'</b><span>Phiên bản</span></div><div><b>'+vnd(x.price)+'</b><span>'+(sp.billing==='monthly' ? 'Mỗi tháng' : 'Một lần')+'</span></div></div>'
     + '<div id="getbox" class="getbox"><b>'+esc(sp.buy_label || (x.price>0 ? 'Mua '+vnd(x.price) : 'Nhận miễn phí'))+'</b><p class="by" style="margin:4px 0 0">'+(x.price>0 ? 'Thanh toán bằng chuyển khoản VietQR. Nhập email để nhận link tải và hoá đơn.' : 'Nhập email để nhận link tải.')+'</p>'
-    + '<form class="form" id="gf"><label for="ge" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Email</label><input id="ge" type="email" required placeholder="email@congty.com" autocomplete="email"><button class="btn y">'+(x.price>0 ? 'Mua ngay' : 'Nhận')+'</button></form><p class="msg" id="gm" role="status"></p><p class="by" style="margin:6px 0 0;font-size:12px">Mua là đồng ý <a href="/dieu-khoan" target="_blank">Điều khoản</a> và <a href="/hoan-tien" target="_blank">Chính sách hoàn tiền</a> (hoàn 100% trong 7 ngày nếu lỗi).</p></div>'
+    + '<form class="form" id="gf"><label for="ge" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Email</label><input id="ge" type="email" required placeholder="email@congty.com" autocomplete="email"><button class="btn y">'+(x.price>0 ? 'Mua ngay' : 'Nhận')+'</button></form>'+(x.price>0 ? vatForm('g') : '')+'<p class="msg" id="gm" role="status"></p><p class="by" style="margin:6px 0 0;font-size:12px">Mua là đồng ý <a href="/dieu-khoan" target="_blank">Điều khoản</a> và <a href="/hoan-tien" target="_blank">Chính sách hoàn tiền</a> (hoàn 100% trong 7 ngày nếu lỗi).</p></div>'
     + specHtml(x)
     + (x.whats_new ? '<h3>Có gì mới · phiên bản '+esc(x.version)+'</h3><p>'+esc(x.whats_new)+'</p>' : '')
     + '<h3>Mô tả</h3><p style="white-space:pre-line">'+esc(x.description||'')+'</p>'
@@ -249,7 +252,8 @@ function detail(x, fromPath){
   var d = $('#dlg'); if(!d.open) d.showModal();
   $('#dx').onclick = function(){ d.close(); };
   $('#gf').addEventListener('submit', function(e){ e.preventDefault(); var m = $('#gm'), btn = e.target.querySelector('button'); btn.disabled = true; m.className = 'msg'; m.textContent = 'Đang tạo đơn…';
-    api('/api/pay/order', {lid:x.id, email:$('#ge').value}).then(function(r){ lsSet('sy-email', $('#ge').value); payBox(r, x); })
+    var vat = vatRead('g'); if(vat === false){ m.className = 'msg err'; m.textContent = 'Điền đủ tên công ty, mã số thuế và địa chỉ để xuất hoá đơn VAT.'; btn.disabled = false; return; }
+    api('/api/pay/order', {lid:x.id, email:$('#ge').value, vat:vat}).then(function(r){ lsSet('sy-email', $('#ge').value); payBox(r, x); })
       .catch(function(err){ m.className = 'msg err'; m.textContent = err.message; btn.disabled = false; }); });
   var em = lsGet('sy-email'); if(em) $('#ge').value = em;
 }
