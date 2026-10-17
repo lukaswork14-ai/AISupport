@@ -16,6 +16,14 @@ Anh Huy duyệt ngày 17/10/2026.
 3. Giao hàng: đóng gói SKILL.md / zip ghi chú / workflow.json, link tải ký 7 ngày, hoá đơn `/pay/receipt`, email cho khách (cần Gmail hoặc Lark Mail đã kết nối), ghi quyền sở hữu theo email, báo anh qua Telegram.
 4. Khách xem lại ở **Đơn của tôi** trên trang công khai (nhập email), bấm **Gửi lại link** nếu hết hạn.
 
+## Gói trả phí: hạn dùng và gia hạn
+- Đơn gói Pro/Doanh nghiệp đã trả ghi `plan_until` (31 ngày) vào đơn và tài khoản. Gia hạn sớm cùng gói thì cộng nối tiếp từ ngày hết hạn cũ; đổi gói hoặc đã quá hạn thì tính từ hôm nay (chưa tính tiền chênh lệch).
+- Quá `plan_until` (hết ngày đó) tài khoản tự về Miễn phí, giữ nguyên dữ liệu, sản phẩm đã mua, workflow; ghi nhật ký kiểm toán và báo anh qua Telegram. Dùng thử hết hạn cũng về Miễn phí; mỗi tài khoản dùng thử một lần.
+- Gói anh đặt tay trong HQ › Người dùng không có hạn (không tự hết hạn).
+- Nhắc gia hạn qua email khi còn ≤ 3 ngày, một lần mỗi kỳ hạn, chỉ khi Gmail/Lark Mail đã kết nối (chưa có thì không gửi, lần quét sau gửi khi đã cấu hình).
+- Quét: `pay.plan_sweep()` chạy hằng ngày (job trong `main.py`, Product Lead nối) và tự chạy tối đa 1 lần/giờ khi có người mở Tài khoản.
+- Tài khoản hiện ngày hết hạn, cảnh báo khi còn ≤ 3 ngày và nút Gia hạn (khi thanh toán mở).
+
 ## Sổ cái và trả người bán
 - Mỗi đơn đã trả ghi một dòng: tổng, phí sàn, phần người bán. Hoàn tiền ghi dòng âm.
 - Quản trị › Giao dịch: tổng bán, về sàn, tháng này, đơn chờ, nợ người bán, hoàn tiền, ghi đã trả (kèm mã giao dịch ngân hàng).
