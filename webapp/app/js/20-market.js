@@ -94,7 +94,7 @@ async function mkRun(id){
 async function qtLoad(){ try{ S.mk.adm = await run('market','quantri',{},'',true); }catch(e){ toast(e.message); } if(S.tab==='mkt' && S.mk.view==='qt' && !$('#sheet').classList.contains('on')) render(); }
 function vQt(){
   const a = S.mk.adm; if(!a){ qtLoad(); return `<div class="card empty">Đang tải bảng quản trị…</div>`; }
-  const k = a.kpi, t = S.mk.admTab; if(t==='gd' && !S.mk.gd) gdLoad();
+  const k = a.kpi, t = S.mk.admTab; if(t==='gd' && !S.mk.gd) gdLoad(); if(!S.mk.kn) knLoad();
   const kp = [['Đang bán',k.published],['Chờ duyệt',k.review,k.review?'warn':''],['Người tạo',k.creators],['Lượt cài',k.installs],['Khách quan tâm',k.interest],['Giá trị quan tâm',money(k.pipeline)],['Đánh giá TB',k.rating?String(k.rating).replace('.',','):'–'],['Tổng sản phẩm',k.listings]];
   const queue = a.listings.filter(x=>x.status==='review');
   const ST = {published:'Đang bán', review:'Chờ duyệt', draft:'Nháp', rejected:'Từ chối', archived:'Đã gỡ'};
@@ -115,14 +115,16 @@ function vQt(){
       : `<div class="card empty">Chưa có người tạo nào. Người ngoài đăng ký bán ở trang công khai › Bán trên superYou.</div>`;
   if(t==='nk') body = `<div class="card mklist">${a.log.map(l=>`<div class="mkrow"><div class="grow"><div>${esc(l.what)}</div><div class="meta">${esc(l.who)} · ${esc(ago(l.at))}</div></div></div>`).join('') || '<div class="empty">Chưa có hoạt động.</div>'}</div>`;
   return `<div class="kpis mkkpis">${kp.map(([l,v,c])=>`<div class="card kpi ${c||''}"><b>${v}</b><span>${l}</span></div>`).join('')}</div>
-    <div class="seg" style="margin:16px 0 12px;flex-wrap:wrap"><button class="${t==='cho'?'on':''}" onclick="S.mk.admTab='cho';render()">Chờ duyệt ${queue.length||''}</button><button class="${t==='gd'?'on':''}" onclick="S.mk.admTab='gd';render()">Giao dịch${S.mk.gd?.kpi?.pending?` <em class="mkbadge">${S.mk.gd.kpi.pending}</em>`:''}</button><button class="${t==='sp'?'on':''}" onclick="S.mk.admTab='sp';render()">Sản phẩm</button><button class="${t==='nt'?'on':''}" onclick="S.mk.admTab='nt';render()">Người tạo</button><button class="${t==='nk'?'on':''}" onclick="S.mk.admTab='nk';render()">Nhật ký</button></div>${t==='gd'?vGd():body}
+    <div class="seg" style="margin:16px 0 12px;flex-wrap:wrap"><button class="${t==='cho'?'on':''}" onclick="S.mk.admTab='cho';render()">Chờ duyệt ${queue.length||''}</button><button class="${t==='gd'?'on':''}" onclick="S.mk.admTab='gd';render()">Giao dịch${S.mk.gd?.kpi?.pending?` <em class="mkbadge">${S.mk.gd.kpi.pending}</em>`:''}</button><button class="${t==='kn'?'on':''}" onclick="S.mk.admTab='kn';render()">Khiếu nại${S.mk.kn?.kpi?.new?` <em class="mkbadge">${S.mk.kn.kpi.new}</em>`:''}</button><button class="${t==='sp'?'on':''}" onclick="S.mk.admTab='sp';render()">Sản phẩm</button><button class="${t==='nt'?'on':''}" onclick="S.mk.admTab='nt';render()">Người tạo</button><button class="${t==='nk'?'on':''}" onclick="S.mk.admTab='nk';render()">Nhật ký</button></div>${t==='gd'?vGd():t==='kn'?vKn():body}
     <p class="muted small" style="margin:14px 4px">Chỉ anh thấy trang này. Sàn giữ 20% mỗi lượt bán của người tạo khác; sản phẩm chính chủ 100% về anh.</p>`;
 }
 async function gdLoad(){ try{ S.mk.gd = await run('market','gd',{},'',true); }catch(e){ toast(e.message); S.mk.gd={kpi:{},orders:[],owed:[],payouts:[],config:{}}; } if(S.tab==='mkt' && S.mk.view==='qt' && !$('#sheet').classList.contains('on')) render(); }
 function vGd(){
   const g = S.mk.gd; if(!g) return `<div class="card empty">Đang tải giao dịch…</div>`;
   const k = g.kpi, c = g.config||{};
-  const setup = [['Tài khoản nhận tiền (VietQR)', c.vietqr_ready, 'Điền BANK_ID, BANK_ACCOUNT, BANK_ACCOUNT_NAME vào .env trên VPS'],['Đối soát tự động (Casso/SePay)', c.webhook_ready, 'Điền PAY_WEBHOOK_TOKEN và trỏ webhook về /api/pay/webhook'],['PayOS (giai đoạn 2)', c.payos_ready, 'Điền PAYOS_CLIENT_ID, PAYOS_API_KEY, PAYOS_CHECKSUM_KEY'],['Email hoá đơn', c.mail_ready, 'Kết nối Gmail hoặc Lark Mail trong Cài đặt']];
+  const setup = [['Tài khoản nhận tiền (VietQR)', c.vietqr_ready, 'Điền BANK_ID, BANK_ACCOUNT, BANK_ACCOUNT_NAME vào .env trên VPS'],['Đối soát tự động (Casso/SePay)', c.webhook_ready, 'Điền PAY_WEBHOOK_TOKEN và trỏ webhook về /api/pay/webhook'],['PayOS (giai đoạn 2)', c.payos_ready, 'Điền PAYOS_CLIENT_ID, PAYOS_API_KEY, PAYOS_CHECKSUM_KEY'],['Email hoá đơn', c.mail_ready, 'Kết nối Gmail hoặc Lark Mail trong Cài đặt'],
+    ['Gia hạn một chạm qua PayOS (chưa bật)', c.phase2?.autorenew?.enabled, c.phase2?.autorenew?.flag ? 'Cờ đã bật, thiếu khoá PayOS' : 'Chờ anh duyệt đề xuất; bật bằng SUPERYOU_AUTORENEW=1'],
+    ['Thẻ quốc tế qua Lemon Squeezy (chưa bật)', c.phase2?.intl?.enabled, c.phase2?.intl?.flag ? 'Cờ đã bật, thiếu cấu hình Lemon Squeezy' : 'Chờ anh duyệt đề xuất; bật bằng SUPERYOU_INTL=1']];
   const pend = g.orders.filter(o=>o.status==='pending');
   return `<div class="kpis mkkpis"><div class="card kpi"><b>${money(k.gross||0)}</b><span>Tổng bán</span></div><div class="card kpi"><b>${money(k.fee||0)}</b><span>Về sàn (anh)</span></div><div class="card kpi"><b>${money(k.month||0)}</b><span>Tháng này</span></div><div class="card kpi ${k.pending?'warn':''}"><b>${k.pending||0}</b><span>Đơn chờ tiền</span></div><div class="card kpi"><b>${money(k.owed||0)}</b><span>Nợ người bán</span></div><div class="card kpi"><b>${k.refunds||0}</b><span>Hoàn tiền</span></div></div>
     <div class="sec"><h2>Thiết lập thanh toán</h2></div><div class="card list">${setup.map(([l,ok,h])=>`<div><span class="st ${ok?'ok':'no'}"></span><div class="grow"><div style="font-weight:600">${l}</div><div class="meta">${ok?'Sẵn sàng':h}</div></div></div>`).join('')}</div>
@@ -303,3 +305,37 @@ async function lbSave(publish){
     toast(r.text, 3500); notifyH('success'); closeSheet(); S.lb.mine=null; S.mk.data=null; S.mk.adm=null; S.lb.view='taisan'; lbMine(); if(S.tab==='lab'||S.tab==='mkt') render(); }catch(e){ toast(e.message, 4500); }
 }
 
+
+/* ---------- Khiếu nại và hoàn tiền (chủ sàn) */
+async function knLoad(){ S.mk.kn = S.mk.kn || {loading:true}; try{ S.mk.kn = await run('market','kn',{},'',true); }catch(e){ toast(e.message); S.mk.kn={kpi:{},items:[],blocked:[]}; } if(S.tab==='mkt' && S.mk.view==='qt' && !$('#sheet').classList.contains('on')) render(); }
+function knReload(){ S.mk.kn=null; S.mk.gd=null; knLoad(); }
+function vKn(){
+  const n = S.mk.kn; if(!n || n.loading) return `<div class="card empty">Đang tải khiếu nại…</div>`;
+  const k = n.kpi||{}, f = S.mk.knFilter||'moi';
+  const rows = (n.items||[]).filter(x=>f==='all'||x.c_status===f);
+  const card = x=>{
+    const sel = x.seller||{}, sOff = sel.official, sLock = sel.status==='suspended';
+    return `<article class="card pad mkkn"><div class="row" style="justify-content:space-between;align-items:flex-start;gap:8px"><div class="grow"><div class="ttl2">${esc(x.code)} · ${esc(x.name)}</div>
+      <div class="meta">${esc(x.email)}${x.buyer_blocked?' <span class="tag hi">Email đang khoá</span>':''} · ${esc(x.amount_text)} · mua ${esc(ago(x.paid_at))} · ${esc(x.status_text)}</div></div>
+      <span class="tag ${x.c_status==='moi'?'hi':x.c_status==='da_hoan'?'mid':''}">${esc(x.c_status_text)}</span></div>
+      <p class="mkknr">“${esc(x.reason)}”<span class="meta"> · ${esc(ago(x.at))}${x.in_window?' · trong hạn hoàn '+n.refund_days+' ngày':' · quá hạn hoàn '+n.refund_days+' ngày'}</span></p>
+      <div class="meta">Người bán: ${sOff?'superYou (chính chủ)':`${esc(sel.name)} · ${sel.complaints_30d} khiếu nại/30 ngày${sLock?' · <b>đang khoá</b>':''}`}</div>
+      ${x.reply?`<div class="meta" style="margin-top:6px">Phản hồi: ${esc(x.reply)}</div>`:''}
+      <div class="row" style="margin-top:10px;flex-wrap:wrap">${x.c_status==='moi'?`<button class="btn sm pri" onclick="knDecide('${esc(x.id)}','hoan')">${x.can_refund?'Chấp nhận, hoàn '+esc(x.amount_text):'Chấp nhận'}</button><button class="btn sm" onclick="knDecide('${esc(x.id)}','tu_choi')">Từ chối</button>`:''}
+        ${sOff||!sel.id?'':`<button class="btn sm" data-n="${esc(sel.name)}" onclick="knSeller('${esc(sel.id)}','${sLock?'mo':'khoa'}',this.dataset.n)">${sLock?'Mở người bán':'Khoá người bán'}</button>`}
+        <button class="btn sm" data-e="${esc(x.email)}" onclick="knBuyer(this.dataset.e,${x.buyer_blocked?0:1})">${x.buyer_blocked?'Mở email mua':'Khoá email mua'}</button></div></article>`;
+  };
+  return `<div class="kpis mkkpis"><div class="card kpi ${k.new?'warn':''}"><b>${k.new||0}</b><span>Khiếu nại mới</span></div><div class="card kpi"><b>${k.refunded||0}</b><span>Đã hoàn tiền</span></div><div class="card kpi"><b>${k.rejected||0}</b><span>Đã từ chối</span></div><div class="card kpi"><b>${k.blocked||0}</b><span>Email mua đang khoá</span></div></div>
+    <div class="chips" style="margin-top:12px">${[['moi','Mới'],['da_hoan','Đã hoàn'],['tu_choi','Từ chối'],['all','Tất cả']].map(([v,l])=>`<button class="chip ${f===v?'on':''}" onclick="S.mk.knFilter='${v}';render()">${l}</button>`).join('')}</div>
+    ${rows.length?rows.map(card).join(''):`<div class="card empty">${f==='moi'?'Không có khiếu nại mới. Khách khiếu nại từ Tài khoản › Sản phẩm đã mua; superHuy báo anh qua Telegram.':'Không có khiếu nại.'}</div>`}
+    ${(n.blocked||[]).length?`<div class="sec"><h2>Email mua đang khoá</h2></div><div class="card mklist">${n.blocked.map(b=>`<div class="mkrow"><div class="grow"><div class="ttl2">${esc(b.email)}</div><div class="meta">${esc(b.note||'')} · ${esc(ago(b.at))}</div></div><div class="row"><button class="btn sm" data-e="${esc(b.email)}" onclick="knBuyer(this.dataset.e,0)">Mở khoá</button></div></div>`).join('')}</div>`:''}
+    <p class="muted small" style="margin:12px 4px">Người bán bị ${n.suspend_after||3} khiếu nại trong 30 ngày tự bị khoá. Hoàn tiền: superYou ghi sổ, anh chuyển khoản trả khách thủ công.${n.mail_ready?'':' Chưa kết nối mail: khách xem phản hồi trong Tài khoản.'}</p>`;
+}
+function knDecide(id, dec){
+  const ok = dec==='hoan';
+  sheet(`<h2>${ok?'Chấp nhận khiếu nại':'Từ chối khiếu nại'}</h2><label class="field" style="margin-top:12px"><span>${ok?'Lời nhắn cho khách (không bắt buộc)':'Lý do từ chối (khách sẽ nhận được)'}</span><textarea id="knN" maxlength="500"></textarea></label>
+    <button class="btn pri full" onclick="knSend('${id}','${dec}')">${ok?'Chấp nhận và ghi hoàn tiền':'Từ chối'}</button>${ok?'<p class="muted small">superYou ghi sổ hoàn tiền; anh chuyển khoản trả khách thủ công.</p>':''}`);
+}
+async function knSend(id, dec){ try{ const r = await run('market','kn_xuly',{oid:id, decision:dec, note:$('#knN').value},'',true); closeSheet(); toast(r.text,5000); knReload(); }catch(e){ toast(e.message); } }
+async function knSeller(cid, act, name){ if(!confirm(`${act==='khoa'?'Khoá':'Mở khoá'} người bán ${name}?${act==='khoa'?' Sản phẩm đang bán sẽ bị gỡ.':''}`)) return; try{ const r = await run('market','qt_nguoitao',{cid, action:act},'',true); toast(r.text,4000); S.mk.adm=null; knReload(); }catch(e){ toast(e.message); } }
+async function knBuyer(email, on){ if(on && !confirm(`Khoá email mua ${email}? Email này không tạo được đơn mới.`)) return; try{ const r = await run('market','kn_khoamua',{email, on: on?'1':'0', note: on?'Khoá từ màn Khiếu nại':''},'',true); toast(r.text,3500); knReload(); }catch(e){ toast(e.message); } }

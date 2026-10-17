@@ -87,8 +87,12 @@ def config() -> dict:
             "name": (os.getenv("BANK_ACCOUNT_NAME") or "").strip()}
     return {"fee_pct": FEE_PCT, "min_price": MIN_PRICE, "tiers": TIERS, "refund_days": REFUND_DAYS, "payout_min": PAYOUT_MIN, "payout_day": PAYOUT_DAY, "payments_open": payments_open(),
             "bank": bank, "vietqr_ready": all(bank.values()), "webhook_ready": bool(os.getenv("PAY_WEBHOOK_TOKEN")),
-            "payos_ready": all(os.getenv(k) for k in ("PAYOS_CLIENT_ID", "PAYOS_API_KEY", "PAYOS_CHECKSUM_KEY")),
-            "mail_ready": _mail_ready()}
+            "payos_ready": _payos_ready(),
+            "mail_ready": _mail_ready(), "phase2": gateways_status()}
+
+
+def _payos_ready() -> bool:
+    return all(os.getenv(k) for k in ("PAYOS_CLIENT_ID", "PAYOS_API_KEY", "PAYOS_CHECKSUM_KEY"))
 
 
 def _mail_ready() -> bool:
@@ -195,7 +199,7 @@ def _code() -> str:
     return "SY" + "".join(secrets.choice("ABCDEFGHJKLMNPQRSTUVWXYZ23456789") for _ in range(6))
 
 
-def create_order(lid: str, email: str, channel: str = "public") -> dict:
+def create_order(lid: str, email: str, channel: str = "public", uid: str = "") -> dict:
     from agents import leads, market
     email = (email or "").strip().lower()[:254]
     if not leads.EMAIL_RE.match(email):
@@ -224,14 +228,14 @@ def create_order(lid: str, email: str, channel: str = "public") -> dict:
             if o["email"] == email and o["lid"] == lid and o["status"] == "pending" and o["expires"] > _iso():
                 return {"owned": False, "order": _public_order(o)}
         if price == 0:
-            o = {"id": secrets.token_hex(6), "code": _code(), "lid": lid, "name": x["name"], "type": x["type"], "email": email, "amount": 0,
+            o = {"id": secrets.token_hex(6), "code": _code(), "lid": lid, "name": x["name"], "type": x["type"], "email": email, "amount": 0, "uid": uid,
                  "seller": _seller(x), "status": "paid", "channel": channel, "created": _iso(), "paid_at": _iso(), "expires": _iso(_now() + dt.timedelta(days=1))}
             d["orders"][o["id"]] = o
             _save(d)
         else:
             if price < MIN_PRICE:
                 price = MIN_PRICE
-            o = {"id": secrets.token_hex(6), "code": _code(), "lid": lid, "name": x["name"], "type": x["type"], "email": email, "amount": price,
+            o = {"id": secrets.token_hex(6), "code": _code(), "lid": lid, "name": x["name"], "type": x["type"], "email": email, "amount": price, "uid": uid,
                  "billing": x.get("billing", "once"), "seller": _seller(x), "status": "pending", "channel": channel, "created": _iso(),
                  "expires": _iso(_now() + dt.timedelta(hours=ORDER_TTL_H)), "method": "vietqr"}
             d["orders"][o["id"]] = o
@@ -342,17 +346,183 @@ def payos_webhook(payload: dict) -> dict:
     sig = hmac.new(key.encode(), msg.encode(), hashlib.sha256).hexdigest()
     if not hmac.compare_digest(sig, str(payload.get("signature") or "")):
         raise PermissionError("Sai chữ ký PayOS")
+    if str(data.get("code", "00")) != "00":
+        return {"ok": True, "matched": 0}
     code = str(data.get("description") or "")
     m = re.search(r"SY[A-Z2-9]{6}", code.upper())
+    oc = data.get("orderCode")
     with _LOCK:
         d = _load()
-        o = next((o for o in d["orders"].values() if m and o["code"] == m.group(0) and o["status"] == "pending"), None)
+        o = next((o for o in d["orders"].values() if o["status"] == "pending" and ((oc and o.get("payos_code") == oc) or (m and o["code"] == m.group(0)))), None)
         if not o:
             return {"ok": True, "matched": 0}
         _mark_paid(d, o, "payos", str(data.get("reference") or data.get("paymentLinkId") or ""))
         _save(d)
     deliver(o["id"])
     return {"ok": True, "matched": 1}
+
+
+# ------------------------------------------------------------------ giai đoạn 2 (CHƯA BẬT): gia hạn qua PayOS, bán quốc tế qua Lemon Squeezy
+# Thiết kế: docs/superyou-thanh-toan.md › "Giai đoạn 2". Hai cổng đều tắt mặc định và chỉ chạy khi ĐỦ cả ba điều kiện:
+#   thanh toán đã mở (SUPERYOU_PAYMENTS=1) + cờ riêng (SUPERYOU_AUTORENEW=1 / SUPERYOU_INTL=1) + khoá cổng trong .env trên VPS.
+# Anh duyệt đề xuất "[Thương mại] Gia hạn PayOS và bán quốc tế" trên bảng trước khi bật. Mã chưa chạy với tài khoản thật.
+PAYOS_API = "https://api-merchant.payos.vn"
+LS_API = "https://api.lemonsqueezy.com/v1"
+
+
+def autorenew_enabled() -> bool:
+    return payments_open() and os.getenv("SUPERYOU_AUTORENEW", "0").strip() == "1" and _payos_ready()
+
+
+def intl_ready() -> bool:
+    return all(os.getenv(k) for k in ("LEMONSQUEEZY_API_KEY", "LEMONSQUEEZY_STORE_ID", "LEMONSQUEEZY_WEBHOOK_SECRET")) and bool(_ls_variants())
+
+
+def intl_enabled() -> bool:
+    return payments_open() and os.getenv("SUPERYOU_INTL", "0").strip() == "1" and intl_ready()
+
+
+def gateways_status() -> dict:
+    """Tình trạng giai đoạn 2 cho Quản trị › Giao dịch (không lộ khoá)."""
+    return {"autorenew": {"enabled": autorenew_enabled(), "flag": os.getenv("SUPERYOU_AUTORENEW", "0").strip() == "1", "payos_ready": _payos_ready()},
+            "intl": {"enabled": intl_enabled(), "flag": os.getenv("SUPERYOU_INTL", "0").strip() == "1", "ready": intl_ready(),
+                     "plans": sorted(_ls_variants())}}
+
+
+def _http_post(url: str, body: dict, headers: dict) -> dict:
+    """Gọi cổng thanh toán (tách riêng để test thay thế, test không bao giờ gọi mạng)."""
+    import urllib.request
+    req = urllib.request.Request(url, data=json.dumps(body).encode(), method="POST", headers={"Content-Type": "application/json", **headers})
+    with urllib.request.urlopen(req, timeout=20) as r:
+        return json.loads(r.read() or b"{}")
+
+
+def _payos_sign(fields: dict) -> str:
+    """Chữ ký tạo link PayOS: HMAC-SHA256 trên amount, cancelUrl, description, orderCode, returnUrl theo thứ tự chữ cái."""
+    msg = "&".join(f"{k}={fields[k]}" for k in ("amount", "cancelUrl", "description", "orderCode", "returnUrl"))
+    return hmac.new(os.getenv("PAYOS_CHECKSUM_KEY", "").encode(), msg.encode(), hashlib.sha256).hexdigest()
+
+
+def payos_link(oid: str, base: str = "https://app.roimaxxhub.com") -> str:
+    """Tạo link thanh toán PayOS cho một đơn đang chờ (dùng cho gia hạn gói). Trả URL checkout; lỗi thì trả ''."""
+    if not autorenew_enabled():
+        return ""
+    with _LOCK:
+        d = _load()
+        o = d["orders"].get(oid)
+        if not o or o["status"] != "pending":
+            return ""
+        if o.get("payos_url"):
+            return o["payos_url"]
+        o["payos_code"] = o.get("payos_code") or (int(_now().strftime("%y%m%d")) * 1000000 + secrets.randbelow(1000000))
+        _save(d)
+    f = {"orderCode": o["payos_code"], "amount": int(o["amount"]), "description": o["code"][:9],
+         "returnUrl": base + "/account#plan", "cancelUrl": base + "/account#plan"}
+    f["signature"] = _payos_sign(f)
+    try:
+        r = _http_post(PAYOS_API + "/v2/payment-requests", f, {"x-client-id": os.getenv("PAYOS_CLIENT_ID", ""), "x-api-key": os.getenv("PAYOS_API_KEY", "")})
+    except Exception:
+        import logging
+        logging.getLogger("pay").exception("Tạo link PayOS lỗi")
+        return ""
+    url = ((r or {}).get("data") or {}).get("checkoutUrl", "") if str((r or {}).get("code", "")) == "00" else ""
+    if url:
+        with _LOCK:
+            d = _load()
+            d["orders"][oid]["payos_url"] = url
+            _save(d)
+    return url
+
+
+def renewal_order(uid: str, email: str, plan: str) -> dict:
+    """Đơn gia hạn (giai đoạn 2): tạo đơn gói như bình thường rồi gắn link PayOS để khách trả một chạm từ email nhắc."""
+    r = create_plan_order(email, plan, uid)
+    oid = r["order"]["id"]
+    with _LOCK:
+        d = _load()
+        d["orders"][oid]["renewal"] = True
+        _save(d)
+    return {"order": r["order"], "url": payos_link(oid)}
+
+
+def _ls_variants() -> dict:
+    """Gói -> variant Lemon Squeezy, ví dụ LEMONSQUEEZY_VARIANT_PRO=123456 (mã sản phẩm, không phải khoá)."""
+    out = {}
+    for plan in ("pro", "business"):
+        v = (os.getenv(f"LEMONSQUEEZY_VARIANT_{plan.upper()}") or "").strip()
+        if v.isdigit():
+            out[plan] = v
+    return out
+
+
+def intl_checkout(uid: str, email: str, plan: str) -> dict:
+    """Thanh toán quốc tế bằng thẻ qua Lemon Squeezy (Merchant of Record, tự gia hạn hằng tháng). Chỉ khi intl_enabled()."""
+    if not intl_enabled():
+        raise ValueError("Thanh toán quốc tế chưa mở.")
+    variant = _ls_variants().get(plan)
+    if not variant:
+        raise ValueError("Gói này chưa bán quốc tế.")
+    body = {"data": {"type": "checkouts",
+                     "attributes": {"checkout_data": {"email": email, "custom": {"uid": uid, "plan": plan}},
+                                    "product_options": {"redirect_url": "https://app.roimaxxhub.com/account#plan"}},
+                     "relationships": {"store": {"data": {"type": "stores", "id": os.getenv("LEMONSQUEEZY_STORE_ID", "")}},
+                                       "variant": {"data": {"type": "variants", "id": variant}}}}}
+    r = _http_post(LS_API + "/checkouts", body, {"Authorization": "Bearer " + os.getenv("LEMONSQUEEZY_API_KEY", ""),
+                                                 "Accept": "application/vnd.api+json", "Content-Type": "application/vnd.api+json"})
+    url = (((r or {}).get("data") or {}).get("attributes") or {}).get("url", "")
+    if not url:
+        raise ValueError("Chưa tạo được trang thanh toán, thử lại sau.")
+    return {"url": url}
+
+
+LS_ACTIVE = {"subscription_created", "subscription_payment_success", "subscription_resumed", "subscription_updated"}
+
+
+def ls_webhook(raw: bytes, signature: str) -> dict:
+    """Webhook Lemon Squeezy: X-Signature = HMAC-SHA256(thân yêu cầu gốc, LEMONSQUEEZY_WEBHOOK_SECRET).
+    Thuê bao đang chạy -> gói có hạn tới renews_at (+1 ngày dự phòng); huỷ -> tắt tự gia hạn, dùng tới hết kỳ đã trả."""
+    from core import accounts
+    secret = os.getenv("LEMONSQUEEZY_WEBHOOK_SECRET", "")
+    if not secret:
+        raise PermissionError("Lemon Squeezy chưa cấu hình")
+    if not hmac.compare_digest(hmac.new(secret.encode(), raw or b"", hashlib.sha256).hexdigest(), (signature or "").strip()):
+        raise PermissionError("Sai chữ ký Lemon Squeezy")
+    p = json.loads(raw or b"{}")
+    meta = p.get("meta") or {}
+    ev, cd = meta.get("event_name", ""), meta.get("custom_data") or {}
+    attr = (p.get("data") or {}).get("attributes") or {}
+    uid, plan = str(cd.get("uid") or ""), str(cd.get("plan") or "")
+    eid = f"ls:{ev}:{(p.get('data') or {}).get('id', '')}:{attr.get('updated_at') or attr.get('created_at') or ''}"
+    with _LOCK:
+        d = _load()
+        seen = d.setdefault("ls_events", [])
+        if eid in seen:
+            return {"ok": True, "dup": True}
+        seen.append(eid)
+        d["ls_events"] = seen[-500:]
+        _save(d)
+    u = accounts.get(uid) if uid else None
+    if not u or plan not in ("pro", "business"):
+        return {"ok": True, "matched": 0}
+    if ev in LS_ACTIVE and attr.get("status", "active") in ("active", "on_trial", "past_due"):
+        ren = str(attr.get("renews_at") or "")[:10]
+        try:
+            until = (dt.date.fromisoformat(ren) + dt.timedelta(days=1)).isoformat()
+        except ValueError:
+            until = plan_until_for(u, plan)
+        accounts.set_paid_plan(uid, plan, until, note=f"Lemon Squeezy {ev}")
+        if ev in ("subscription_created", "subscription_payment_success"):
+            with _LOCK:
+                d = _load()
+                d.setdefault("intl", []).append({"at": _iso(), "uid": uid, "email": u.get("email", ""), "plan": plan, "event": ev,
+                                                 "total": attr.get("total") or attr.get("subtotal") or 0, "currency": attr.get("currency", "USD"),
+                                                 "sub": (p.get("data") or {}).get("id", "")})
+                d["intl"] = d["intl"][-2000:]
+                _save(d)
+        return {"ok": True, "matched": 1, "until": until}
+    if ev in ("subscription_cancelled", "subscription_expired"):
+        return {"ok": True, "matched": 1, "note": "dùng tới hết plan_until rồi tự về Miễn phí"}
+    return {"ok": True, "matched": 0}
 
 
 # ------------------------------------------------------------------ giao hàng
@@ -399,31 +569,125 @@ def create_plan_order(email: str, plan: str, uid: str = "") -> dict:
     return {"owned": False, "order": _public_order(o)}
 
 
+PLAN_DAYS = 31
+
+
+def plan_until_for(cur: dict | None, plan: str, today: dt.date | None = None) -> str:
+    """Ngày hết hạn sau khi trả 1 tháng. Gia hạn đúng gói còn hiệu lực -> cộng nối tiếp từ ngày hết hạn cũ;
+    đổi gói hoặc đã hết hạn -> tính từ hôm nay (chưa tính tiền chênh lệch, chờ chính sách)."""
+    today = today or _now().date()
+    start = today
+    if cur and cur.get("plan") == plan and cur.get("plan_until"):
+        try:
+            old = dt.date.fromisoformat(cur["plan_until"])
+            if old >= today:
+                start = old
+        except ValueError:
+            pass
+    return (start + dt.timedelta(days=PLAN_DAYS)).isoformat()
+
+
 def _deliver_plan(o: dict) -> dict:
     from core import accounts
     u = accounts.by_email(o["email"]) if not o.get("uid") else accounts.get(o["uid"])
-    if u:
-        accounts.admin_set(u["id"], plan=o["plan"], note=f"thanh toán đơn {o['code']}")
+    until = o.get("plan_until") or plan_until_for(u, o["plan"])
+    if u and not o.get("plan_until"):
+        accounts.set_paid_plan(u["id"], o["plan"], until, note=f"thanh toán đơn {o['code']}")
     with _LOCK:
         d = _load()
         oo = d["orders"][o["id"]]
         oo["status"] = "delivered"
-        oo["delivered_at"] = _iso()
+        oo["delivered_at"] = oo.get("delivered_at") or _iso()
         oo["receipt"] = receipt_url(oo)
-        oo["plan_until"] = (_now() + dt.timedelta(days=31)).strftime("%Y-%m-%d")
+        oo["plan_until"] = until
         _save(d)
         o = oo
     try:
         from core import security
-        security.alert_once(f"sale:{o['id']}", f"💎 Nâng cấp gói: {o['email']} đã trả {vnd(o['amount'])} cho {o['name']}.", every=10**9)
+        security.alert_once(f"sale:{o['id']}", f"💎 Nâng cấp gói: {o['email']} đã trả {vnd(o['amount'])} cho {o['name']} (đến {until}).", every=10**9)
     except Exception:
         pass
-    return {"text": "Đã kích hoạt gói", "downloads": []}
+    return {"text": f"Đã kích hoạt gói đến {until}", "downloads": [], "plan_until": until}
 
 
-def deliver(oid: str) -> dict:
-    from agents import market
+def _remind_email(r: dict) -> bool:
+    """Email nhắc gia hạn. Chỉ gửi khi Gmail/Lark Mail đã kết nối; chưa có thì bỏ qua (lần quét sau gửi khi đã cấu hình)."""
+    if not _mail_ready():
+        return False
+    from core import plans
+    try:
+        from agents import mailbox
+        name = (plans.PLANS.get(r["plan"]) or {}).get("name", r["plan"])
+        when = "hôm nay" if r["left"] == 0 else f"sau {r['left']} ngày"
+        until = dt.date.fromisoformat(r["until"]).strftime("%d/%m/%Y")
+        body = (f"Chào {r['name'] or 'bạn'},\n\nGói {name} của bạn trên superYou hết hạn {when} (hết ngày {until}).\n\n"
+                + (f"Gia hạn một chạm (PayOS): {r['pay_url']}\n\n" if r.get("pay_url") else "")
+                + f"Gia hạn tại: https://app.roimaxxhub.com/account#plans (Tài khoản › Gói và nâng cấp › Gia hạn).\n\n"
+                "Nếu không gia hạn, tài khoản tự về gói Miễn phí; dữ liệu, sản phẩm đã mua và workflow của bạn vẫn được giữ nguyên.\n\nsuperYou · Roimaxx")
+        platform = "gmail" if mailbox.gmail_ready() else "lark"
+        mailbox.send(platform, r["email"], f"[superYou] Gói {name} hết hạn {when}", body)
+        return True
+    except Exception:
+        import logging
+        logging.getLogger("pay").exception("Gửi email nhắc gia hạn lỗi")
+        return False
+
+
+def plan_sweep() -> dict:
+    """Chạy hằng ngày (và tự chạy khi có người mở Tài khoản, tối đa 1 lần/giờ): hạ gói hết hạn về Free, nhắc gia hạn trước 3 ngày."""
+    from core import accounts
+    expired = accounts.expire_plans()
+    sent, skipped = [], []
+    for r in accounts.due_reminders():
+        if autorenew_enabled() and _mail_ready():
+            try:
+                r["pay_url"] = renewal_order(r["id"], r["email"], r["plan"])["url"]
+            except Exception:
+                r["pay_url"] = ""
+        if _remind_email(r):
+            accounts.mark_reminded(r["id"], r["until"])
+            sent.append(r["email"])
+        else:
+            skipped.append(r["email"])
+    if expired:
+        try:
+            from core import security
+            security.alert_once(f"plan-exp:{_iso()[:10]}:{len(expired)}", "⏳ Gói hết hạn, đã về Miễn phí: "
+                                + ", ".join(f"{x['email']} ({x['plan']})" for x in expired[:10]) + ".", every=10**9)
+        except Exception:
+            pass
+    return {"expired": expired, "reminded": sent, "remind_pending": skipped, "mail_ready": _mail_ready()}
+
+
+_SWEPT = {"at": 0.0}
+
+
+def maybe_sweep(every: int = 3600) -> None:
+    import time
+    if time.time() - _SWEPT["at"] < every:
+        return
+    _SWEPT["at"] = time.time()
+    try:
+        plan_sweep()
+    except Exception:
+        import logging
+        logging.getLogger("pay").exception("Quét hết hạn gói lỗi")
+
+
+def _fresh_links(o: dict, x: dict) -> list[dict]:
+    """Đóng gói bản mới nhất của sản phẩm và ký link tải 7 ngày (gắn mã đơn để đếm lượt tải)."""
     from webapp import server
+    PKG_DIR.mkdir(parents=True, exist_ok=True)
+    fname, data = _package(x)
+    p = PKG_DIR / f"{x['id']}-{x.get('version', '1')}-{fname}"
+    p.write_bytes(data)
+    link = server.sign_download(str(p), fname, ttl=7 * 86400) + "&o=" + o["id"]
+    return [{"name": fname, "url": link, "expires": _iso(_now() + dt.timedelta(days=7))}]
+
+
+def deliver(oid: str, email: bool = True) -> dict:
+    """Giao hàng (lần đầu) hoặc cấp lại link mới (gửi lại). Chỉ lần giao đầu mới đếm lượt bán và ghi quyền sở hữu mới."""
+    from agents import market
     with _LOCK:
         d = _load()
         o = d["orders"].get(oid)
@@ -439,25 +703,24 @@ def deliver(oid: str) -> dict:
         x = market.get_listing(o["lid"])
         if not x:
             raise ValueError("Sản phẩm không còn")
-        PKG_DIR.mkdir(parents=True, exist_ok=True)
-        fname, data = _package(x)
-        p = PKG_DIR / f"{x['id']}-{x.get('version', '1')}-{fname}"
-        p.write_bytes(data)
-        link = server.sign_download(str(p), fname, ttl=7 * 86400) + "&o=" + o["id"]
-        o["downloads"] = [{"name": fname, "url": link, "expires": _iso(_now() + dt.timedelta(days=7))}]
+        first = not o.get("delivered_at")
+        o["downloads"] = _fresh_links(o, x)
         o["receipt"] = receipt_url(o)
         o["status"] = "delivered"
-        o["delivered_at"] = _iso()
-        d["entitlements"].setdefault(o["email"], {})[o["lid"]] = {"order": o["id"], "at": o["delivered_at"], "version": x.get("version")}
-        market.count_sale(o["lid"])
+        if first:
+            o["delivered_at"] = _iso()
+            d["entitlements"].setdefault(o["email"], {})[o["lid"]] = {"order": o["id"], "at": o["delivered_at"], "version": x.get("version")}
+            market.count_sale(o["lid"])
         _save(d)
-    _email_receipt(o, x)
-    try:
-        from core import security
-        security.alert_once(f"sale:{o['id']}", f"💰 Marketplace: {o['email']} đã mua “{o['name']}” {vnd(o['amount'])}"
-                            + ("" if o["seller"].get("official") else f" (người bán {o['seller']['name']} nhận {vnd(o.get('seller_amount', 0))})") + ".", every=10**9)
-    except Exception:
-        pass
+    if email:
+        _email_receipt(o, x)
+    if first:
+        try:
+            from core import security
+            security.alert_once(f"sale:{o['id']}", f"💰 Marketplace: {o['email']} đã mua “{o['name']}” {vnd(o['amount'])}"
+                                + ("" if o["seller"].get("official") else f" (người bán {o['seller']['name']} nhận {vnd(o.get('seller_amount', 0))})") + ".", every=10**9)
+        except Exception:
+            pass
     return {"text": "Đã giao hàng", "downloads": o["downloads"]}
 
 
@@ -525,6 +788,14 @@ def refund(oid: str, note: str = "") -> dict:
                             "fee": -int(o.get("fee", 0)), "seller_amount": -int(o.get("seller_amount", 0)), "seller": o["seller"], "lid": o["lid"], "name": o["name"]})
         d["entitlements"].get(o["email"], {}).pop(o["lid"], None)
         _save(d)
+    if o.get("kind") == "plan":  # hoàn tiền gói -> về Miễn phí ngay (giữ dữ liệu)
+        try:
+            from core import accounts
+            u = accounts.get(o["uid"]) if o.get("uid") else accounts.by_email(o["email"])
+            if u and u.get("plan") == o.get("plan"):
+                accounts.admin_set(u["id"], plan="free", note=f"hoàn tiền đơn {o['code']}")
+        except Exception:
+            pass
     return {"text": f"Đã ghi hoàn tiền đơn {o['code']} ({vnd(o['amount'])}). Anh chuyển khoản trả khách theo tài khoản họ cung cấp."}
 
 
@@ -535,15 +806,37 @@ def seller_balance(d: dict, sid: str) -> dict:
 
 
 def seller_revenue(sid: str) -> dict:
+    """Console người bán › Doanh thu: số dư, theo sản phẩm, 6 tháng gần nhất, phần còn trong hạn hoàn tiền, dự kiến kỳ trả tới."""
     d = _load()
     sales = [e for e in d["ledger"] if e["seller"].get("id") == sid]
     b = seller_balance(d, sid)
     month = _now().strftime("%Y-%m")
+    since = _iso(_now() - dt.timedelta(days=REFUND_DAYS))
+    refunded = {e["order"] for e in sales if e["kind"] == "refund"}
+    hold = sum(e["seller_amount"] for e in sales if e["kind"] == "sale" and e["at"] >= since and e["order"] not in refunded)
+    by_product = {}
+    for e in sales:
+        r = by_product.setdefault(e["lid"], {"lid": e["lid"], "name": e["name"], "sales": 0, "refunds": 0, "gross": 0, "earned": 0})
+        r["sales" if e["kind"] == "sale" else "refunds"] += 1
+        r["gross"] += e["amount"]
+        r["earned"] += e["seller_amount"]
+    months = []
+    t = _now().replace(day=1)
+    for _ in range(6):
+        k = t.strftime("%Y-%m")
+        months.append({"month": k, "label": t.strftime("%m/%Y"), "earned": sum(e["seller_amount"] for e in sales if e["at"][:7] == k)})
+        t = (t - dt.timedelta(days=1)).replace(day=1)
+    bank = d["bank_info"].get(sid, {})
+    nxt = b["balance"] if b["balance"] >= PAYOUT_MIN else 0
     return {"balance": b["balance"], "earned": b["earned"], "paid": b["paid"], "sales": len([e for e in sales if e["kind"] == "sale"]),
-            "this_month": sum(e["seller_amount"] for e in sales if e["at"][:7] == month),
+            "refunds": len(refunded), "this_month": sum(e["seller_amount"] for e in sales if e["at"][:7] == month),
             "recent": [{"at": e["at"], "name": e["name"], "amount": e["amount"], "seller_amount": e["seller_amount"], "kind": e["kind"]} for e in sales[-20:]][::-1],
-            "payouts": [p for p in d["payouts"] if p["seller"] == sid][-12:][::-1], "bank": d["bank_info"].get(sid, {}),
-            "fee_pct": FEE_PCT, "payout_min": PAYOUT_MIN, "payout_day": PAYOUT_DAY, "next_payout": _next_payout()}
+            "payouts": [p for p in d["payouts"] if p["seller"] == sid][-12:][::-1], "bank": bank,
+            "by_product": sorted(by_product.values(), key=lambda r: -r["earned"]), "months": months[::-1],
+            "in_refund_window": hold, "next_amount": nxt, "next_ready": bool(nxt) and bool(bank.get("account")),
+            "next_note": ("Chưa có tài khoản nhận tiền: điền bên dưới để nhận kỳ tới." if nxt and not bank.get("account") else
+                          f"Số dư dưới {vnd(PAYOUT_MIN)} được cộng dồn sang kỳ sau." if not nxt else ""),
+            "fee_pct": FEE_PCT, "payout_min": PAYOUT_MIN, "payout_day": PAYOUT_DAY, "refund_days": REFUND_DAYS, "next_payout": _next_payout()}
 
 
 def _next_payout() -> str:
@@ -601,21 +894,24 @@ def payout_mark(sid: str, amount: int, ref: str = "") -> dict:
 
 
 def entitlements(email: str) -> dict:
+    """Tra cứu công khai theo email (trang /market › Đơn của tôi): chỉ tên và ngày, KHÔNG trả link tải hay hoá đơn
+    (ai biết email cũng gọi được). Link tải xem trong Tài khoản hoặc qua email."""
     d = _load()
     email = (email or "").strip().lower()
     ent = d["entitlements"].get(email, {})
     out = []
     for lid, e in ent.items():
         o = d["orders"].get(e["order"]) or {}
-        out.append({"lid": lid, "name": o.get("name", ""), "at": e["at"], "downloads": o.get("downloads") or [], "receipt": o.get("receipt", "")})
-    return {"items": out}
+        out.append({"lid": lid, "name": o.get("name", ""), "at": e["at"], "code": o.get("code", "")})
+    return {"items": out, "mail_ready": _mail_ready()}
 
 
 def resend(email: str) -> dict:
-    """Khách bấm 'Gửi lại link tải' (giới hạn tần suất ở server)."""
-    from agents import market
+    """Khách bấm 'Gửi lại link tải' trên trang công khai: link mới chỉ đi qua email (giới hạn tần suất ở server)."""
     d = _load()
     email = (email or "").strip().lower()
+    if not _mail_ready():
+        return {"ok": False, "sent": 0, "text": "Hiện chưa gửi được email. Bạn đăng nhập Tài khoản bằng email này để tải lại sản phẩm."}
     ids = [e["order"] for e in d["entitlements"].get(email, {}).values()]
     n = 0
     for oid in ids:
@@ -624,7 +920,220 @@ def resend(email: str) -> dict:
             n += 1
         except Exception:
             pass
-    return {"ok": True, "sent": n}
+    return {"ok": True, "sent": n, "text": f"Đã gửi lại {n} link mới tới email." if n else "Không có đơn nào để gửi lại."}
+
+
+# ------------------------------------------------------------------ sản phẩm đã mua trong Tài khoản
+RESEND_PER_DAY = 3
+COMPLAINT_REASONS = {"khong_tai": "Không tải hoặc không cài được sản phẩm",
+                     "sai_mo_ta": "Sản phẩm không đúng như mô tả",
+                     "hoan_tien": "Tôi muốn hoàn tiền theo chính sách 7 ngày",
+                     "khac": "Vấn đề khác"}
+
+
+def _owns(o: dict, uid: str, email: str) -> bool:
+    return bool(o) and ((uid and o.get("uid") == uid) or (email and o.get("email") == email))
+
+
+def account_orders(uid: str, email: str) -> dict:
+    """Đơn của một tài khoản: theo uid (mua khi đã đăng nhập) hoặc email tài khoản (mua trước khi có tài khoản).
+    Lần đầu thấy đơn theo email thì gắn uid vào đơn, để sau này đơn vẫn thuộc tài khoản."""
+    email = (email or "").strip().lower()
+    now = _iso()
+    with _LOCK:
+        d = _load()
+        mine = [o for o in d["orders"].values() if _owns(o, uid, email) and o["status"] in ("paid", "delivered", "refunded")]
+        changed = False
+        for o in mine:
+            if uid and not o.get("uid"):
+                o["uid"] = uid
+                changed = True
+        if changed:
+            _save(d)
+    items = []
+    for o in sorted(mine, key=lambda q: q.get("paid_at") or q["created"], reverse=True):
+        paid = o.get("paid_at") or o["created"]
+        dls = [{"name": x["name"], "url": x["url"], "expires": x["expires"], "expired": x["expires"] < now} for x in (o.get("downloads") or [])]
+        refund_until = _iso(dt.datetime.fromisoformat(paid) + dt.timedelta(days=REFUND_DAYS))
+        c = o.get("complaint") or {}
+        items.append({"id": o["id"], "code": o["code"], "name": o["name"], "type": o.get("type", ""), "kind": o.get("kind", "product"),
+                      "amount": o["amount"], "amount_text": vnd(o["amount"]), "status": o["status"], "status_text": STATUS.get(o["status"], o["status"]),
+                      "paid_at": paid, "downloads": dls, "receipt": o.get("receipt", ""), "plan_until": o.get("plan_until", ""),
+                      "can_download": o["status"] == "delivered" and o.get("kind") != "plan",
+                      "refund_until": refund_until if o["amount"] and o["status"] == "delivered" else "",
+                      "refundable": bool(o["amount"]) and o["status"] == "delivered" and now <= refund_until,
+                      "complaint": {"status": c.get("status", ""), "at": c.get("at", ""), "reason": c.get("reason", ""), "reply": c.get("reply", "")} if c else None,
+                      "can_complain": o["status"] == "delivered" and not c})
+    return {"items": items, "mail_ready": _mail_ready(), "reasons": COMPLAINT_REASONS, "refund_days": REFUND_DAYS}
+
+
+def _account_order(uid: str, email: str, oid: str) -> dict:
+    o = _load()["orders"].get(oid)
+    if not _owns(o, uid, (email or "").strip().lower()):
+        raise ValueError("Không tìm thấy đơn trong tài khoản của bạn.")
+    return o
+
+
+def account_redownload(uid: str, email: str, oid: str) -> dict:
+    """Tải lại: cấp link mới ngay trên trang (không gửi email). Lượt tải vẫn bị giới hạn theo đơn."""
+    o = _account_order(uid, email, oid)
+    if o["status"] != "delivered" or o.get("kind") == "plan":
+        raise ValueError("Đơn này không có tệp để tải.")
+    if (o.get("dl") or {}).get("total", 0) >= DL_TOTAL:
+        raise ValueError("Đơn đã dùng hết lượt tải. Liên hệ hỗ trợ nếu bạn cần thêm.")
+    r = deliver(oid, email=False)
+    return {"text": "Đã tạo link tải mới, dùng trong 7 ngày.", "downloads": r["downloads"]}
+
+
+def account_resend(uid: str, email: str, oid: str) -> dict:
+    """Gửi lại link mới và hoá đơn qua email (tối đa RESEND_PER_DAY lần/ngày mỗi đơn)."""
+    o = _account_order(uid, email, oid)
+    if o["status"] != "delivered":
+        raise ValueError("Đơn chưa giao nên chưa gửi lại được.")
+    if not _mail_ready():
+        raise ValueError("Hiện chưa gửi được email. Bạn bấm Tải lại để lấy link ngay tại đây.")
+    with _LOCK:
+        d = _load()
+        oo = d["orders"][oid]
+        today = _iso()[:10]
+        rs = oo.setdefault("resend", {"day": today, "n": 0})
+        if rs["day"] != today:
+            rs.update({"day": today, "n": 0})
+        if rs["n"] >= RESEND_PER_DAY:
+            raise ValueError("Đơn này đã gửi lại nhiều lần hôm nay, thử lại vào ngày mai.")
+        rs["n"] += 1
+        _save(d)
+    if o.get("kind") == "plan":
+        _email_plan_receipt(o)
+    else:
+        deliver(oid, email=True)
+    return {"text": f"Đã gửi lại tới {o['email']}."}
+
+
+def _email_plan_receipt(o: dict):
+    try:
+        from agents import mailbox
+        platform = "gmail" if mailbox.gmail_ready() else "lark"
+        mailbox.send(platform, o["email"], f"[superYou] Hoá đơn {o['code']}: {o['name']}",
+                     f"Mã đơn: {o['code']}\nSố tiền: {vnd(o['amount'])}\nGói dùng đến hết: {o.get('plan_until', '')}\nHoá đơn: {o.get('receipt', '')}\n\nsuperYou · Roimaxx")
+    except Exception:
+        import logging
+        logging.getLogger("pay").exception("Gửi lại hoá đơn gói lỗi")
+
+
+def account_complain(uid: str, email: str, oid: str, reason_key: str, detail: str = "") -> dict:
+    """Khiếu nại một chạm từ Tài khoản: chọn lý do có sẵn, ghi thêm nếu muốn."""
+    o = _account_order(uid, email, oid)
+    base = COMPLAINT_REASONS.get(reason_key)
+    if not base:
+        raise ValueError("Chọn lý do khiếu nại.")
+    detail = (detail or "").strip()[:400]
+    if reason_key == "khac" and len(detail) < 10:
+        raise ValueError("Bạn mô tả vấn đề cụ thể hơn (ít nhất 10 ký tự).")
+    return complain(o["id"], o["email"], base + (": " + detail if detail else "") + " [từ Tài khoản]")
+
+
+# ------------------------------------------------------------------ quản trị khiếu nại và hoàn tiền (chủ sàn)
+COMPLAINT_STATUS = {"moi": "Mới", "da_hoan": "Đã hoàn tiền", "tu_choi": "Đã từ chối"}
+
+
+def complaints_overview() -> dict:
+    """HQ › Marketplace › Quản trị › Khiếu nại: đơn bị khiếu nại, người bán liên quan, email mua đang khoá."""
+    from agents import market
+    d = _load()
+    creators = market._load().get("creators", {})
+    since = _iso(_now() - dt.timedelta(days=30))
+    by_seller = {}
+    for q in d["orders"].values():
+        c = q.get("complaint")
+        if c and c["at"] >= since:
+            sid = (q.get("seller") or {}).get("id") or ""
+            by_seller[sid] = by_seller.get(sid, 0) + 1
+    blocked = d.get("blocked", {})
+    items = []
+    for o in d["orders"].values():
+        c = o.get("complaint")
+        if not c:
+            continue
+        sel = o.get("seller") or {}
+        cr = creators.get(sel.get("id") or "") or {}
+        items.append({"id": o["id"], "code": o["code"], "name": o["name"], "email": o["email"], "amount": o["amount"], "amount_text": vnd(o["amount"]),
+                      "status": o["status"], "status_text": STATUS.get(o["status"], o["status"]), "paid_at": o.get("paid_at") or o["created"],
+                      "kind": o.get("kind", "product"), "reason": c.get("reason", ""), "at": c["at"], "c_status": c.get("status", "moi"),
+                      "c_status_text": COMPLAINT_STATUS.get(c.get("status", "moi"), c.get("status", "")), "reply": c.get("reply", ""), "resolved_at": c.get("resolved_at", ""),
+                      "seller": {"id": sel.get("id", ""), "name": sel.get("name", ""), "official": bool(sel.get("official")),
+                                 "status": cr.get("status", "active") if cr else "", "complaints_30d": by_seller.get(sel.get("id") or "", 0)},
+                      "buyer_blocked": o["email"] in blocked, "can_refund": o["status"] in ("paid", "delivered") and o["amount"] > 0,
+                      "in_window": (o.get("paid_at") or o["created"]) >= _iso(_now() - dt.timedelta(days=REFUND_DAYS))})
+    items.sort(key=lambda x: x["at"], reverse=True)
+    items.sort(key=lambda x: x["c_status"] != "moi")  # khiếu nại mới lên đầu, trong mỗi nhóm mới nhất trước
+    return {"items": items[:300], "kpi": {"new": sum(1 for x in items if x["c_status"] == "moi"), "refunded": sum(1 for x in items if x["c_status"] == "da_hoan"),
+                                          "rejected": sum(1 for x in items if x["c_status"] == "tu_choi"), "blocked": len(blocked)},
+            "blocked": [{"email": e, **v} for e, v in sorted(blocked.items(), key=lambda kv: kv[1].get("at", ""), reverse=True)],
+            "statuses": COMPLAINT_STATUS, "refund_days": REFUND_DAYS, "suspend_after": COMPLAINTS_TO_SUSPEND, "mail_ready": _mail_ready()}
+
+
+def complaint_resolve(oid: str, decision: str, note: str = "") -> dict:
+    """Chủ sàn xử lý khiếu nại: decision 'hoan' (chấp nhận, ghi hoàn tiền) hoặc 'tu_choi' (bắt buộc ghi lý do, gửi cho khách)."""
+    note = (note or "").strip()[:500]
+    with _LOCK:
+        d = _load()
+        o = d["orders"].get(oid)
+        if not o or not o.get("complaint"):
+            raise ValueError("Không tìm thấy khiếu nại")
+        if o["complaint"].get("status", "moi") != "moi":
+            raise ValueError("Khiếu nại này đã xử lý")
+    if decision == "hoan":
+        if o["status"] in ("paid", "delivered") and o["amount"] > 0:
+            refund(oid, note or "Chấp nhận khiếu nại")
+        reply = note or f"superYou chấp nhận khiếu nại và hoàn {vnd(o['amount'])} cho đơn {o['code']}."
+        status = "da_hoan"
+    elif decision == "tu_choi":
+        if len(note) < 5:
+            raise ValueError("Cần ghi lý do từ chối (khách sẽ nhận được lý do này).")
+        reply, status = note, "tu_choi"
+    else:
+        raise ValueError("Quyết định không hợp lệ")
+    with _LOCK:
+        d = _load()
+        c = d["orders"][oid]["complaint"]
+        c.update({"status": status, "reply": reply, "resolved_at": _iso()})
+        _save(d)
+    sent = _email_complaint_reply(o, status, reply)
+    try:
+        from agents import market
+        with market._LOCK:
+            md = market._load()
+            market._log(md, "Huy (quản trị)", f"{COMPLAINT_STATUS[status]} khiếu nại đơn {o['code']} ({o['email']})")
+            market._save(md)
+    except Exception:
+        pass
+    txt = f"{COMPLAINT_STATUS[status]} khiếu nại đơn {o['code']}."
+    if status == "da_hoan" and o["amount"]:
+        txt += f" Anh chuyển khoản trả khách {vnd(o['amount'])}."
+    txt += " Đã email cho khách." if sent else " Chưa gửi được email (chưa kết nối mail), khách thấy phản hồi trong Tài khoản."
+    return {"text": txt}
+
+
+def _email_complaint_reply(o: dict, status: str, reply: str) -> bool:
+    if not _mail_ready():
+        return False
+    try:
+        from agents import mailbox
+        platform = "gmail" if mailbox.gmail_ready() else "lark"
+        head = "đã được chấp nhận và hoàn tiền" if status == "da_hoan" else "chưa được chấp nhận"
+        mailbox.send(platform, o["email"], f"[superYou] Khiếu nại đơn {o['code']} {head}",
+                     f"Khiếu nại của bạn cho đơn {o['code']} ({o['name']}) {head}.\n\nPhản hồi của superYou: {reply}\n\n"
+                     "Xem lại tại https://app.roimaxxhub.com/account#buys. Cần trao đổi thêm, bạn trả lời email này.\n\nsuperYou · Roimaxx")
+        return True
+    except Exception:
+        import logging
+        logging.getLogger("pay").exception("Gửi email phản hồi khiếu nại lỗi")
+        return False
+
+
+def admin_block_buyer(email: str, on: str = "1", note: str = "") -> dict:
+    return block_buyer(email, str(on).lower() not in ("0", "false", "mo", "off", ""), note)
 
 
 def price_reco(x: dict) -> dict:
