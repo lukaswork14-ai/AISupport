@@ -303,6 +303,16 @@ async def job_strategy_weekly():
                      "Mở app › Nội dung › Chiến lược để xem.")
 
 
+async def job_plan_sweep():
+    """Mỗi sáng (mảng Thương mại): hạ gói trả phí/dùng thử đã hết hạn về Miễn phí (giữ dữ liệu), nhắc gia hạn trước 3 ngày
+    qua email khi Gmail/Lark Mail đã kết nối."""
+    from agents import pay
+    try:
+        await asyncio.to_thread(pay.plan_sweep)
+    except Exception:
+        log.exception("job_plan_sweep")
+
+
 async def job_cso_daily():
     """Mỗi sáng: CSO superYou soạn nháp theo đuổi (chào mừng khách mới, nhắc dùng thử sắp hết hạn) chờ anh duyệt;
     thứ Hai thêm kế hoạch bán hàng tuần lên bảng Phòng ban. Không bao giờ tự gửi thư."""
@@ -488,6 +498,7 @@ async def post_init(app: Application):
         scheduler.add_job(job_strategy_weekly, CronTrigger(day_of_week="mon", hour=6, minute=20), misfire_grace_time=6 * 3600, coalesce=True)
         scheduler.add_job(job_repo_weekly, CronTrigger(day_of_week="mon", hour=6, minute=40), misfire_grace_time=6 * 3600, coalesce=True)
     scheduler.add_job(job_cfo_brief, CronTrigger(hour=7, minute=30), misfire_grace_time=3 * 3600, coalesce=True)
+    scheduler.add_job(job_plan_sweep, CronTrigger(hour=7, minute=5), misfire_grace_time=6 * 3600, coalesce=True)
     scheduler.add_job(job_cso_daily, CronTrigger(hour=7, minute=45), misfire_grace_time=3 * 3600, coalesce=True)
     if not IS_TENANT:
         scheduler.add_job(job_ops_weekly, CronTrigger(day_of_week="mon", hour=6, minute=55), misfire_grace_time=6 * 3600, coalesce=True)
