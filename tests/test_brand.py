@@ -46,3 +46,30 @@ def test_landing_uses_brand():
     assert "#6A3DF0" not in html and "#FF5AA8" not in html
     assert "/brand/og.png" in html and "/brand/icon-128.png" in html
     assert "Nói là xong." in html
+
+
+def _app_index(tenant: bool, tmp_path) -> str:
+    home = tmp_path / ("superyou-tenants/khach" if tenant else "owner")
+    home.mkdir(parents=True)
+    (home / ".env").write_text("TELEGRAM_TOKEN=1:x\nOWNER_CHAT_ID=1\nLLM_API_KEY=x\n")
+    env = {k: v for k, v in os.environ.items() if k not in ("SUPERYOU_TENANT",)}
+    env.update({"SUPERHUY_HOME": str(home), "OBSIDIAN_VAULT": str(home / "vault"), "PYTHONPATH": str(ROOT)})
+    code = "from webapp import server; print(server._app_index())"
+    out = subprocess.run([sys.executable, "-c", code], cwd=ROOT, env=env, capture_output=True, text=True, timeout=120)
+    assert out.returncode == 0, out.stderr[-2000:]
+    return out.stdout.strip().splitlines()[-1]
+
+
+def test_tenant_app_is_superyou_branded(tmp_path):
+    owner = Path(_app_index(False, tmp_path / "o"))
+    assert owner == STATIC / "index.html"                      # superHuy của anh Huy giữ giao diện riêng
+    page = Path(_app_index(True, tmp_path / "t")).read_text(encoding="utf-8")
+    assert "<title>superYou</title>" in page and 'id="superyou-brand"' in page
+    assert "/icons/huy-" not in page and "/brand/icon-192.png" in page
+
+
+def test_public_pages_use_brand():
+    for rel in ("account/index.html", "market/index.html", "legal/index.html"):
+        html = (STATIC / rel).read_text(encoding="utf-8")
+        assert "#6A3DF0" not in html and "#A493FF" not in html, rel
+        assert '/brand/icon-128.png' in html and '/brand/mark.svg' in html, rel
